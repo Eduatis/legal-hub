@@ -204,8 +204,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div class="ctabs" id="dash-ctabs"></div>
         <div class="metrics" id="dash-metrics"></div>
         <div class="g2">
-          <div class="card"><div class="cardh"><div class="cardht">Alertas de vencimiento</div><div class="cardhl" onclick="navTo('vencimientos')">Ver todos</div></div><div id="dash-alerts"></div></div>
-          <div class="card"><div class="cardh"><div class="cardht">Temas activos</div><div class="cardhl" onclick="navTo('temas')">Ver todos</div></div><div id="dash-tasks"></div></div>
+          <div class="card"><div class="cardh"><div class="cardht">Alertas — vence en 48hs</div><div class="cardhl" onclick="navTo('temas')">Ver todos</div></div><div id="dash-alerts"></div></div>
+          <div class="card"><div class="cardh"><div class="cardht">Temas · Prioridad Alta</div><div class="cardhl" onclick="navTo('temas')">Ver todos</div></div><div id="dash-tasks"></div></div>
         </div>
         <div class="g1"><div class="card"><div class="cardh"><div class="cardht">Últimos documentos</div><div class="cardhl" onclick="navTo('documentos')">Ver todos</div></div><div class="dwrap"><table class="dtable" id="dash-docs"></table></div></div></div>
       </div>
@@ -227,7 +227,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         </div>
         <div id="tfilter-activos" class="filters">
           <div class="sbox"><svg class="sico" width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4" stroke="#1A1916" stroke-width="1.2"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="#1A1916" stroke-width="1.2" stroke-linecap="round"/></svg><input type="text" placeholder="Buscar temas..." id="tema-q" oninput="renderTemas()"></div>
-          <select class="fsel" id="tema-estado" onchange="renderTemas()"><option value="">Todos los estados</option><option>Abierto</option><option>En curso</option></select>
+          <select class="fsel" id="tema-estado" onchange="renderTemas()"><option value="">Todos los estados</option><option>No iniciado</option><option>En curso</option></select>
           <select class="fsel" id="tema-resp" onchange="renderTemas()"><option value="">Todos los responsables</option><option>EG</option><option>CS</option><option>ST</option></select>
         </div>
         <div id="tfilter-cerrados" class="filters" style="display:none">
@@ -276,7 +276,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <div class="field"><label>Contraparte</label><input type="text" id="fd-cp" placeholder="Propietario, empresa u organismo"></div>
     <div class="fieldrow">
       <div class="field" style="margin:0"><label>Fecha inicio / firma</label><input type="date" id="fd-fi" oninput="updateCode()"></div>
-      <div class="field" style="margin:0"><label>Fecha vencimiento</label><input type="date" id="fd-fv"></div>
+      
     </div>
     <div class="field" style="margin-top:12px"><label>Responsable</label>
       <select id="fd-resp"><option value="EG">Eduardo Galindo</option><option value="CS">Camila Soto</option><option value="ST">Samira T.</option></select>
@@ -311,7 +311,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div class="field" style="margin:0"><label>Deadline</label><input type="date" id="ft-dead"></div>
       <div class="field" style="margin:0"><label>Prioridad</label><select id="ft-prio"><option>Alta</option><option>Media</option><option>Baja</option></select></div>
     </div>
-    <div class="field" style="margin-top:4px"><label>Estado</label><select id="ft-estado"><option>Abierto</option><option>En curso</option></select></div>
+    <div class="field" style="margin-top:4px"><label>Estado</label><select id="ft-estado"><option>No iniciado</option><option>En curso</option></select></div>
     <div style="display:flex;gap:8px;margin-top:16px">
       <button class="btnp" style="flex:1" id="save-tema-btn" onclick="saveTema()">Guardar</button>
       <button class="btns" onclick="closeFormTema()">Cancelar</button>
@@ -630,7 +630,7 @@ async function cerrarTema(id) {
 async function reabrirTema(id) {
   showLoading('Reabriendo tema...');
   try {
-    await updateListItem(LIST_TEMAS, id, { Estado:'Abierto', FechaCierre: null });
+    await updateListItem(LIST_TEMAS, id, { Estado:'No iniciado', FechaCierre: null });
     await syncAll();
     hideLoading(); showToast('Tema reabierto');
   } catch(e) { hideLoading(); showToast('Error', true); }
@@ -844,7 +844,7 @@ function openFormTema() {
   document.getElementById('ft-pais').value='Global';
   document.getElementById('ft-cli').value='';
   document.getElementById('ft-prio').value='Alta';
-  document.getElementById('ft-estado').value='Abierto';
+  document.getElementById('ft-estado').value='No iniciado';
   document.getElementById('form-tema').classList.add('open');
 }
 function closeFormTema() { document.getElementById('form-tema').classList.remove('open'); }
@@ -861,7 +861,7 @@ function editTema(id) {
   document.getElementById('ft-cli').value = t.cli||'';
   document.getElementById('ft-dead').value = t.dead||'';
   document.getElementById('ft-prio').value = t.prio||'Alta';
-  document.getElementById('ft-estado').value = (t.estado==='Cerrado') ? 'Abierto' : (t.estado||'Abierto');
+  document.getElementById('ft-estado').value = (t.estado==='Cerrado') ? 'No iniciado' : (t.estado||'No iniciado');
   document.getElementById('form-tema').classList.add('open');
 }
 
