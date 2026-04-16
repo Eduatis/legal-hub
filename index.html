@@ -312,6 +312,21 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div class="field" style="margin:0"><label>Prioridad</label><select id="ft-prio"><option>Alta</option><option>Media</option><option>Baja</option></select></div>
     </div>
     <div class="field" style="margin-top:4px"><label>Estado</label><select id="ft-estado"><option>No iniciado</option><option>En curso</option></select></div>
+    <div class="sectit">Bloqueo</div>
+    <div class="field" style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <input type="checkbox" id="ft-bloq" onchange="toggleBloq()" style="width:auto;cursor:pointer">
+      <label for="ft-bloq" style="margin:0;cursor:pointer;font-size:13px;color:var(--tx)">Requiere intervención para avanzar</label>
+    </div>
+    <div id="bloq-fields" style="display:none">
+      <div class="field"><label>¿Quién debe intervenir?</label>
+        <select id="ft-bloq-quien">
+          <option value="EG">EG — Eduardo Galindo</option>
+          <option value="tercero">Tercero externo</option>
+        </select>
+      </div>
+      <div class="field"><label>Nombre del tercero (si aplica)</label><input type="text" id="ft-bloq-tercero-nombre" placeholder="Ej: Telecom, Municipalidad de Tigre..." oninput="syncTercero()"></div>
+      <div class="field"><label>¿Qué se necesita para continuar?</label><textarea id="ft-bloq-que" placeholder="Ej: Revisión y firma del borrador, respuesta de propietario..."></textarea></div>
+    </div>
     <div style="display:flex;gap:8px;margin-top:16px">
       <button class="btnp" style="flex:1" id="save-tema-btn" onclick="saveTema()">Guardar</button>
       <button class="btns" onclick="closeFormTema()">Cancelar</button>
@@ -664,6 +679,11 @@ function renderTemas() {
     var h = '<div class="titem'+(cer?' cer':'')+'"><div class="titemh"><div class="titemtit">'+t.tit+'</div><div class="avsm" style="background:'+pc.bg+';color:'+pc.tc+'">'+t.resp+'</div></div>';
     if (t.desc) h += '<div style="font-size:12px;color:var(--tx2);margin-top:4px">'+t.desc+'</div>';
     h += '<div class="titemmeta">';
+    if (!cer && t.bloqueado) {
+      var bloqLabel = t.bloqQuien==='EG' ? '🔴 Espera a EG' : '🟡 Espera a tercero';
+      if (t.bloqQue) bloqLabel += ': '+t.bloqQue.substring(0,40);
+      h += '<span style="font-size:11px;padding:2px 8px;border-radius:20px;background:'+(t.bloqQuien==='EG'?'var(--rd-bg)':'var(--am-bg)')+';color:'+(t.bloqQuien==='EG'?'var(--rd-tx)':'var(--am-tx)')+'">'+bloqLabel+'</span>';
+    }
     if (!cer) h += '<span class="titemdead">Deadline: '+fmtDate(t.dead)+'</span>';
     if (t.cli) h += '<span class="badge bdb">'+t.cli+'</span>';
     h += '<span style="font-size:11px;color:var(--tx3)">'+t.pais+'</span>';
@@ -845,6 +865,10 @@ function openFormTema() {
   document.getElementById('ft-cli').value='';
   document.getElementById('ft-prio').value='Alta';
   document.getElementById('ft-estado').value='No iniciado';
+  document.getElementById('ft-bloq').checked=false;
+  document.getElementById('ft-bloq-quien').value='';
+  document.getElementById('ft-bloq-que').value='';
+  toggleBloq();
   document.getElementById('form-tema').classList.add('open');
 }
 function closeFormTema() { document.getElementById('form-tema').classList.remove('open'); }
@@ -862,7 +886,24 @@ function editTema(id) {
   document.getElementById('ft-dead').value = t.dead||'';
   document.getElementById('ft-prio').value = t.prio||'Alta';
   document.getElementById('ft-estado').value = (t.estado==='Cerrado') ? 'No iniciado' : (t.estado||'No iniciado');
+  document.getElementById('ft-bloq').checked = t.bloqueado||false;
+  document.getElementById('ft-bloq-quien').value = t.bloqQuien||'';
+  document.getElementById('ft-bloq-que').value = t.bloqQue||'';
+  toggleBloq();
   document.getElementById('form-tema').classList.add('open');
+}
+
+function syncTercero() {
+  var quien = document.getElementById('ft-bloq-quien').value;
+  var nombre = document.getElementById('ft-bloq-tercero-nombre').value;
+  if (quien === 'tercero' && nombre) {
+    document.getElementById('ft-bloq-quien').dataset.nombre = nombre;
+  }
+}
+
+function toggleBloq() {
+  var show = document.getElementById('ft-bloq').checked;
+  document.getElementById('bloq-fields').style.display = show ? 'block' : 'none';
 }
 
 async function saveTema() {
@@ -878,7 +919,10 @@ async function saveTema() {
     Cliente: document.getElementById('ft-cli').value||'',
     Deadline: document.getElementById('ft-dead').value ? document.getElementById('ft-dead').value+'T00:00:00Z' : null,
     Prioridad: document.getElementById('ft-prio').value,
-    Estado: document.getElementById('ft-estado').value
+    Estado: document.getElementById('ft-estado').value,
+    Bloqueado: document.getElementById('ft-bloq').checked,
+    BloqQuien: document.getElementById('ft-bloq-quien').value,
+    BloqQue: document.getElementById('ft-bloq-que').value
   };
   try {
     if (editingTemaId) {
