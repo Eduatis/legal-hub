@@ -407,7 +407,7 @@ async function doLogin() {
   try {
     showLoading('Conectando con Microsoft...');
     await msalInstance.initialize();
-    const result = await msalInstance.loginPopup({ scopes: SCOPES });
+    const result = await msalInstance.loginRedirect({ scopes: SCOPES });
     await initApp(result.account);
   } catch(e) {
     hideLoading();
