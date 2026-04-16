@@ -4,3 +4,919 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ATIS Legal Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F5F4F0;--surf:#fff;--surf2:#F0EFE9;--brd:rgba(0,0,0,0.08);--brd2:rgba(0,0,0,0.14);--tx:#1A1916;--tx2:#6B6A64;--tx3:#A09F98;--bl:#1B4FD8;--bl-bg:#EEF2FF;--gr-bg:#DCFCE7;--gr-tx:#15803D;--am:#D97706;--am-bg:#FEF3C7;--am-tx:#B45309;--rd:#DC2626;--rd-bg:#FEE2E2;--rd-tx:#B91C1C;--r:10px;--rs:6px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);font-size:14px;line-height:1.5}
+button{font-family:'DM Sans',sans-serif;cursor:pointer}
+input,select,textarea{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--tx);background:var(--surf);border:1px solid var(--brd2);border-radius:var(--rs);padding:7px 10px;width:100%;outline:none;transition:border .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--bl)}
+textarea{resize:vertical;min-height:70px}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236B6A64'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+
+/* LOGIN */
+#login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:100}
+.lcard{background:var(--surf);border:1px solid var(--brd);border-radius:16px;padding:40px 36px;width:340px;text-align:center}
+.lbrand{font-size:11px;font-weight:500;letter-spacing:.12em;color:var(--tx3);text-transform:uppercase;margin-bottom:6px}
+.ltitle{font-size:22px;font-weight:300;margin-bottom:4px}
+.lsub{font-size:13px;color:var(--tx2);margin-bottom:28px}
+.ugrid{display:flex;flex-direction:column;gap:8px}
+.ubtn{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--brd2);border-radius:var(--r);background:var(--surf);color:var(--tx);transition:all .15s;text-align:left}
+.ubtn:hover{border-color:var(--bl);background:var(--bl-bg)}
+.av{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:500;flex-shrink:0}
+.uname{font-size:13px;font-weight:500}.urole{font-size:11px;color:var(--tx2)}
+
+/* LOADING */
+#loading-screen{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:90;flex-direction:column;gap:12px}
+.spinner{width:32px;height:32px;border:3px solid var(--brd2);border-top-color:var(--bl);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:13px;color:var(--tx2)}
+
+/* LAYOUT */
+#app{display:none;height:100vh;overflow:hidden}
+.layout{display:flex;height:100vh}
+.sidebar{width:210px;background:var(--surf);border-right:1px solid var(--brd);display:flex;flex-direction:column;flex-shrink:0}
+.sbhead{padding:18px 16px 14px;border-bottom:1px solid var(--brd)}
+.sbbrand{font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3)}
+.sbtitle{font-size:15px;font-weight:500;margin-top:2px}
+.sbnav{padding:10px 8px;flex:1;overflow-y:auto}
+.navg{margin-bottom:16px}
+.navgl{font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);padding:0 8px 6px}
+.navi{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--rs);color:var(--tx2);font-size:13px;cursor:pointer;transition:all .12s;margin-bottom:1px}
+.navi:hover{background:var(--surf2);color:var(--tx)}.navi.active{background:var(--bl-bg);color:var(--bl);font-weight:500}
+.navi svg{flex-shrink:0;opacity:.7}.navi.active svg{opacity:1}
+.sbfoot{padding:12px 16px;border-top:1px solid var(--brd)}
+.sbuser{display:flex;align-items:center;gap:10px}
+.sbun{font-size:12px;font-weight:500}.sbur{font-size:10px;color:var(--tx3)}
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.topbar{padding:16px 24px;border-bottom:1px solid var(--brd);background:var(--surf);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.tbtitle{font-size:16px;font-weight:500}.tbsub{font-size:12px;color:var(--tx2);margin-top:1px}
+.tbact{display:flex;gap:8px;align-items:center}
+.sync-btn{font-size:11px;padding:5px 10px;border-radius:20px;border:1px solid var(--brd2);background:var(--surf);color:var(--tx2);transition:all .12s}
+.sync-btn:hover{border-color:var(--bl);color:var(--bl)}
+.btnp{background:var(--bl);color:#fff;border:none;padding:8px 16px;border-radius:var(--rs);font-size:13px;font-weight:500}.btnp:hover{opacity:.88}
+.btns{background:var(--surf);color:var(--tx2);border:1px solid var(--brd2);padding:8px 14px;border-radius:var(--rs);font-size:13px}
+.btnsm{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--brd2);background:var(--surf);color:var(--tx2)}
+.btnrd{font-size:11px;padding:4px 10px;border-radius:20px;border:none;background:var(--rd-bg);color:var(--rd-tx)}
+.btnedit{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--brd2);background:var(--surf);color:var(--bl)}
+.content{padding:20px 24px;flex:1}
+.pageview{display:none}.pageview.active{display:block}
+.ctabs{display:flex;gap:6px;margin-bottom:18px}
+.ctab{padding:5px 14px;border-radius:20px;border:1px solid var(--brd2);font-size:12px;color:var(--tx2);cursor:pointer;background:var(--surf)}
+.ctab.active{background:var(--bl);color:#fff;border-color:var(--bl)}
+.subtabs{display:flex;border-bottom:1px solid var(--brd);margin-bottom:16px}
+.stab{padding:8px 16px;font-size:13px;color:var(--tx2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.stab.active{color:var(--bl);border-bottom-color:var(--bl);font-weight:500}
+.sbadge{display:inline-flex;align-items:center;justify-content:center;background:var(--rd-bg);color:var(--rd-tx);font-size:9px;font-weight:500;border-radius:10px;padding:1px 6px;margin-left:5px}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:18px}
+.metric{background:var(--surf);border:1px solid var(--brd);border-radius:var(--r);padding:14px 16px}
+.metlbl{font-size:11px;color:var(--tx3);margin-bottom:5px}
+.metval{font-size:26px;font-weight:300;line-height:1}.metval.w{color:var(--am)}.metval.d{color:var(--rd)}
+.metsub{font-size:11px;color:var(--tx3);margin-top:4px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.g1{margin-bottom:14px}
+.card{background:var(--surf);border:1px solid var(--brd);border-radius:var(--r);padding:16px 18px}
+.cardh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.cardht{font-size:13px;font-weight:500}.cardhl{font-size:12px;color:var(--bl);cursor:pointer}
+.aitem{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--brd)}
+.aitem:last-child{border:none;padding-bottom:0}
+.dot{width:7px;height:7px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.dotr{background:var(--rd)}.dota{background:var(--am)}.dotb{background:var(--bl)}
+.acode{font-family:'DM Mono',monospace;font-size:10px;color:var(--tx2);margin-bottom:2px}
+.adesc{font-size:12px;color:var(--tx)}.ameta{font-size:11px;color:var(--tx3);margin-top:1px}
+.badge{font-size:10px;padding:2px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0}
+.bdr{background:var(--rd-bg);color:var(--rd-tx)}.bda{background:var(--am-bg);color:var(--am-tx)}
+.bdb{background:var(--bl-bg);color:var(--bl)}.bdg{background:#F0EFE9;color:#6B6A64}.bdgr{background:var(--gr-bg);color:var(--gr-tx)}
+.dwrap{overflow-x:auto}
+.dtable{width:100%;border-collapse:collapse;font-size:12px;min-width:750px}
+.dtable th{text-align:left;padding:0 10px 8px;font-size:10px;font-weight:500;color:var(--tx3);letter-spacing:.05em;text-transform:uppercase;border-bottom:1px solid var(--brd);white-space:nowrap}
+.dtable td{padding:9px 10px;border-bottom:1px solid var(--brd);vertical-align:middle}
+.dtable tr:last-child td{border:none}.dtable tr:hover td{background:var(--surf2)}
+.mono{font-family:'DM Mono',monospace;font-size:10px;background:var(--surf2);padding:2px 7px;border-radius:4px;color:var(--tx2);white-space:nowrap}
+.stat{font-size:10px;padding:2px 9px;border-radius:20px;white-space:nowrap}
+.s0{background:#F0EFE9;color:#6B6A64}.s1{background:#EEF2FF;color:#1B4FD8}.s2{background:#E0F2FE;color:#0369A1}
+.s3{background:#DCFCE7;color:#15803D}.s4{background:#FEF3C7;color:#B45309}.s5{background:#FEE2E2;color:#B91C1C}
+.acbtn{display:flex;gap:4px;white-space:nowrap}
+.filters{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.sbox{position:relative;flex:1;min-width:180px}.sbox input{padding-left:32px}
+.sico{position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.4}
+.fsel{flex:0 0 auto;width:auto;min-width:130px}
+.formov{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:50;display:none;align-items:flex-start;justify-content:flex-end}
+.formov.open{display:flex}
+.formpanel{background:var(--surf);width:480px;height:100vh;overflow-y:auto;padding:24px;animation:slideIn .2s ease}
+@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+.formtit{font-size:16px;font-weight:500;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between}
+.formclose{background:none;border:none;font-size:20px;color:var(--tx3);cursor:pointer;padding:0;line-height:1}
+.field{margin-bottom:12px}.field label{display:block;font-size:11px;font-weight:500;color:var(--tx2);margin-bottom:4px}
+.fieldrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.reftog{display:flex;gap:5px;margin-bottom:10px}
+.rtbtn{font-size:11px;padding:4px 11px;border-radius:20px;border:1px solid var(--brd2);cursor:pointer;color:var(--tx2);background:var(--surf)}
+.rtbtn.sel{background:var(--am-bg);color:var(--am-tx);border-color:var(--am)}
+.codebox{background:var(--bl-bg);border-radius:var(--rs);padding:12px 14px;margin:14px 0}
+.codeboxlbl{font-size:10px;color:var(--bl);font-weight:500;margin-bottom:5px;letter-spacing:.05em}
+.codeboxval{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;color:var(--bl);word-break:break-all}
+.lcbar{display:flex;flex-wrap:wrap;margin-bottom:14px}
+.lcbtn{font-size:10px;padding:4px 9px;border:1px solid var(--brd2);color:var(--tx3);cursor:pointer;background:var(--surf)}
+.lcbtn:first-child{border-radius:var(--rs) 0 0 var(--rs)}.lcbtn:last-child{border-radius:0 var(--rs) var(--rs) 0}
+.lcbtn:not(:first-child){border-left:none}.lcbtn.sel{background:var(--bl);color:#fff;border-color:var(--bl);z-index:1;position:relative}
+.sectit{font-size:10px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;color:var(--tx3);padding:12px 0 8px;border-top:1px solid var(--brd);margin-top:4px}
+.titem{padding:12px 0;border-bottom:1px solid var(--brd)}.titem:last-child{border:none}
+.titem.cer{opacity:.6}
+.titemh{display:flex;align-items:flex-start;gap:8px}
+.titemtit{font-size:13px;font-weight:500;flex:1}
+.titemmeta{display:flex;gap:6px;margin-top:5px;align-items:center;flex-wrap:wrap}
+.titemdead{font-size:11px;color:var(--tx3)}
+.titemact{display:flex;gap:6px;margin-top:8px}
+.avsm{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:500;flex-shrink:0}
+.ctag{font-size:11px;color:var(--gr-tx);background:var(--gr-bg);padding:2px 8px;border-radius:20px}
+.confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:none;align-items:center;justify-content:center}
+.confirm-overlay.open{display:flex}
+.confirm-box{background:var(--surf);border-radius:var(--r);padding:24px 28px;width:320px;text-align:center}
+.confirm-title{font-size:15px;font-weight:500;margin-bottom:8px}
+.confirm-sub{font-size:13px;color:var(--tx2);margin-bottom:20px}
+.confirm-btns{display:flex;gap:8px;justify-content:center}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--tx);color:#fff;padding:10px 18px;border-radius:var(--rs);font-size:13px;z-index:300;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+.empty{text-align:center;padding:40px 20px;color:var(--tx3);font-size:13px}
+.err{text-align:center;padding:20px;color:var(--rd-tx);font-size:13px;background:var(--rd-bg);border-radius:var(--rs);margin:8px 0}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="lcard">
+    <div class="lbrand">ATIS Group</div>
+    <div class="ltitle">Legal Hub</div>
+    <div class="lsub">Seleccioná tu usuario para ingresar</div>
+    <div class="ugrid">
+      <button class="ubtn" onclick="doLogin('edu')">
+        <div class="av" style="width:36px;height:36px;font-size:12px;background:#EEF2FF;color:#1B4FD8">EG</div>
+        <div><div class="uname">Eduardo Galindo</div><div class="urole">Legal Manager · Global</div></div>
+      </button>
+      <button class="ubtn" onclick="doLogin('camila')">
+        <div class="av" style="width:36px;height:36px;font-size:12px;background:#DCFCE7;color:#15803D">CS</div>
+        <div><div class="uname">Camila Soto</div><div class="urole">Legal · Argentina + Uruguay</div></div>
+      </button>
+      <button class="ubtn" onclick="doLogin('samira')">
+        <div class="av" style="width:36px;height:36px;font-size:12px;background:#FEF3C7;color:#B45309">ST</div>
+        <div><div class="uname">Samira T.</div><div class="urole">Legal · Paraguay</div></div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <div class="loading-txt" id="loading-txt">Conectando con SharePoint...</div>
+</div>
+
+<!-- APP -->
+<div id="app">
+<div class="layout">
+  <div class="sidebar">
+    <div class="sbhead"><div class="sbbrand">ATIS Group</div><div class="sbtitle">Legal Hub</div></div>
+    <div class="sbnav">
+      <div class="navg">
+        <div class="navgl">Principal</div>
+        <div class="navi active" id="nav-dashboard" onclick="goTo('dashboard',this)">
+          <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1" y="1" width="5" height="5" rx="1" fill="currentColor"/><rect x="8" y="1" width="5" height="5" rx="1" fill="currentColor" opacity=".5"/><rect x="1" y="8" width="5" height="5" rx="1" fill="currentColor" opacity=".5"/><rect x="8" y="8" width="5" height="5" rx="1" fill="currentColor" opacity=".5"/></svg>Dashboard
+        </div>
+        <div class="navi" id="nav-documentos" onclick="goTo('documentos',this)">
+          <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="2" y="1" width="10" height="12" rx="1.5" stroke="currentColor" stroke-width="1"/><line x1="4.5" y1="4.5" x2="9.5" y2="4.5" stroke="currentColor"/><line x1="4.5" y1="7" x2="9.5" y2="7" stroke="currentColor"/><line x1="4.5" y1="9.5" x2="7.5" y2="9.5" stroke="currentColor"/></svg>Documentos
+        </div>
+        <div class="navi" id="nav-temas" onclick="goTo('temas',this)">
+          <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" stroke="currentColor"/><path d="M7 4v3.5l2 1.5" stroke="currentColor" stroke-linecap="round"/></svg>Temas
+        </div>
+        <div class="navi" id="nav-vencimientos" onclick="goTo('vencimientos',this)">
+          <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1.5" y="2.5" width="11" height="9" rx="1.5" stroke="currentColor"/><line x1="4" y1="1" x2="4" y2="4" stroke="currentColor" stroke-linecap="round"/><line x1="10" y1="1" x2="10" y2="4" stroke="currentColor" stroke-linecap="round"/><line x1="1.5" y1="6" x2="12.5" y2="6" stroke="currentColor"/></svg>Vencimientos
+        </div>
+      </div>
+    </div>
+    <div class="sbfoot">
+      <div class="sbuser">
+        <div class="av" id="sb-av" style="width:28px;height:28px;font-size:10px"></div>
+        <div><div class="sbun" id="sb-name"></div><div class="sbur" id="sb-role"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div><div class="tbtitle" id="tb-title">Dashboard</div><div class="tbsub" id="tb-sub">Resumen general</div></div>
+      <div class="tbact">
+        <button class="sync-btn" onclick="syncAll()" id="sync-btn">↻ Actualizar</button>
+        <div id="tb-act"></div>
+      </div>
+    </div>
+    <div class="content">
+
+      <div class="pageview active" id="page-dashboard">
+        <div class="ctabs" id="dash-ctabs"></div>
+        <div class="metrics" id="dash-metrics"></div>
+        <div class="g2">
+          <div class="card"><div class="cardh"><div class="cardht">Alertas de vencimiento</div><div class="cardhl" onclick="navTo('vencimientos')">Ver todos</div></div><div id="dash-alerts"></div></div>
+          <div class="card"><div class="cardh"><div class="cardht">Temas activos</div><div class="cardhl" onclick="navTo('temas')">Ver todos</div></div><div id="dash-tasks"></div></div>
+        </div>
+        <div class="g1"><div class="card"><div class="cardh"><div class="cardht">Últimos documentos</div><div class="cardhl" onclick="navTo('documentos')">Ver todos</div></div><div class="dwrap"><table class="dtable" id="dash-docs"></table></div></div></div>
+      </div>
+
+      <div class="pageview" id="page-documentos">
+        <div class="filters">
+          <div class="sbox"><svg class="sico" width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4" stroke="#1A1916" stroke-width="1.2"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="#1A1916" stroke-width="1.2" stroke-linecap="round"/></svg><input type="text" placeholder="Buscar código, contraparte..." id="doc-q" oninput="renderDocs()"></div>
+          <select class="fsel" id="doc-tipo" onchange="renderDocs()"><option value="">Todos los tipos</option><option>LOC</option><option>SIT</option><option>MLA</option><option>NDA</option><option>ADD</option><option>ACT</option><option>CVN</option><option>DSC</option><option>CSV</option><option>CTR</option></select>
+          <select class="fsel" id="doc-estado" onchange="renderDocs()"><option value="">Todos los estados</option><option>Borrador</option><option>En revisión</option><option>Firmado</option><option>Vigente</option><option>En renovación</option><option>Vencido</option></select>
+          <select class="fsel" id="doc-pais" onchange="renderDocs()"><option value="">Todos los países</option><option>AR</option><option>UY</option><option>PY</option></select>
+        </div>
+        <div id="docs-error"></div>
+        <div class="card" style="padding:0;overflow:hidden"><div class="dwrap"><table class="dtable" id="docs-table"></table></div></div>
+      </div>
+
+      <div class="pageview" id="page-temas">
+        <div class="subtabs">
+          <div class="stab active" id="stab-activos" onclick="setTemaTab('activos')">Activos <span class="sbadge" id="badge-activos">0</span></div>
+          <div class="stab" id="stab-cerrados" onclick="setTemaTab('cerrados')">Cerrados / Archivo</div>
+        </div>
+        <div id="tfilter-activos" class="filters">
+          <div class="sbox"><svg class="sico" width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4" stroke="#1A1916" stroke-width="1.2"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="#1A1916" stroke-width="1.2" stroke-linecap="round"/></svg><input type="text" placeholder="Buscar temas..." id="tema-q" oninput="renderTemas()"></div>
+          <select class="fsel" id="tema-estado" onchange="renderTemas()"><option value="">Todos los estados</option><option>Abierto</option><option>En curso</option></select>
+          <select class="fsel" id="tema-resp" onchange="renderTemas()"><option value="">Todos los responsables</option><option>EG</option><option>CS</option><option>ST</option></select>
+          <select class="fsel" id="tema-cli" onchange="renderTemas()">
+            <option value="">Todos los clientes</option>
+            <option value="TMA">TMA · Telefónica AR</option><option value="TECO">TECO · Telecom AR</option><option value="AMX">AMX · Claro AR</option>
+            <option value="ANTEL">ANTEL · Antel UY</option><option value="TIGOUY">TIGOUY · Tigo UY</option><option value="AMXUY">AMXUY · Claro UY</option>
+            <option value="TIGOPY">TIGOPY · Tigo PY</option><option value="NUBI">NUBI · Nubicom PY</option><option value="NUCL">NUCL · Núcleo PY</option><option value="AMXPY">AMXPY · Claro PY</option>
+            <option value="__n">Sin cliente</option>
+          </select>
+        </div>
+        <div id="tfilter-cerrados" class="filters" style="display:none">
+          <div class="sbox"><svg class="sico" width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4" stroke="#1A1916" stroke-width="1.2"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="#1A1916" stroke-width="1.2" stroke-linecap="round"/></svg><input type="text" placeholder="Buscar en archivo..." id="cerrado-q" oninput="renderTemas()"></div>
+        </div>
+        <div class="card" id="temas-list"></div>
+      </div>
+
+      <div class="pageview" id="page-vencimientos">
+        <div class="filters"><select class="fsel" id="venc-window" onchange="renderVenc()"><option value="30">Próximos 30 días</option><option value="60">Próximos 60 días</option><option value="90">Próximos 90 días</option><option value="0">Vencidos</option></select></div>
+        <div class="card" style="padding:0;overflow:hidden"><div class="dwrap"><table class="dtable" id="venc-table"></table></div></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- FORM DOCUMENTO -->
+<div class="formov" id="form-doc" onclick="if(event.target===this)closeFormDoc()">
+  <div class="formpanel" onclick="event.stopPropagation()">
+    <div class="formtit"><span id="form-doc-title">Nuevo documento</span><button class="formclose" onclick="closeFormDoc()">×</button></div>
+    <div class="field"><label>Tipo de documento</label>
+      <select id="fd-tipo" onchange="updateCode()"><option value="">— Seleccionar —</option><option value="LOC">LOC · Contrato terreno</option><option value="SIT">SIT · Contrato de sitio</option><option value="MLA">MLA · Master Lease Agreement</option><option value="NDA">NDA · Non-Disclosure Agreement</option><option value="ADD">ADD · Adenda</option><option value="ACT">ACT · Acta</option><option value="CVN">CVN · Convenio municipal</option><option value="DSC">DSC · Descargo</option><option value="CSV">CSV · Compraventa</option><option value="CTR">CTR · Contrato general</option></select>
+    </div>
+    <div class="field"><label>País</label>
+      <select id="fd-pais" onchange="updateCode()"><option value="">— Seleccionar —</option><option value="AR">Argentina</option><option value="UY">Uruguay</option><option value="PY">Paraguay</option></select>
+    </div>
+    <div class="sectit">Referencia</div>
+    <div class="reftog">
+      <div class="rtbtn sel" id="rt-s" onclick="setRefMode('s')">Sitio</div>
+      <div class="rtbtn" id="rt-c" onclick="setRefMode('c')">Cliente</div>
+      <div class="rtbtn" id="rt-p" onclick="setRefMode('p')">Sin referencia</div>
+    </div>
+    <div id="ref-sitio" class="field"><label>Código de sitio</label><input type="text" id="fd-sitio" placeholder="Ej: MON2028" oninput="this.value=this.value.toUpperCase();updateCode()"></div>
+    <div id="ref-cliente" class="field" style="display:none"><label>Cliente</label>
+      <select id="fd-cli" onchange="updateCode()"><option value="">— Seleccionar —</option>
+        <optgroup label="Argentina"><option value="TMA">TMA · Telefónica</option><option value="TECO">TECO · Telecom</option><option value="AMX">AMX · Claro AR</option></optgroup>
+        <optgroup label="Uruguay"><option value="ANTEL">ANTEL</option><option value="TIGOUY">TIGOUY · Tigo UY</option><option value="AMXUY">AMXUY · Claro UY</option></optgroup>
+        <optgroup label="Paraguay"><option value="TIGOPY">TIGOPY · Tigo PY</option><option value="NUBI">NUBI · Nubicom</option><option value="NUCL">NUCL · Núcleo</option><option value="AMXPY">AMXPY · Claro PY</option></optgroup>
+      </select>
+    </div>
+    <div class="codebox"><div class="codeboxlbl">CÓDIGO GENERADO</div><div class="codeboxval" id="code-preview">—</div></div>
+    <div class="sectit">Estado</div>
+    <div class="lcbar"><div class="lcbtn sel" onclick="setLC(this)">Borrador</div><div class="lcbtn" onclick="setLC(this)">En revisión</div><div class="lcbtn" onclick="setLC(this)">Firmado</div><div class="lcbtn" onclick="setLC(this)">Vigente</div><div class="lcbtn" onclick="setLC(this)">En renovación</div><div class="lcbtn" onclick="setLC(this)">Vencido</div></div>
+    <div class="sectit">Datos</div>
+    <div class="field"><label>Contraparte</label><input type="text" id="fd-cp" placeholder="Propietario, empresa u organismo"></div>
+    <div class="fieldrow">
+      <div class="field" style="margin:0"><label>Fecha inicio / firma</label><input type="date" id="fd-fi" oninput="updateCode()"></div>
+      <div class="field" style="margin:0"><label>Fecha vencimiento</label><input type="date" id="fd-fv"></div>
+    </div>
+    <div class="field" style="margin-top:12px"><label>Responsable</label>
+      <select id="fd-resp"><option value="EG">Eduardo Galindo</option><option value="CS">Camila Soto</option><option value="ST">Samira T.</option></select>
+    </div>
+    <div class="field"><label>Link al archivo (Sytex / Drive / Z)</label><input type="text" id="fd-link" placeholder="URL o ruta de red"></div>
+    <div class="field"><label>Observaciones</label><textarea id="fd-obs"></textarea></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btnp" style="flex:1" id="save-doc-btn" onclick="saveDoc()">Guardar</button>
+      <button class="btns" onclick="closeFormDoc()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- FORM TEMA -->
+<div class="formov" id="form-tema" onclick="if(event.target===this)closeFormTema()">
+  <div class="formpanel" onclick="event.stopPropagation()">
+    <div class="formtit"><span id="form-tema-title">Nuevo tema</span><button class="formclose" onclick="closeFormTema()">×</button></div>
+    <div class="field"><label>Título</label><input type="text" id="ft-tit" placeholder="Descripción del tema"></div>
+    <div class="field"><label>Descripción</label><textarea id="ft-desc"></textarea></div>
+    <div class="fieldrow">
+      <div class="field" style="margin:0"><label>Responsable</label><select id="ft-resp"><option value="EG">Eduardo Galindo</option><option value="CS">Camila Soto</option><option value="ST">Samira T.</option></select></div>
+      <div class="field" style="margin:0"><label>País</label><select id="ft-pais"><option value="Global">Global</option><option value="AR">Argentina</option><option value="UY">Uruguay</option><option value="PY">Paraguay</option></select></div>
+    </div>
+    <div class="field"><label>Cliente relacionado (opcional)</label>
+      <select id="ft-cli"><option value="">Sin cliente</option>
+        <optgroup label="Argentina"><option value="TMA">TMA</option><option value="TECO">TECO</option><option value="AMX">AMX</option></optgroup>
+        <optgroup label="Uruguay"><option value="ANTEL">ANTEL</option><option value="TIGOUY">TIGOUY</option><option value="AMXUY">AMXUY</option></optgroup>
+        <optgroup label="Paraguay"><option value="TIGOPY">TIGOPY</option><option value="NUBI">NUBI</option><option value="NUCL">NUCL</option><option value="AMXPY">AMXPY</option></optgroup>
+      </select>
+    </div>
+    <div class="fieldrow" style="margin-top:4px">
+      <div class="field" style="margin:0"><label>Deadline</label><input type="date" id="ft-dead"></div>
+      <div class="field" style="margin:0"><label>Prioridad</label><select id="ft-prio"><option>Alta</option><option>Media</option><option>Baja</option></select></div>
+    </div>
+    <div class="field" style="margin-top:4px"><label>Estado</label><select id="ft-estado"><option>Abierto</option><option>En curso</option></select></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btnp" style="flex:1" id="save-tema-btn" onclick="saveTema()">Guardar</button>
+      <button class="btns" onclick="closeFormTema()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title">Confirmar eliminación</div>
+    <div class="confirm-sub" id="confirm-msg"></div>
+    <div class="confirm-btns">
+      <button class="btnrd" style="padding:8px 20px;font-size:13px" onclick="confirmDelete()">Eliminar</button>
+      <button class="btns" onclick="cancelDelete()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────
+var SP_SITE = 'https://atisargentina.sharepoint.com/sites/LegalOps';
+var SP_API  = SP_SITE + '/_api/web/lists';
+var LIST_DOCS  = 'Documentos_Legal';
+var LIST_TEMAS = 'Temas_Legal';
+
+// ─── STATE ────────────────────────────────────────────────
+var TODAY = new Date();
+TODAY.setHours(0,0,0,0);
+var currentUser = null;
+var dashCountry = 'Global';
+var refMode = 's';
+var lcState = 'Borrador';
+var temaTab = 'activos';
+var editingDocId = null;
+var editingTemaId = null;
+var pendingDelete = null;
+var docs = [];
+var temas = [];
+var spDigest = null;
+var docSeq = 0;
+
+var USERS = {
+  edu:    { name:'Eduardo Galindo', ini:'EG', role:'Global · Legal Manager', bg:'#EEF2FF', tc:'#1B4FD8', scope:['AR','UY','PY'] },
+  camila: { name:'Camila Soto',     ini:'CS', role:'Legal · AR + UY',        bg:'#DCFCE7', tc:'#15803D', scope:['AR','UY'] },
+  samira: { name:'Samira T.',       ini:'ST', role:'Legal · PY',             bg:'#FEF3C7', tc:'#B45309', scope:['PY'] }
+};
+var AVC = { EG:{bg:'#EEF2FF',tc:'#1B4FD8'}, CS:{bg:'#DCFCE7',tc:'#15803D'}, ST:{bg:'#FEF3C7',tc:'#B45309'} };
+var SCLASS = { 'Borrador':'s0','En revisión':'s1','Firmado':'s2','Vigente':'s3','En renovación':'s4','Vencido':'s5' };
+var CLIENTS = ['TMA','TECO','AMX','ANTEL','TIGOUY','AMXUY','TIGOPY','NUBI','NUCL','AMXPY'];
+
+// ─── HELPERS ──────────────────────────────────────────────
+function fmtDate(d) {
+  if (!d) return '-';
+  var dt = new Date(d);
+  return dt.toLocaleDateString('es-AR', {day:'2-digit',month:'short',year:'numeric'});
+}
+function daysTo(d) {
+  if (!d) return null;
+  return Math.round((new Date(d) - TODAY) / 86400000);
+}
+function todayStr() { return TODAY.toISOString().split('T')[0]; }
+function showToast(msg, err) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = err ? 'var(--rd)' : 'var(--tx)';
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+function showLoading(msg) {
+  document.getElementById('loading-txt').textContent = msg || 'Cargando...';
+  document.getElementById('loading-screen').style.display = 'flex';
+}
+function hideLoading() {
+  document.getElementById('loading-screen').style.display = 'none';
+}
+
+// ─── SHAREPOINT API ───────────────────────────────────────
+function spFetch(url, opts) {
+  var headers = {
+    'Accept': 'application/json;odata=verbose',
+    'Content-Type': 'application/json;odata=verbose'
+  };
+  if (spDigest) headers['X-RequestDigest'] = spDigest;
+  if (opts && opts.method && opts.method !== 'GET') headers['X-RequestDigest'] = spDigest;
+  return fetch(url, Object.assign({ credentials:'include', headers:headers }, opts || {}));
+}
+
+function getDigest() {
+  return fetch(SP_SITE + '/_api/contextinfo', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Accept': 'application/json;odata=verbose' }
+  }).then(function(r){ return r.json(); })
+    .then(function(d){ spDigest = d.d.GetContextWebInformation.FormDigestValue; });
+}
+
+function spGetList(listName) {
+  var url = SP_API + "/getbytitle('" + listName + "')/items?$top=5000&$orderby=Id desc";
+  return spFetch(url).then(function(r){ return r.json(); });
+}
+
+function spCreateItem(listName, data) {
+  var type = "SP.Data." + listName + "ListItem";
+  data.__metadata = { type: type };
+  return spFetch(SP_API + "/getbytitle('" + listName + "')/items", {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }).then(function(r){ return r.json(); });
+}
+
+function spUpdateItem(listName, id, data) {
+  var type = "SP.Data." + listName + "ListItem";
+  data.__metadata = { type: type };
+  return spFetch(SP_API + "/getbytitle('" + listName + "')/items(" + id + ")", {
+    method: 'POST',
+    headers: { 'X-HTTP-Method': 'MERGE', 'IF-MATCH': '*' },
+    body: JSON.stringify(data)
+  });
+}
+
+function spDeleteItem(listName, id) {
+  return spFetch(SP_API + "/getbytitle('" + listName + "')/items(" + id + ")", {
+    method: 'POST',
+    headers: { 'X-HTTP-Method': 'DELETE', 'IF-MATCH': '*' }
+  });
+}
+
+// ─── MAP SP → local ───────────────────────────────────────
+function mapDoc(item) {
+  return {
+    id: item.Id,
+    code: item.Codigo || '',
+    tipo: item.Tipo || '',
+    ref: item.Referencia || '',
+    pais: item.Pais || '',
+    cp: item.Contraparte || '',
+    fi: item.FechaInicio ? item.FechaInicio.split('T')[0] : '',
+    fv: item.FechaVencimiento ? item.FechaVencimiento.split('T')[0] : '',
+    estado: item.Estado || 'Borrador',
+    resp: item.Responsable || '',
+    link: item.LinkArchivo || '',
+    obs: item.Observaciones || ''
+  };
+}
+
+function mapTema(item) {
+  return {
+    id: item.Id,
+    tit: item.Titulo || '',
+    desc: item.Descripcion || '',
+    resp: item.Responsable || '',
+    pais: item.Pais || '',
+    cli: item.Cliente || '',
+    dead: item.Deadline ? item.Deadline.split('T')[0] : '',
+    prio: item.Prioridad || 'Media',
+    estado: item.Estado || 'Abierto',
+    fc: item.FechaCierre ? item.FechaCierre.split('T')[0] : null
+  };
+}
+
+// ─── SYNC ─────────────────────────────────────────────────
+function syncAll() {
+  var btn = document.getElementById('sync-btn');
+  btn.textContent = '↻ Actualizando...';
+  btn.disabled = true;
+  return getDigest()
+    .then(function(){
+      return Promise.all([
+        spGetList(LIST_DOCS),
+        spGetList(LIST_TEMAS)
+      ]);
+    })
+    .then(function(results){
+      docs = (results[0].d && results[0].d.results) ? results[0].d.results.map(mapDoc) : [];
+      temas = (results[1].d && results[1].d.results) ? results[1].d.results.map(mapTema) : [];
+      // compute seq from existing codes
+      docs.forEach(function(d){
+        var m = d.code.match(/-(\d{4})$/);
+        if (m) { var n = parseInt(m[1]); if (n > docSeq) docSeq = n; }
+      });
+      renderAll();
+      showToast('Datos actualizados');
+    })
+    .catch(function(e){
+      showToast('Error al conectar con SharePoint. Revisá que estés logueado en ATIS.', true);
+      console.error(e);
+    })
+    .finally(function(){
+      btn.textContent = '↻ Actualizar';
+      btn.disabled = false;
+    });
+}
+
+// ─── LOGIN ────────────────────────────────────────────────
+function doLogin(u) {
+  currentUser = u;
+  var user = USERS[u];
+  var av = document.getElementById('sb-av');
+  av.textContent = user.ini; av.style.background = user.bg; av.style.color = user.tc;
+  av.style.borderRadius='50%'; av.style.width='28px'; av.style.height='28px';
+  av.style.fontSize='10px'; av.style.display='flex'; av.style.alignItems='center'; av.style.justifyContent='center';
+  document.getElementById('sb-name').textContent = user.name;
+  document.getElementById('sb-role').textContent = user.role;
+  document.getElementById('login-screen').style.display = 'none';
+  showLoading('Conectando con SharePoint...');
+  syncAll().then(function(){
+    hideLoading();
+    document.getElementById('app').style.display = 'block';
+  }).catch(function(){
+    hideLoading();
+    document.getElementById('app').style.display = 'block';
+  });
+}
+
+// ─── FILTERS ──────────────────────────────────────────────
+function vDocs() {
+  var s = USERS[currentUser].scope;
+  return docs.filter(function(d){ return s.indexOf(d.pais) >= 0; });
+}
+function vTemas() {
+  var s = USERS[currentUser].scope;
+  return temas.filter(function(t){ return s.indexOf(t.pais) >= 0 || t.pais === 'Global'; });
+}
+function renderAll() { renderDash(); renderDocs(); renderTemas(); renderVenc(); }
+
+// ─── DOC TABLE ────────────────────────────────────────────
+function docTableHTML(list, actions) {
+  if (!list.length) return '<tr><td colspan="9" style="padding:30px;text-align:center;color:var(--tx3)">Sin documentos cargados</td></tr>';
+  var head = '<thead><tr><th>Código</th><th>Tipo</th><th>Contraparte</th><th>País</th><th>Inicio</th><th>Vencimiento</th><th>Estado</th><th>Resp.</th>' + (actions ? '<th></th>' : '') + '</tr></thead>';
+  var rows = list.map(function(d) {
+    var dt = daysTo(d.fv);
+    var vc = (dt!==null&&dt>=0&&dt<=30)?'color:var(--am)':(dt!==null&&dt<0)?'color:var(--rd)':'';
+    var sc = SCLASS[d.estado] || 's0';
+    var act = actions ? '<td><div class="acbtn"><button class="btnedit" onclick="editDoc('+d.id+')">Editar</button><button class="btnrd" onclick="askDeleteDoc('+d.id+')">Borrar</button></div></td>' : '';
+    return '<tr><td><span class="mono">'+d.code+'</span></td><td>'+d.tipo+'</td><td>'+d.cp+'</td><td>'+d.pais+'</td><td>'+fmtDate(d.fi)+'</td><td style="'+vc+'">'+fmtDate(d.fv)+'</td><td><span class="stat '+sc+'">'+d.estado+'</span></td><td>'+d.resp+'</td>'+act+'</tr>';
+  });
+  return head + '<tbody>' + rows.join('') + '</tbody>';
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────
+function renderDash() {
+  var scope = USERS[currentUser].scope;
+  var countries = currentUser === 'edu' ? ['Global'].concat(scope) : scope;
+  document.getElementById('dash-ctabs').innerHTML = countries.map(function(c){
+    return '<div class="ctab'+(c===dashCountry?' active':'')+'" onclick="setDashCountry(\''+c+'\')">'+c+'</div>';
+  }).join('');
+  var vd = vDocs().filter(function(d){ return dashCountry==='Global'||d.pais===dashCountry; });
+  var vt = vTemas().filter(function(t){ return dashCountry==='Global'||t.pais===dashCountry||t.pais==='Global'; });
+  var act = vd.filter(function(d){ return ['Vigente','Firmado','En renovación'].indexOf(d.estado)>=0; }).length;
+  var v30 = vd.filter(function(d){ var dt=daysTo(d.fv); return dt!==null&&dt>=0&&dt<=30; }).length;
+  var venc = vd.filter(function(d){ return d.estado==='Vencido'; }).length;
+  var tab = vt.filter(function(t){ return t.estado!=='Cerrado'; }).length;
+  var altap = vt.filter(function(t){ return t.prio==='Alta'&&t.estado!=='Cerrado'; }).length;
+  var sub = scope.map(function(p){ return p+' '+vd.filter(function(d){ return d.pais===p; }).length; }).join(' · ');
+  document.getElementById('dash-metrics').innerHTML =
+    '<div class="metric"><div class="metlbl">Documentos activos</div><div class="metval">'+act+'</div><div class="metsub">'+sub+'</div></div>'+
+    '<div class="metric"><div class="metlbl">Vencen en 30 días</div><div class="metval w">'+v30+'</div><div class="metsub">Requieren atención</div></div>'+
+    '<div class="metric"><div class="metlbl">Vencidos sin renovar</div><div class="metval d">'+venc+'</div><div class="metsub">Acción urgente</div></div>'+
+    '<div class="metric"><div class="metlbl">Temas activos</div><div class="metval">'+tab+'</div><div class="metsub">'+altap+' alta prioridad</div></div>';
+  var alerts = vd.filter(function(d){ var dt=daysTo(d.fv); return dt!==null&&dt<=60; });
+  alerts.sort(function(a,b){ return new Date(a.fv)-new Date(b.fv); });
+  document.getElementById('dash-alerts').innerHTML = alerts.slice(0,5).length ? alerts.slice(0,5).map(function(d){
+    var dt=daysTo(d.fv); var r=dt<10||d.estado==='Vencido';
+    return '<div class="aitem"><div class="dot '+(r?'dotr':'dota')+'"></div><div style="flex:1"><div class="acode">'+d.code+'</div><div class="adesc">'+d.cp+'</div><div class="ameta">'+fmtDate(d.fv)+' · '+d.resp+'</div></div><span class="badge '+(r?'bdr':'bda')+'" style="margin-left:8px">'+(dt<0?'Vencido':dt+' días')+'</span></div>';
+  }).join('') : '<div class="empty">Sin alertas próximas</div>';
+  var tasks = vt.filter(function(t){ return t.estado!=='Cerrado'; }).slice(0,5);
+  document.getElementById('dash-tasks').innerHTML = tasks.length ? tasks.map(function(t){
+    var pb = t.prio==='Alta'?'bdr':t.prio==='Media'?'bda':'bdg';
+    return '<div class="aitem"><div class="dot dotb"></div><div style="flex:1"><div class="adesc">'+t.tit+'</div><div class="ameta">'+fmtDate(t.dead)+(t.cli?' · '+t.cli:'')+'</div></div><span class="badge '+pb+'" style="margin-left:8px">'+t.prio+'</span></div>';
+  }).join('') : '<div class="empty">Sin temas activos</div>';
+  document.getElementById('dash-docs').innerHTML = docTableHTML(vDocs().slice(0,5), false);
+}
+function setDashCountry(c) { dashCountry=c; renderDash(); }
+
+// ─── DOCUMENTOS ───────────────────────────────────────────
+function renderDocs() {
+  var q = (document.getElementById('doc-q').value||'').toLowerCase();
+  var ft = document.getElementById('doc-tipo').value;
+  var fe = document.getElementById('doc-estado').value;
+  var fp = document.getElementById('doc-pais').value;
+  var list = vDocs();
+  if (q) list = list.filter(function(d){ return d.code.toLowerCase().indexOf(q)>=0||d.cp.toLowerCase().indexOf(q)>=0||d.ref.toLowerCase().indexOf(q)>=0; });
+  if (ft) list = list.filter(function(d){ return d.tipo===ft; });
+  if (fe) list = list.filter(function(d){ return d.estado===fe; });
+  if (fp) list = list.filter(function(d){ return d.pais===fp; });
+  document.getElementById('docs-table').innerHTML = docTableHTML(list, true);
+}
+
+// ─── TEMAS ────────────────────────────────────────────────
+function setTemaTab(tab) {
+  temaTab = tab;
+  document.getElementById('stab-activos').classList.toggle('active', tab==='activos');
+  document.getElementById('stab-cerrados').classList.toggle('active', tab==='cerrados');
+  document.getElementById('tfilter-activos').style.display = tab==='activos'?'flex':'none';
+  document.getElementById('tfilter-cerrados').style.display = tab==='cerrados'?'flex':'none';
+  renderTemas();
+}
+
+function cerrarTema(id) {
+  showLoading('Cerrando tema...');
+  getDigest().then(function(){
+    return spUpdateItem(LIST_TEMAS, id, { Estado:'Cerrado', FechaCierre: todayStr()+'T00:00:00Z' });
+  }).then(function(){ return syncAll(); })
+  .then(function(){ hideLoading(); showToast('Tema cerrado'); })
+  .catch(function(){ hideLoading(); showToast('Error al cerrar tema', true); });
+}
+
+function reabrirTema(id) {
+  showLoading('Reabriendo tema...');
+  getDigest().then(function(){
+    return spUpdateItem(LIST_TEMAS, id, { Estado:'Abierto', FechaCierre: null });
+  }).then(function(){ return syncAll(); })
+  .then(function(){ hideLoading(); showToast('Tema reabierto'); })
+  .catch(function(){ hideLoading(); showToast('Error', true); });
+}
+
+function renderTemas() {
+  var vt = vTemas();
+  var activos = vt.filter(function(t){ return t.estado!=='Cerrado'; });
+  document.getElementById('badge-activos').textContent = activos.length;
+  var list;
+  if (temaTab === 'activos') {
+    var q = (document.getElementById('tema-q').value||'').toLowerCase();
+    var fe = document.getElementById('tema-estado').value;
+    var fr = document.getElementById('tema-resp').value;
+    var fc = document.getElementById('tema-cli').value;
+    list = activos;
+    if (q) list = list.filter(function(t){ return t.tit.toLowerCase().indexOf(q)>=0||t.desc.toLowerCase().indexOf(q)>=0; });
+    if (fe) list = list.filter(function(t){ return t.estado===fe; });
+    if (fr) list = list.filter(function(t){ return t.resp===fr; });
+    if (fc==='__n') list = list.filter(function(t){ return !t.cli; });
+    else if (fc) list = list.filter(function(t){ return t.cli===fc; });
+  } else {
+    var q2 = (document.getElementById('cerrado-q').value||'').toLowerCase();
+    list = vt.filter(function(t){ return t.estado==='Cerrado'; });
+    if (q2) list = list.filter(function(t){ return t.tit.toLowerCase().indexOf(q2)>=0; });
+  }
+  var el = document.getElementById('temas-list');
+  if (!list.length) { el.innerHTML='<div class="empty">'+(temaTab==='activos'?'Sin temas activos':'Sin temas cerrados')+'</div>'; return; }
+  el.innerHTML = list.map(function(t) {
+    var pc = AVC[t.resp]||{bg:'#F0EFE9',tc:'#6B6A64'};
+    var pb = t.prio==='Alta'?'bdr':t.prio==='Media'?'bda':'bdg';
+    var eb = t.estado==='En curso'?'bdb':'bdg';
+    var cer = t.estado==='Cerrado';
+    var h = '<div class="titem'+(cer?' cer':'')+'"><div class="titemh"><div class="titemtit">'+t.tit+'</div><div class="avsm" style="background:'+pc.bg+';color:'+pc.tc+'">'+t.resp+'</div></div>';
+    if (t.desc) h += '<div style="font-size:12px;color:var(--tx2);margin-top:4px">'+t.desc+'</div>';
+    h += '<div class="titemmeta">';
+    if (!cer) h += '<span class="titemdead">Deadline: '+fmtDate(t.dead)+'</span>';
+    if (t.cli) h += '<span class="badge bdb">'+t.cli+'</span>';
+    h += '<span style="font-size:11px;color:var(--tx3)">'+t.pais+'</span>';
+    if (!cer) h += '<span class="badge '+pb+'">'+t.prio+'</span><span class="badge '+eb+'">'+t.estado+'</span>';
+    if (cer) h += '<span class="ctag">Cerrado el '+fmtDate(t.fc)+'</span>';
+    h += '</div><div class="titemact">';
+    if (!cer) h += '<button class="btnedit" onclick="editTema('+t.id+')">Editar</button><button class="btnrd" onclick="askDeleteTema('+t.id+')">Borrar</button><button class="btnsm" onclick="cerrarTema('+t.id+')">Cerrar</button>';
+    if (cer) h += '<button class="btnedit" onclick="editTema('+t.id+')">Editar</button><button class="btnrd" onclick="askDeleteTema('+t.id+')">Borrar</button><button class="btnsm" onclick="reabrirTema('+t.id+')">Reabrir</button>';
+    h += '</div></div>';
+    return h;
+  }).join('');
+}
+
+// ─── VENCIMIENTOS ─────────────────────────────────────────
+function renderVenc() {
+  var w = parseInt(document.getElementById('venc-window').value);
+  var list = vDocs();
+  if (w===0) list = list.filter(function(d){ return daysTo(d.fv)<0; });
+  else list = list.filter(function(d){ var dt=daysTo(d.fv); return dt!==null&&dt>=0&&dt<=w; });
+  list.sort(function(a,b){ return new Date(a.fv)-new Date(b.fv); });
+  document.getElementById('venc-table').innerHTML = docTableHTML(list, false);
+}
+
+// ─── NAV ──────────────────────────────────────────────────
+function goTo(page, el) {
+  document.querySelectorAll('.navi').forEach(function(n){ n.classList.remove('active'); });
+  el.classList.add('active');
+  document.querySelectorAll('.pageview').forEach(function(p){ p.classList.remove('active'); });
+  document.getElementById('page-'+page).classList.add('active');
+  var T = {dashboard:'Dashboard',documentos:'Documentos',temas:'Temas',vencimientos:'Vencimientos'};
+  var S = {dashboard:'Resumen general',documentos:'Registro de documentos legales',temas:'Follow-up y gestión de temas',vencimientos:'Calendario de vencimientos'};
+  document.getElementById('tb-title').textContent = T[page]||page;
+  document.getElementById('tb-sub').textContent = S[page]||'';
+  var A = {documentos:'<button class="btnp" onclick="openFormDoc()">+ Nuevo documento</button>',temas:'<button class="btnp" onclick="openFormTema()">+ Nuevo tema</button>'};
+  document.getElementById('tb-act').innerHTML = A[page]||'';
+}
+function navTo(page) { var el=document.getElementById('nav-'+page); if(el) goTo(page,el); }
+
+// ─── DOC FORM ─────────────────────────────────────────────
+function openFormDoc() {
+  editingDocId = null;
+  document.getElementById('form-doc-title').textContent = 'Nuevo documento';
+  ['fd-tipo','fd-pais','fd-sitio','fd-cli','fd-cp','fd-fv','fd-link','fd-obs'].forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
+  document.getElementById('fd-fi').value = todayStr();
+  setRefMode('s');
+  document.querySelectorAll('.lcbtn').forEach(function(l,i){ l.classList.toggle('sel',i===0); });
+  lcState = 'Borrador';
+  updateCode();
+  document.getElementById('form-doc').classList.add('open');
+}
+function closeFormDoc() { document.getElementById('form-doc').classList.remove('open'); }
+
+function editDoc(id) {
+  var d = null; for(var i=0;i<docs.length;i++){if(docs[i].id===id){d=docs[i];break;}}
+  if (!d) return;
+  editingDocId = id;
+  document.getElementById('form-doc-title').textContent = 'Editar documento';
+  document.getElementById('fd-tipo').value = d.tipo;
+  document.getElementById('fd-pais').value = d.pais;
+  document.getElementById('fd-fi').value = d.fi||'';
+  document.getElementById('fd-fv').value = d.fv||'';
+  document.getElementById('fd-cp').value = d.cp||'';
+  document.getElementById('fd-resp').value = d.resp||'EG';
+  document.getElementById('fd-link').value = d.link||'';
+  document.getElementById('fd-obs').value = d.obs||'';
+  if (CLIENTS.indexOf(d.ref)>=0) { setRefMode('c'); document.getElementById('fd-cli').value=d.ref; }
+  else if (d.ref===d.pais) { setRefMode('p'); }
+  else { setRefMode('s'); document.getElementById('fd-sitio').value=d.ref; }
+  document.querySelectorAll('.lcbtn').forEach(function(l){ l.classList.toggle('sel', l.textContent.trim()===d.estado); });
+  lcState = d.estado;
+  document.getElementById('code-preview').textContent = d.code;
+  document.getElementById('form-doc').classList.add('open');
+}
+
+function setRefMode(m) {
+  refMode = m;
+  ['s','c','p'].forEach(function(x){ document.getElementById('rt-'+x).classList.toggle('sel',x===m); });
+  document.getElementById('ref-sitio').style.display = m==='s'?'block':'none';
+  document.getElementById('ref-cliente').style.display = m==='c'?'block':'none';
+  if (!editingDocId) updateCode();
+}
+function setLC(el) {
+  document.querySelectorAll('.lcbtn').forEach(function(l){ l.classList.remove('sel'); });
+  el.classList.add('sel'); lcState = el.textContent.trim();
+}
+function updateCode() {
+  if (editingDocId) return;
+  var tipo = document.getElementById('fd-tipo').value;
+  var pais = document.getElementById('fd-pais').value;
+  var sitio = document.getElementById('fd-sitio').value.toUpperCase().replace(/\s/g,'');
+  var cli = document.getElementById('fd-cli').value;
+  var fecha = document.getElementById('fd-fi').value;
+  var yr = fecha ? fecha.split('-')[0] : new Date().getFullYear();
+  var ref = '—';
+  if (refMode==='s'&&sitio) ref=sitio;
+  else if (refMode==='c'&&cli) ref=cli;
+  else if (refMode==='p'&&pais) ref=pais;
+  var t = tipo||'—';
+  var seq = String(docSeq+1).padStart(4,'0');
+  document.getElementById('code-preview').textContent = (tipo&&ref!=='—') ? ('ATIS-LEG-'+t+'-'+ref+'-'+yr+'-'+seq) : ('ATIS · LEG · '+t+' · '+ref+' · '+yr+' · '+seq);
+}
+
+function saveDoc() {
+  var tipo = document.getElementById('fd-tipo').value;
+  var pais = document.getElementById('fd-pais').value;
+  if (!tipo||!pais) { alert('Completá al menos Tipo y País.'); return; }
+  var sitio = document.getElementById('fd-sitio').value.toUpperCase().replace(/\s/g,'');
+  var cli = document.getElementById('fd-cli').value;
+  var ref = pais;
+  if (refMode==='s'&&sitio) ref=sitio;
+  else if (refMode==='c'&&cli) ref=cli;
+  var fecha = document.getElementById('fd-fi').value||todayStr();
+  var yr = fecha.split('-')[0];
+  var btn = document.getElementById('save-doc-btn');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  var data = {
+    Tipo: tipo, Pais: pais, Referencia: ref,
+    Contraparte: document.getElementById('fd-cp').value||'',
+    FechaInicio: fecha ? fecha+'T00:00:00Z' : null,
+    FechaVencimiento: document.getElementById('fd-fv').value ? document.getElementById('fd-fv').value+'T00:00:00Z' : null,
+    Estado: lcState,
+    Responsable: document.getElementById('fd-resp').value,
+    LinkArchivo: document.getElementById('fd-link').value||'',
+    Observaciones: document.getElementById('fd-obs').value||''
+  };
+  getDigest().then(function(){
+    if (editingDocId) {
+      return spUpdateItem(LIST_DOCS, editingDocId, data);
+    } else {
+      docSeq++;
+      var seq = String(docSeq).padStart(4,'0');
+      data.Codigo = 'ATIS-LEG-'+tipo+'-'+ref+'-'+yr+'-'+seq;
+      return spCreateItem(LIST_DOCS, data);
+    }
+  }).then(function(){ return syncAll(); })
+  .then(function(){
+    closeFormDoc();
+    showToast(editingDocId ? 'Documento actualizado' : 'Documento guardado en SharePoint');
+  }).catch(function(e){
+    showToast('Error al guardar. Verificá tu conexión.', true);
+    console.error(e);
+  }).finally(function(){
+    btn.disabled = false; btn.textContent = 'Guardar';
+  });
+}
+
+// ─── DELETE ───────────────────────────────────────────────
+function askDeleteDoc(id) {
+  pendingDelete = {type:'doc',id:id};
+  var d = null; for(var i=0;i<docs.length;i++){if(docs[i].id===id){d=docs[i];break;}}
+  document.getElementById('confirm-msg').textContent = d ? 'Se eliminará "'+d.code+'" de forma permanente.' : '¿Confirmar?';
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+function askDeleteTema(id) {
+  pendingDelete = {type:'tema',id:id};
+  var t = null; for(var i=0;i<temas.length;i++){if(temas[i].id===id){t=temas[i];break;}}
+  document.getElementById('confirm-msg').textContent = t ? 'Se eliminará "'+t.tit+'" de forma permanente.' : '¿Confirmar?';
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+function confirmDelete() {
+  if (!pendingDelete) return;
+  document.getElementById('confirm-overlay').classList.remove('open');
+  showLoading('Eliminando...');
+  var listName = pendingDelete.type==='doc' ? LIST_DOCS : LIST_TEMAS;
+  getDigest().then(function(){
+    return spDeleteItem(listName, pendingDelete.id);
+  }).then(function(){ return syncAll(); })
+  .then(function(){ hideLoading(); showToast('Eliminado correctamente'); })
+  .catch(function(){ hideLoading(); showToast('Error al eliminar', true); });
+  pendingDelete = null;
+}
+function cancelDelete() { pendingDelete=null; document.getElementById('confirm-overlay').classList.remove('open'); }
+
+// ─── TEMA FORM ────────────────────────────────────────────
+function openFormTema() {
+  editingTemaId = null;
+  document.getElementById('form-tema-title').textContent = 'Nuevo tema';
+  ['ft-tit','ft-desc','ft-dead'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('ft-resp').value='EG';
+  document.getElementById('ft-pais').value='Global';
+  document.getElementById('ft-cli').value='';
+  document.getElementById('ft-prio').value='Alta';
+  document.getElementById('ft-estado').value='Abierto';
+  document.getElementById('form-tema').classList.add('open');
+}
+function closeFormTema() { document.getElementById('form-tema').classList.remove('open'); }
+
+function editTema(id) {
+  var t = null; for(var i=0;i<temas.length;i++){if(temas[i].id===id){t=temas[i];break;}}
+  if (!t) return;
+  editingTemaId = id;
+  document.getElementById('form-tema-title').textContent = 'Editar tema';
+  document.getElementById('ft-tit').value = t.tit||'';
+  document.getElementById('ft-desc').value = t.desc||'';
+  document.getElementById('ft-resp').value = t.resp||'EG';
+  document.getElementById('ft-pais').value = t.pais||'Global';
+  document.getElementById('ft-cli').value = t.cli||'';
+  document.getElementById('ft-dead').value = t.dead||'';
+  document.getElementById('ft-prio').value = t.prio||'Alta';
+  document.getElementById('ft-estado').value = (t.estado==='Cerrado') ? 'Abierto' : (t.estado||'Abierto');
+  document.getElementById('form-tema').classList.add('open');
+}
+
+function saveTema() {
+  var tit = document.getElementById('ft-tit').value;
+  if (!tit) { alert('Ingresá un título.'); return; }
+  var btn = document.getElementById('save-tema-btn');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  var data = {
+    Titulo: tit,
+    Descripcion: document.getElementById('ft-desc').value||'',
+    Responsable: document.getElementById('ft-resp').value,
+    Pais: document.getElementById('ft-pais').value,
+    Cliente: document.getElementById('ft-cli').value||'',
+    Deadline: document.getElementById('ft-dead').value ? document.getElementById('ft-dead').value+'T00:00:00Z' : null,
+    Prioridad: document.getElementById('ft-prio').value,
+    Estado: document.getElementById('ft-estado').value
+  };
+  getDigest().then(function(){
+    return editingTemaId ? spUpdateItem(LIST_TEMAS, editingTemaId, data) : spCreateItem(LIST_TEMAS, data);
+  }).then(function(){ return syncAll(); })
+  .then(function(){
+    closeFormTema();
+    showToast(editingTemaId ? 'Tema actualizado' : 'Tema guardado');
+  }).catch(function(e){
+    showToast('Error al guardar', true); console.error(e);
+  }).finally(function(){
+    btn.disabled=false; btn.textContent='Guardar';
+  });
+}
+
+document.getElementById('fd-fi').value = todayStr();
+updateCode();
+</script>
+</body>
+</html>
