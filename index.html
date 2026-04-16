@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ATIS Legal Hub</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://alcdn.msauth.net/browser/2.38.2/js/msal-browser.min.js"></script>
 <style>
 :root{--bg:#F5F4F0;--surf:#fff;--surf2:#F0EFE9;--brd:rgba(0,0,0,0.08);--brd2:rgba(0,0,0,0.14);--tx:#1A1916;--tx2:#6B6A64;--tx3:#A09F98;--bl:#1B4FD8;--bl-bg:#EEF2FF;--gr-bg:#DCFCE7;--gr-tx:#15803D;--am:#D97706;--am-bg:#FEF3C7;--am-tx:#B45309;--rd:#DC2626;--rd-bg:#FEE2E2;--rd-tx:#B91C1C;--r:10px;--rs:6px}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -21,11 +22,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .lbrand{font-size:11px;font-weight:500;letter-spacing:.12em;color:var(--tx3);text-transform:uppercase;margin-bottom:6px}
 .ltitle{font-size:22px;font-weight:300;margin-bottom:4px}
 .lsub{font-size:13px;color:var(--tx2);margin-bottom:28px}
-.ugrid{display:flex;flex-direction:column;gap:8px}
-.ubtn{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--brd2);border-radius:var(--r);background:var(--surf);color:var(--tx);transition:all .15s;text-align:left}
-.ubtn:hover{border-color:var(--bl);background:var(--bl-bg)}
-.av{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:500;flex-shrink:0}
-.uname{font-size:13px;font-weight:500}.urole{font-size:11px;color:var(--tx2)}
+.msft-btn{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--brd2);border-radius:var(--r);background:var(--surf);color:var(--tx);transition:all .15s;width:100%;font-size:13px;font-weight:500}
+.msft-btn:hover{border-color:var(--bl);background:var(--bl-bg)}
+.msft-logo{width:20px;height:20px;flex-shrink:0}
 
 /* LOADING */
 #loading-screen{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:90;flex-direction:column;gap:12px}
@@ -45,7 +44,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .navgl{font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);padding:0 8px 6px}
 .navi{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--rs);color:var(--tx2);font-size:13px;cursor:pointer;transition:all .12s;margin-bottom:1px}
 .navi:hover{background:var(--surf2);color:var(--tx)}.navi.active{background:var(--bl-bg);color:var(--bl);font-weight:500}
-.navi svg{flex-shrink:0;opacity:.7}.navi.active svg{opacity:1}
 .sbfoot{padding:12px 16px;border-top:1px solid var(--brd)}
 .sbuser{display:flex;align-items:center;gap:10px}
 .sbun{font-size:12px;font-weight:500}.sbur{font-size:10px;color:var(--tx3)}
@@ -139,7 +137,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .toast{position:fixed;bottom:24px;right:24px;background:var(--tx);color:#fff;padding:10px 18px;border-radius:var(--rs);font-size:13px;z-index:300;opacity:0;transition:opacity .3s;pointer-events:none}
 .toast.show{opacity:1}
 .empty{text-align:center;padding:40px 20px;color:var(--tx3);font-size:13px}
-.err{text-align:center;padding:20px;color:var(--rd-tx);font-size:13px;background:var(--rd-bg);border-radius:var(--rs);margin:8px 0}
+.av{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:500;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -149,28 +147,18 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   <div class="lcard">
     <div class="lbrand">ATIS Group</div>
     <div class="ltitle">Legal Hub</div>
-    <div class="lsub">Seleccioná tu usuario para ingresar</div>
-    <div class="ugrid">
-      <button class="ubtn" onclick="doLogin('edu')">
-        <div class="av" style="width:36px;height:36px;font-size:12px;background:#EEF2FF;color:#1B4FD8">EG</div>
-        <div><div class="uname">Eduardo Galindo</div><div class="urole">Legal Manager · Global</div></div>
-      </button>
-      <button class="ubtn" onclick="doLogin('camila')">
-        <div class="av" style="width:36px;height:36px;font-size:12px;background:#DCFCE7;color:#15803D">CS</div>
-        <div><div class="uname">Camila Soto</div><div class="urole">Legal · Argentina + Uruguay</div></div>
-      </button>
-      <button class="ubtn" onclick="doLogin('samira')">
-        <div class="av" style="width:36px;height:36px;font-size:12px;background:#FEF3C7;color:#B45309">ST</div>
-        <div><div class="uname">Samira T.</div><div class="urole">Legal · Paraguay</div></div>
-      </button>
-    </div>
+    <div class="lsub">Ingresá con tu cuenta de ATIS</div>
+    <button class="msft-btn" onclick="doLogin()">
+      <svg class="msft-logo" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+      Iniciar sesión con Microsoft
+    </button>
   </div>
 </div>
 
 <!-- LOADING -->
 <div id="loading-screen">
   <div class="spinner"></div>
-  <div class="loading-txt" id="loading-txt">Conectando con SharePoint...</div>
+  <div class="loading-txt" id="loading-txt">Conectando...</div>
 </div>
 
 <!-- APP -->
@@ -212,7 +200,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       </div>
     </div>
     <div class="content">
-
       <div class="pageview active" id="page-dashboard">
         <div class="ctabs" id="dash-ctabs"></div>
         <div class="metrics" id="dash-metrics"></div>
@@ -230,7 +217,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <select class="fsel" id="doc-estado" onchange="renderDocs()"><option value="">Todos los estados</option><option>Borrador</option><option>En revisión</option><option>Firmado</option><option>Vigente</option><option>En renovación</option><option>Vencido</option></select>
           <select class="fsel" id="doc-pais" onchange="renderDocs()"><option value="">Todos los países</option><option>AR</option><option>UY</option><option>PY</option></select>
         </div>
-        <div id="docs-error"></div>
         <div class="card" style="padding:0;overflow:hidden"><div class="dwrap"><table class="dtable" id="docs-table"></table></div></div>
       </div>
 
@@ -243,13 +229,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <div class="sbox"><svg class="sico" width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4" stroke="#1A1916" stroke-width="1.2"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="#1A1916" stroke-width="1.2" stroke-linecap="round"/></svg><input type="text" placeholder="Buscar temas..." id="tema-q" oninput="renderTemas()"></div>
           <select class="fsel" id="tema-estado" onchange="renderTemas()"><option value="">Todos los estados</option><option>Abierto</option><option>En curso</option></select>
           <select class="fsel" id="tema-resp" onchange="renderTemas()"><option value="">Todos los responsables</option><option>EG</option><option>CS</option><option>ST</option></select>
-          <select class="fsel" id="tema-cli" onchange="renderTemas()">
-            <option value="">Todos los clientes</option>
-            <option value="TMA">TMA · Telefónica AR</option><option value="TECO">TECO · Telecom AR</option><option value="AMX">AMX · Claro AR</option>
-            <option value="ANTEL">ANTEL · Antel UY</option><option value="TIGOUY">TIGOUY · Tigo UY</option><option value="AMXUY">AMXUY · Claro UY</option>
-            <option value="TIGOPY">TIGOPY · Tigo PY</option><option value="NUBI">NUBI · Nubicom PY</option><option value="NUCL">NUCL · Núcleo PY</option><option value="AMXPY">AMXPY · Claro PY</option>
-            <option value="__n">Sin cliente</option>
-          </select>
         </div>
         <div id="tfilter-cerrados" class="filters" style="display:none">
           <div class="sbox"><svg class="sico" width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4" stroke="#1A1916" stroke-width="1.2"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="#1A1916" stroke-width="1.2" stroke-linecap="round"/></svg><input type="text" placeholder="Buscar en archivo..." id="cerrado-q" oninput="renderTemas()"></div>
@@ -261,7 +240,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div class="filters"><select class="fsel" id="venc-window" onchange="renderVenc()"><option value="30">Próximos 30 días</option><option value="60">Próximos 60 días</option><option value="90">Próximos 90 días</option><option value="0">Vencidos</option></select></div>
         <div class="card" style="padding:0;overflow:hidden"><div class="dwrap"><table class="dtable" id="venc-table"></table></div></div>
       </div>
-
     </div>
   </div>
 </div>
@@ -303,7 +281,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <div class="field" style="margin-top:12px"><label>Responsable</label>
       <select id="fd-resp"><option value="EG">Eduardo Galindo</option><option value="CS">Camila Soto</option><option value="ST">Samira T.</option></select>
     </div>
-    <div class="field"><label>Link al archivo (Sytex / Drive / Z)</label><input type="text" id="fd-link" placeholder="URL o ruta de red"></div>
+    <div class="field"><label>Link al archivo</label><input type="text" id="fd-link" placeholder="URL o ruta de red"></div>
     <div class="field"><label>Observaciones</label><textarea id="fd-obs"></textarea></div>
     <div style="display:flex;gap:8px;margin-top:8px">
       <button class="btnp" style="flex:1" id="save-doc-btn" onclick="saveDoc()">Guardar</button>
@@ -356,15 +334,27 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 <div class="toast" id="toast"></div>
 
 <script>
-// ─── CONFIG ───────────────────────────────────────────────
-var SP_SITE = 'https://atisargentina.sharepoint.com/sites/LegalOps';
-var SP_API  = SP_SITE + '/_api/web/lists';
-var LIST_DOCS  = 'Documentos_Legal';
-var LIST_TEMAS = 'Temas_Legal';
+// ─── CONFIG ────────────────────────────────────────────────────────────────
+const CLIENT_ID = '3201d559-c69c-48a5-9a7b-404427ce962d';
+const TENANT_ID = 'ea75d328-1aac-4145-9a20-1c8b310671c6';
+const SP_SITE_ID = 'atisargentina.sharepoint.com,LegalOps';
+const LIST_DOCS  = 'Documentos_Legal';
+const LIST_TEMAS = 'Temas_Legal';
+const REDIRECT_URI = window.location.origin + window.location.pathname;
 
-// ─── STATE ────────────────────────────────────────────────
-var TODAY = new Date();
-TODAY.setHours(0,0,0,0);
+const msalConfig = {
+  auth: {
+    clientId: CLIENT_ID,
+    authority: 'https://login.microsoftonline.com/' + TENANT_ID,
+    redirectUri: REDIRECT_URI
+  },
+  cache: { cacheLocation: 'sessionStorage' }
+};
+const msalInstance = new msal.PublicClientApplication(msalConfig);
+const SCOPES = ['Sites.ReadWrite.All', 'User.Read'];
+
+// ─── STATE ─────────────────────────────────────────────────────────────────
+var TODAY = new Date(); TODAY.setHours(0,0,0,0);
 var currentUser = null;
 var dashCountry = 'Global';
 var refMode = 's';
@@ -375,23 +365,24 @@ var editingTemaId = null;
 var pendingDelete = null;
 var docs = [];
 var temas = [];
-var spDigest = null;
 var docSeq = 0;
+var accessToken = null;
+var siteId = null;
 
-var USERS = {
-  edu:    { name:'Eduardo Galindo', ini:'EG', role:'Global · Legal Manager', bg:'#EEF2FF', tc:'#1B4FD8', scope:['AR','UY','PY'] },
-  camila: { name:'Camila Soto',     ini:'CS', role:'Legal · AR + UY',        bg:'#DCFCE7', tc:'#15803D', scope:['AR','UY'] },
-  samira: { name:'Samira T.',       ini:'ST', role:'Legal · PY',             bg:'#FEF3C7', tc:'#B45309', scope:['PY'] }
+var USERS_MAP = {
+  'eduardo.galindo@atis-group.com': { name:'Eduardo Galindo', ini:'EG', role:'Global · Legal Manager', bg:'#EEF2FF', tc:'#1B4FD8', scope:['AR','UY','PY'] },
+  'camila.soto@atis-group.com':     { name:'Camila Soto',     ini:'CS', role:'Legal · AR + UY',        bg:'#DCFCE7', tc:'#15803D', scope:['AR','UY'] },
+  'edit.roco@atis-group.com':       { name:'Edit Roco',       ini:'ST', role:'Legal · PY',             bg:'#FEF3C7', tc:'#B45309', scope:['PY'] }
 };
+var DEFAULT_USER = { name:'Usuario', ini:'??', role:'Legal', bg:'#F0EFE9', tc:'#6B6A64', scope:['AR','UY','PY'] };
 var AVC = { EG:{bg:'#EEF2FF',tc:'#1B4FD8'}, CS:{bg:'#DCFCE7',tc:'#15803D'}, ST:{bg:'#FEF3C7',tc:'#B45309'} };
 var SCLASS = { 'Borrador':'s0','En revisión':'s1','Firmado':'s2','Vigente':'s3','En renovación':'s4','Vencido':'s5' };
 var CLIENTS = ['TMA','TECO','AMX','ANTEL','TIGOUY','AMXUY','TIGOPY','NUBI','NUCL','AMXPY'];
 
-// ─── HELPERS ──────────────────────────────────────────────
+// ─── HELPERS ───────────────────────────────────────────────────────────────
 function fmtDate(d) {
   if (!d) return '-';
-  var dt = new Date(d);
-  return dt.toLocaleDateString('es-AR', {day:'2-digit',month:'short',year:'numeric'});
+  return new Date(d).toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'});
 }
 function daysTo(d) {
   if (!d) return null;
@@ -409,160 +400,152 @@ function showLoading(msg) {
   document.getElementById('loading-txt').textContent = msg || 'Cargando...';
   document.getElementById('loading-screen').style.display = 'flex';
 }
-function hideLoading() {
-  document.getElementById('loading-screen').style.display = 'none';
+function hideLoading() { document.getElementById('loading-screen').style.display = 'none'; }
+
+// ─── AUTH ──────────────────────────────────────────────────────────────────
+async function doLogin() {
+  try {
+    showLoading('Conectando con Microsoft...');
+    await msalInstance.initialize();
+    const result = await msalInstance.loginPopup({ scopes: SCOPES });
+    await initApp(result.account);
+  } catch(e) {
+    hideLoading();
+    showToast('Error al iniciar sesión: ' + e.message, true);
+    console.error(e);
+  }
 }
 
-// ─── SHAREPOINT API ───────────────────────────────────────
-function spFetch(url, opts) {
-  var headers = {
-    'Accept': 'application/json;odata=verbose',
-    'Content-Type': 'application/json;odata=verbose'
-  };
-  if (spDigest) headers['X-RequestDigest'] = spDigest;
-  if (opts && opts.method && opts.method !== 'GET') headers['X-RequestDigest'] = spDigest;
-  return fetch(url, Object.assign({ credentials:'include', headers:headers }, opts || {}));
+async function getToken() {
+  const accounts = msalInstance.getAllAccounts();
+  if (!accounts.length) throw new Error('No hay sesión activa');
+  const result = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account: accounts[0] });
+  return result.accessToken;
 }
 
-function getDigest() {
-  return fetch(SP_SITE + '/_api/contextinfo', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Accept': 'application/json;odata=verbose' }
-  }).then(function(r){ return r.json(); })
-    .then(function(d){ spDigest = d.d.GetContextWebInformation.FormDigestValue; });
-}
-
-function spGetList(listName) {
-  var url = SP_API + "/getbytitle('" + listName + "')/items?$top=5000&$orderby=Id desc";
-  return spFetch(url).then(function(r){ return r.json(); });
-}
-
-function spCreateItem(listName, data) {
-  var type = "SP.Data." + listName + "ListItem";
-  data.__metadata = { type: type };
-  return spFetch(SP_API + "/getbytitle('" + listName + "')/items", {
-    method: 'POST',
-    body: JSON.stringify(data)
-  }).then(function(r){ return r.json(); });
-}
-
-function spUpdateItem(listName, id, data) {
-  var type = "SP.Data." + listName + "ListItem";
-  data.__metadata = { type: type };
-  return spFetch(SP_API + "/getbytitle('" + listName + "')/items(" + id + ")", {
-    method: 'POST',
-    headers: { 'X-HTTP-Method': 'MERGE', 'IF-MATCH': '*' },
-    body: JSON.stringify(data)
-  });
-}
-
-function spDeleteItem(listName, id) {
-  return spFetch(SP_API + "/getbytitle('" + listName + "')/items(" + id + ")", {
-    method: 'POST',
-    headers: { 'X-HTTP-Method': 'DELETE', 'IF-MATCH': '*' }
-  });
-}
-
-// ─── MAP SP → local ───────────────────────────────────────
-function mapDoc(item) {
-  return {
-    id: item.Id,
-    code: item.Codigo || '',
-    tipo: item.Tipo || '',
-    ref: item.Referencia || '',
-    pais: item.Pais || '',
-    cp: item.Contraparte || '',
-    fi: item.FechaInicio ? item.FechaInicio.split('T')[0] : '',
-    fv: item.FechaVencimiento ? item.FechaVencimiento.split('T')[0] : '',
-    estado: item.Estado || 'Borrador',
-    resp: item.Responsable || '',
-    link: item.LinkArchivo || '',
-    obs: item.Observaciones || ''
-  };
-}
-
-function mapTema(item) {
-  return {
-    id: item.Id,
-    tit: item.Titulo || '',
-    desc: item.Descripcion || '',
-    resp: item.Responsable || '',
-    pais: item.Pais || '',
-    cli: item.Cliente || '',
-    dead: item.Deadline ? item.Deadline.split('T')[0] : '',
-    prio: item.Prioridad || 'Media',
-    estado: item.Estado || 'Abierto',
-    fc: item.FechaCierre ? item.FechaCierre.split('T')[0] : null
-  };
-}
-
-// ─── SYNC ─────────────────────────────────────────────────
-function syncAll() {
-  var btn = document.getElementById('sync-btn');
-  btn.textContent = '↻ Actualizando...';
-  btn.disabled = true;
-  return getDigest()
-    .then(function(){
-      return Promise.all([
-        spGetList(LIST_DOCS),
-        spGetList(LIST_TEMAS)
-      ]);
-    })
-    .then(function(results){
-      docs = (results[0].d && results[0].d.results) ? results[0].d.results.map(mapDoc) : [];
-      temas = (results[1].d && results[1].d.results) ? results[1].d.results.map(mapTema) : [];
-      // compute seq from existing codes
-      docs.forEach(function(d){
-        var m = d.code.match(/-(\d{4})$/);
-        if (m) { var n = parseInt(m[1]); if (n > docSeq) docSeq = n; }
-      });
-      renderAll();
-      showToast('Datos actualizados');
-    })
-    .catch(function(e){
-      showToast('Error al conectar con SharePoint. Revisá que estés logueado en ATIS.', true);
-      console.error(e);
-    })
-    .finally(function(){
-      btn.textContent = '↻ Actualizar';
-      btn.disabled = false;
-    });
-}
-
-// ─── LOGIN ────────────────────────────────────────────────
-function doLogin(u) {
-  currentUser = u;
-  var user = USERS[u];
+async function initApp(account) {
+  showLoading('Cargando datos...');
+  const email = account.username.toLowerCase();
+  currentUser = USERS_MAP[email] || { ...DEFAULT_USER, name: account.name || email, ini: email.substring(0,2).toUpperCase() };
+  
   var av = document.getElementById('sb-av');
-  av.textContent = user.ini; av.style.background = user.bg; av.style.color = user.tc;
-  av.style.borderRadius='50%'; av.style.width='28px'; av.style.height='28px';
-  av.style.fontSize='10px'; av.style.display='flex'; av.style.alignItems='center'; av.style.justifyContent='center';
-  document.getElementById('sb-name').textContent = user.name;
-  document.getElementById('sb-role').textContent = user.role;
+  av.textContent = currentUser.ini;
+  av.style.cssText = 'width:28px;height:28px;font-size:10px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:'+currentUser.bg+';color:'+currentUser.tc;
+  document.getElementById('sb-name').textContent = currentUser.name;
+  document.getElementById('sb-role').textContent = currentUser.role;
   document.getElementById('login-screen').style.display = 'none';
-  showLoading('Conectando con SharePoint...');
-  syncAll().then(function(){
-    hideLoading();
-    document.getElementById('app').style.display = 'block';
-  }).catch(function(){
-    hideLoading();
-    document.getElementById('app').style.display = 'block';
-  });
+  
+  await syncAll();
+  hideLoading();
+  document.getElementById('app').style.display = 'block';
 }
 
-// ─── FILTERS ──────────────────────────────────────────────
-function vDocs() {
-  var s = USERS[currentUser].scope;
-  return docs.filter(function(d){ return s.indexOf(d.pais) >= 0; });
+// ─── GRAPH API ─────────────────────────────────────────────────────────────
+async function graphFetch(url, opts) {
+  const token = await getToken();
+  const headers = Object.assign({ 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, (opts && opts.headers) || {});
+  return fetch(url, Object.assign({}, opts || {}, { headers }));
 }
-function vTemas() {
-  var s = USERS[currentUser].scope;
-  return temas.filter(function(t){ return s.indexOf(t.pais) >= 0 || t.pais === 'Global'; });
+
+async function getSiteId() {
+  if (siteId) return siteId;
+  const r = await graphFetch('https://graph.microsoft.com/v1.0/sites/atisargentina.sharepoint.com:/sites/LegalOps');
+  const d = await r.json();
+  siteId = d.id;
+  return siteId;
 }
+
+async function getListItems(listName) {
+  const site = await getSiteId();
+  const r = await graphFetch(`https://graph.microsoft.com/v1.0/sites/${site}/lists/${listName}/items?$expand=fields&$top=5000`);
+  const d = await r.json();
+  return d.value || [];
+}
+
+async function createListItem(listName, fields) {
+  const site = await getSiteId();
+  const r = await graphFetch(`https://graph.microsoft.com/v1.0/sites/${site}/lists/${listName}/items`, {
+    method: 'POST',
+    body: JSON.stringify({ fields })
+  });
+  return r.json();
+}
+
+async function updateListItem(listName, id, fields) {
+  const site = await getSiteId();
+  const r = await graphFetch(`https://graph.microsoft.com/v1.0/sites/${site}/lists/${listName}/items/${id}/fields`, {
+    method: 'PATCH',
+    body: JSON.stringify(fields)
+  });
+  return r.json();
+}
+
+async function deleteListItem(listName, id) {
+  const site = await getSiteId();
+  return graphFetch(`https://graph.microsoft.com/v1.0/sites/${site}/lists/${listName}/items/${id}`, { method: 'DELETE' });
+}
+
+// ─── MAP ───────────────────────────────────────────────────────────────────
+function mapDoc(item) {
+  var f = item.fields;
+  return {
+    id: item.id,
+    code: f.Codigo || '',
+    tipo: f.Tipo || '',
+    ref: f.Referencia || '',
+    pais: f.Pais || '',
+    cp: f.Contraparte || '',
+    fi: f.FechaInicio ? f.FechaInicio.split('T')[0] : '',
+    fv: f.FechaVencimiento ? f.FechaVencimiento.split('T')[0] : '',
+    estado: f.Estado || 'Borrador',
+    resp: f.Responsable || '',
+    link: f.LinkArchivo || '',
+    obs: f.Observaciones || ''
+  };
+}
+function mapTema(item) {
+  var f = item.fields;
+  return {
+    id: item.id,
+    tit: f.Titulo || '',
+    desc: f.Descripcion || '',
+    resp: f.Responsable || '',
+    pais: f.Pais || '',
+    cli: f.Cliente || '',
+    dead: f.Deadline ? f.Deadline.split('T')[0] : '',
+    prio: f.Prioridad || 'Media',
+    estado: f.Estado || 'Abierto',
+    fc: f.FechaCierre ? f.FechaCierre.split('T')[0] : null
+  };
+}
+
+// ─── SYNC ──────────────────────────────────────────────────────────────────
+async function syncAll() {
+  var btn = document.getElementById('sync-btn');
+  btn.textContent = '↻ Actualizando...'; btn.disabled = true;
+  try {
+    const [docsRaw, temasRaw] = await Promise.all([getListItems(LIST_DOCS), getListItems(LIST_TEMAS)]);
+    docs = docsRaw.map(mapDoc);
+    temas = temasRaw.map(mapTema);
+    docs.forEach(function(d){
+      var m = d.code.match(/-(\d{4})$/);
+      if (m) { var n = parseInt(m[1]); if (n > docSeq) docSeq = n; }
+    });
+    renderAll();
+    showToast('Datos actualizados');
+  } catch(e) {
+    showToast('Error al conectar con SharePoint: ' + e.message, true);
+    console.error(e);
+  }
+  btn.textContent = '↻ Actualizar'; btn.disabled = false;
+}
+
+// ─── FILTERS ───────────────────────────────────────────────────────────────
+function vDocs() { return docs.filter(function(d){ return currentUser.scope.indexOf(d.pais) >= 0; }); }
+function vTemas() { return temas.filter(function(t){ return currentUser.scope.indexOf(t.pais) >= 0 || t.pais === 'Global'; }); }
 function renderAll() { renderDash(); renderDocs(); renderTemas(); renderVenc(); }
 
-// ─── DOC TABLE ────────────────────────────────────────────
+// ─── DOC TABLE ─────────────────────────────────────────────────────────────
 function docTableHTML(list, actions) {
   if (!list.length) return '<tr><td colspan="9" style="padding:30px;text-align:center;color:var(--tx3)">Sin documentos cargados</td></tr>';
   var head = '<thead><tr><th>Código</th><th>Tipo</th><th>Contraparte</th><th>País</th><th>Inicio</th><th>Vencimiento</th><th>Estado</th><th>Resp.</th>' + (actions ? '<th></th>' : '') + '</tr></thead>';
@@ -570,16 +553,16 @@ function docTableHTML(list, actions) {
     var dt = daysTo(d.fv);
     var vc = (dt!==null&&dt>=0&&dt<=30)?'color:var(--am)':(dt!==null&&dt<0)?'color:var(--rd)':'';
     var sc = SCLASS[d.estado] || 's0';
-    var act = actions ? '<td><div class="acbtn"><button class="btnedit" onclick="editDoc('+d.id+')">Editar</button><button class="btnrd" onclick="askDeleteDoc('+d.id+')">Borrar</button></div></td>' : '';
+    var act = actions ? '<td><div class="acbtn"><button class="btnedit" onclick="editDoc(\''+d.id+'\')">Editar</button><button class="btnrd" onclick="askDeleteDoc(\''+d.id+'\')">Borrar</button></div></td>' : '';
     return '<tr><td><span class="mono">'+d.code+'</span></td><td>'+d.tipo+'</td><td>'+d.cp+'</td><td>'+d.pais+'</td><td>'+fmtDate(d.fi)+'</td><td style="'+vc+'">'+fmtDate(d.fv)+'</td><td><span class="stat '+sc+'">'+d.estado+'</span></td><td>'+d.resp+'</td>'+act+'</tr>';
   });
   return head + '<tbody>' + rows.join('') + '</tbody>';
 }
 
-// ─── DASHBOARD ────────────────────────────────────────────
+// ─── DASHBOARD ─────────────────────────────────────────────────────────────
 function renderDash() {
-  var scope = USERS[currentUser].scope;
-  var countries = currentUser === 'edu' ? ['Global'].concat(scope) : scope;
+  var scope = currentUser.scope;
+  var countries = scope.length > 1 ? ['Global'].concat(scope) : scope;
   document.getElementById('dash-ctabs').innerHTML = countries.map(function(c){
     return '<div class="ctab'+(c===dashCountry?' active':'')+'" onclick="setDashCountry(\''+c+'\')">'+c+'</div>';
   }).join('');
@@ -611,7 +594,7 @@ function renderDash() {
 }
 function setDashCountry(c) { dashCountry=c; renderDash(); }
 
-// ─── DOCUMENTOS ───────────────────────────────────────────
+// ─── DOCUMENTOS ────────────────────────────────────────────────────────────
 function renderDocs() {
   var q = (document.getElementById('doc-q').value||'').toLowerCase();
   var ft = document.getElementById('doc-tipo').value;
@@ -625,7 +608,7 @@ function renderDocs() {
   document.getElementById('docs-table').innerHTML = docTableHTML(list, true);
 }
 
-// ─── TEMAS ────────────────────────────────────────────────
+// ─── TEMAS ─────────────────────────────────────────────────────────────────
 function setTemaTab(tab) {
   temaTab = tab;
   document.getElementById('stab-activos').classList.toggle('active', tab==='activos');
@@ -635,22 +618,22 @@ function setTemaTab(tab) {
   renderTemas();
 }
 
-function cerrarTema(id) {
+async function cerrarTema(id) {
   showLoading('Cerrando tema...');
-  getDigest().then(function(){
-    return spUpdateItem(LIST_TEMAS, id, { Estado:'Cerrado', FechaCierre: todayStr()+'T00:00:00Z' });
-  }).then(function(){ return syncAll(); })
-  .then(function(){ hideLoading(); showToast('Tema cerrado'); })
-  .catch(function(){ hideLoading(); showToast('Error al cerrar tema', true); });
+  try {
+    await updateListItem(LIST_TEMAS, id, { Estado:'Cerrado', FechaCierre: todayStr()+'T00:00:00Z' });
+    await syncAll();
+    hideLoading(); showToast('Tema cerrado');
+  } catch(e) { hideLoading(); showToast('Error al cerrar tema', true); }
 }
 
-function reabrirTema(id) {
+async function reabrirTema(id) {
   showLoading('Reabriendo tema...');
-  getDigest().then(function(){
-    return spUpdateItem(LIST_TEMAS, id, { Estado:'Abierto', FechaCierre: null });
-  }).then(function(){ return syncAll(); })
-  .then(function(){ hideLoading(); showToast('Tema reabierto'); })
-  .catch(function(){ hideLoading(); showToast('Error', true); });
+  try {
+    await updateListItem(LIST_TEMAS, id, { Estado:'Abierto', FechaCierre: null });
+    await syncAll();
+    hideLoading(); showToast('Tema reabierto');
+  } catch(e) { hideLoading(); showToast('Error', true); }
 }
 
 function renderTemas() {
@@ -662,13 +645,10 @@ function renderTemas() {
     var q = (document.getElementById('tema-q').value||'').toLowerCase();
     var fe = document.getElementById('tema-estado').value;
     var fr = document.getElementById('tema-resp').value;
-    var fc = document.getElementById('tema-cli').value;
     list = activos;
     if (q) list = list.filter(function(t){ return t.tit.toLowerCase().indexOf(q)>=0||t.desc.toLowerCase().indexOf(q)>=0; });
     if (fe) list = list.filter(function(t){ return t.estado===fe; });
     if (fr) list = list.filter(function(t){ return t.resp===fr; });
-    if (fc==='__n') list = list.filter(function(t){ return !t.cli; });
-    else if (fc) list = list.filter(function(t){ return t.cli===fc; });
   } else {
     var q2 = (document.getElementById('cerrado-q').value||'').toLowerCase();
     list = vt.filter(function(t){ return t.estado==='Cerrado'; });
@@ -690,14 +670,14 @@ function renderTemas() {
     if (!cer) h += '<span class="badge '+pb+'">'+t.prio+'</span><span class="badge '+eb+'">'+t.estado+'</span>';
     if (cer) h += '<span class="ctag">Cerrado el '+fmtDate(t.fc)+'</span>';
     h += '</div><div class="titemact">';
-    if (!cer) h += '<button class="btnedit" onclick="editTema('+t.id+')">Editar</button><button class="btnrd" onclick="askDeleteTema('+t.id+')">Borrar</button><button class="btnsm" onclick="cerrarTema('+t.id+')">Cerrar</button>';
-    if (cer) h += '<button class="btnedit" onclick="editTema('+t.id+')">Editar</button><button class="btnrd" onclick="askDeleteTema('+t.id+')">Borrar</button><button class="btnsm" onclick="reabrirTema('+t.id+')">Reabrir</button>';
+    if (!cer) h += '<button class="btnedit" onclick="editTema(\''+t.id+'\')">Editar</button><button class="btnrd" onclick="askDeleteTema(\''+t.id+'\')">Borrar</button><button class="btnsm" onclick="cerrarTema(\''+t.id+'\')">Cerrar</button>';
+    if (cer) h += '<button class="btnedit" onclick="editTema(\''+t.id+'\')">Editar</button><button class="btnrd" onclick="askDeleteTema(\''+t.id+'\')">Borrar</button><button class="btnsm" onclick="reabrirTema(\''+t.id+'\')">Reabrir</button>';
     h += '</div></div>';
     return h;
   }).join('');
 }
 
-// ─── VENCIMIENTOS ─────────────────────────────────────────
+// ─── VENCIMIENTOS ──────────────────────────────────────────────────────────
 function renderVenc() {
   var w = parseInt(document.getElementById('venc-window').value);
   var list = vDocs();
@@ -707,7 +687,7 @@ function renderVenc() {
   document.getElementById('venc-table').innerHTML = docTableHTML(list, false);
 }
 
-// ─── NAV ──────────────────────────────────────────────────
+// ─── NAV ───────────────────────────────────────────────────────────────────
 function goTo(page, el) {
   document.querySelectorAll('.navi').forEach(function(n){ n.classList.remove('active'); });
   el.classList.add('active');
@@ -722,7 +702,7 @@ function goTo(page, el) {
 }
 function navTo(page) { var el=document.getElementById('nav-'+page); if(el) goTo(page,el); }
 
-// ─── DOC FORM ─────────────────────────────────────────────
+// ─── DOC FORM ──────────────────────────────────────────────────────────────
 function openFormDoc() {
   editingDocId = null;
   document.getElementById('form-doc-title').textContent = 'Nuevo documento';
@@ -737,7 +717,7 @@ function openFormDoc() {
 function closeFormDoc() { document.getElementById('form-doc').classList.remove('open'); }
 
 function editDoc(id) {
-  var d = null; for(var i=0;i<docs.length;i++){if(docs[i].id===id){d=docs[i];break;}}
+  var d = docs.find(function(x){ return x.id===id; });
   if (!d) return;
   editingDocId = id;
   document.getElementById('form-doc-title').textContent = 'Editar documento';
@@ -786,7 +766,7 @@ function updateCode() {
   document.getElementById('code-preview').textContent = (tipo&&ref!=='—') ? ('ATIS-LEG-'+t+'-'+ref+'-'+yr+'-'+seq) : ('ATIS · LEG · '+t+' · '+ref+' · '+yr+' · '+seq);
 }
 
-function saveDoc() {
+async function saveDoc() {
   var tipo = document.getElementById('fd-tipo').value;
   var pais = document.getElementById('fd-pais').value;
   if (!tipo||!pais) { alert('Completá al menos Tipo y País.'); return; }
@@ -799,7 +779,7 @@ function saveDoc() {
   var yr = fecha.split('-')[0];
   var btn = document.getElementById('save-doc-btn');
   btn.disabled = true; btn.textContent = 'Guardando...';
-  var data = {
+  var fields = {
     Tipo: tipo, Pais: pais, Referencia: ref,
     Contraparte: document.getElementById('fd-cp').value||'',
     FechaInicio: fecha ? fecha+'T00:00:00Z' : null,
@@ -809,55 +789,53 @@ function saveDoc() {
     LinkArchivo: document.getElementById('fd-link').value||'',
     Observaciones: document.getElementById('fd-obs').value||''
   };
-  getDigest().then(function(){
+  try {
     if (editingDocId) {
-      return spUpdateItem(LIST_DOCS, editingDocId, data);
+      await updateListItem(LIST_DOCS, editingDocId, fields);
     } else {
       docSeq++;
       var seq = String(docSeq).padStart(4,'0');
-      data.Codigo = 'ATIS-LEG-'+tipo+'-'+ref+'-'+yr+'-'+seq;
-      return spCreateItem(LIST_DOCS, data);
+      fields.Codigo = 'ATIS-LEG-'+tipo+'-'+ref+'-'+yr+'-'+seq;
+      await createListItem(LIST_DOCS, fields);
     }
-  }).then(function(){ return syncAll(); })
-  .then(function(){
+    await syncAll();
     closeFormDoc();
     showToast(editingDocId ? 'Documento actualizado' : 'Documento guardado en SharePoint');
-  }).catch(function(e){
-    showToast('Error al guardar. Verificá tu conexión.', true);
+  } catch(e) {
+    showToast('Error al guardar: ' + e.message, true);
     console.error(e);
-  }).finally(function(){
-    btn.disabled = false; btn.textContent = 'Guardar';
-  });
+  }
+  btn.disabled = false; btn.textContent = 'Guardar';
 }
 
-// ─── DELETE ───────────────────────────────────────────────
+// ─── DELETE ────────────────────────────────────────────────────────────────
 function askDeleteDoc(id) {
   pendingDelete = {type:'doc',id:id};
-  var d = null; for(var i=0;i<docs.length;i++){if(docs[i].id===id){d=docs[i];break;}}
+  var d = docs.find(function(x){ return x.id===id; });
   document.getElementById('confirm-msg').textContent = d ? 'Se eliminará "'+d.code+'" de forma permanente.' : '¿Confirmar?';
   document.getElementById('confirm-overlay').classList.add('open');
 }
 function askDeleteTema(id) {
   pendingDelete = {type:'tema',id:id};
-  var t = null; for(var i=0;i<temas.length;i++){if(temas[i].id===id){t=temas[i];break;}}
+  var t = temas.find(function(x){ return x.id===id; });
   document.getElementById('confirm-msg').textContent = t ? 'Se eliminará "'+t.tit+'" de forma permanente.' : '¿Confirmar?';
   document.getElementById('confirm-overlay').classList.add('open');
 }
-function confirmDelete() {
+async function confirmDelete() {
   if (!pendingDelete) return;
   document.getElementById('confirm-overlay').classList.remove('open');
   showLoading('Eliminando...');
   var listName = pendingDelete.type==='doc' ? LIST_DOCS : LIST_TEMAS;
-  getDigest().then(function(){
-    return spDeleteItem(listName, pendingDelete.id);
-  }).then(function(){ return syncAll(); })
-  .then(function(){ hideLoading(); showToast('Eliminado correctamente'); })
-  .catch(function(){ hideLoading(); showToast('Error al eliminar', true); });
+  try {
+    await deleteListItem(listName, pendingDelete.id);
+    await syncAll();
+    hideLoading(); showToast('Eliminado correctamente');
+  } catch(e) { hideLoading(); showToast('Error al eliminar', true); }
   pendingDelete = null;
 }
 function cancelDelete() { pendingDelete=null; document.getElementById('confirm-overlay').classList.remove('open'); }
 
-// ─── TEMA FORM ────────────────────────────────────────────
+// ─── TEMA FORM ─────────────────────────────────────────────────────────────
 function openFormTema() {
   editingTemaId = null;
   document.getElementById('form-tema-title').textContent = 'Nuevo tema';
@@ -872,7 +850,7 @@ function openFormTema() {
 function closeFormTema() { document.getElementById('form-tema').classList.remove('open'); }
 
 function editTema(id) {
-  var t = null; for(var i=0;i<temas.length;i++){if(temas[i].id===id){t=temas[i];break;}}
+  var t = temas.find(function(x){ return x.id===id; });
   if (!t) return;
   editingTemaId = id;
   document.getElementById('form-tema-title').textContent = 'Editar tema';
@@ -887,12 +865,12 @@ function editTema(id) {
   document.getElementById('form-tema').classList.add('open');
 }
 
-function saveTema() {
+async function saveTema() {
   var tit = document.getElementById('ft-tit').value;
   if (!tit) { alert('Ingresá un título.'); return; }
   var btn = document.getElementById('save-tema-btn');
   btn.disabled = true; btn.textContent = 'Guardando...';
-  var data = {
+  var fields = {
     Titulo: tit,
     Descripcion: document.getElementById('ft-desc').value||'',
     Responsable: document.getElementById('ft-resp').value,
@@ -902,21 +880,34 @@ function saveTema() {
     Prioridad: document.getElementById('ft-prio').value,
     Estado: document.getElementById('ft-estado').value
   };
-  getDigest().then(function(){
-    return editingTemaId ? spUpdateItem(LIST_TEMAS, editingTemaId, data) : spCreateItem(LIST_TEMAS, data);
-  }).then(function(){ return syncAll(); })
-  .then(function(){
+  try {
+    if (editingTemaId) {
+      await updateListItem(LIST_TEMAS, editingTemaId, fields);
+    } else {
+      await createListItem(LIST_TEMAS, fields);
+    }
+    await syncAll();
     closeFormTema();
     showToast(editingTemaId ? 'Tema actualizado' : 'Tema guardado');
-  }).catch(function(e){
-    showToast('Error al guardar', true); console.error(e);
-  }).finally(function(){
-    btn.disabled=false; btn.textContent='Guardar';
-  });
+  } catch(e) {
+    showToast('Error al guardar: ' + e.message, true);
+    console.error(e);
+  }
+  btn.disabled = false; btn.textContent = 'Guardar';
 }
 
+// ─── INIT ──────────────────────────────────────────────────────────────────
 document.getElementById('fd-fi').value = todayStr();
 updateCode();
+
+// Handle redirect after OAuth
+(async function(){
+  try {
+    await msalInstance.initialize();
+    const result = await msalInstance.handleRedirectPromise();
+    if (result) await initApp(result.account);
+  } catch(e) { console.error(e); }
+})();
 </script>
 </body>
 </html>
