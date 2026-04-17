@@ -247,7 +247,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div class="pageview" id="page-documentos">
         <div class="filters">
           <div class="sbox"><svg class="sico" width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4" stroke="#1A1916" stroke-width="1.2"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="#1A1916" stroke-width="1.2" stroke-linecap="round"/></svg><input type="text" placeholder="Buscar código, contraparte..." id="doc-q" oninput="renderDocs()"></div>
-          <select class="fsel" id="doc-tipo" onchange="renderDocs()"><option value="">Todos los tipos</option><option>LOC</option><option>SIT</option><option>MLA</option><option>NDA</option><option>ADD</option><option>ACT</option><option>CVN</option><option>DSC</option><option>CSV</option><option>CTR</option></select>
+          <select class="fsel" id="doc-tipo" onchange="renderDocs()"><option value="">Todos los tipos</option><option>LOC</option><option>SIT</option><option>MLA</option><option>NDA</option><option>ADD</option><option>ACT</option><option>CVN</option><option>DSC</option><option>CSV</option><option>CTR</option><option>RESC</option></select>
           <select class="fsel" id="doc-pais" onchange="renderDocs()"><option value="">Todos los países</option><option>AR</option><option>UY</option><option>PY</option></select>
         </div>
         <div class="card" style="padding:0;overflow:hidden"><div class="dwrap"><table class="dtable" id="docs-table"></table></div></div>
@@ -331,8 +331,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 <div class="formov" id="form-doc" onclick="if(event.target===this)closeFormDoc()">
   <div class="formpanel" onclick="event.stopPropagation()">
     <div class="formtit"><span id="form-doc-title">Nuevo documento</span><button class="formclose" onclick="closeFormDoc()">×</button></div>
+    <div class="field"><label>Nombre del documento</label><input type="text" id="fd-nombre" placeholder="Ej: Convenio Servicios Sertel"></div>
     <div class="field"><label>Tipo de documento</label>
-      <select id="fd-tipo" onchange="updateCode()"><option value="">— Seleccionar —</option><option value="LOC">LOC · Contrato terreno</option><option value="SIT">SIT · Contrato de sitio</option><option value="MLA">MLA · Master Lease Agreement</option><option value="NDA">NDA · Non-Disclosure Agreement</option><option value="ADD">ADD · Adenda</option><option value="ACT">ACT · Acta</option><option value="CVN">CVN · Convenio municipal</option><option value="DSC">DSC · Descargo</option><option value="CSV">CSV · Compraventa</option><option value="CTR">CTR · Contrato general</option></select>
+      <select id="fd-tipo" onchange="updateCode()"><option value="">— Seleccionar —</option><option value="LOC">LOC · Contrato terreno</option><option value="SIT">SIT · Contrato de sitio</option><option value="MLA">MLA · Master Lease Agreement</option><option value="NDA">NDA · Non-Disclosure Agreement</option><option value="ADD">ADD · Adenda</option><option value="ACT">ACT · Acta</option><option value="CVN">CVN · Convenio municipal</option><option value="DSC">DSC · Descargo</option><option value="CSV">CSV · Compraventa</option><option value="CTR">CTR · Contrato general</option><option value="RESC">RESC · Rescisión</option></select>
     </div>
     <div class="field"><label>País</label>
       <select id="fd-pais" onchange="updateCode()"><option value="">— Seleccionar —</option><option value="AR">Argentina</option><option value="UY">Uruguay</option><option value="PY">Paraguay</option></select>
@@ -509,7 +510,7 @@ async function deleteListItem(listName,id){
 }
 
 // ─── MAP ────────────────────────────────────────────────────────────────────
-function mapDoc(item){var f=item.fields;return{id:item.id,code:f.Codigo||'',tipo:f.Tipo||'',ref:f.Referencia||'',pais:f.Pais||'',cp:f.Contraparte||'',fi:f.FechaInicio?f.FechaInicio.split('T')[0]:'',estado:f.Estado||'Borrador',resp:f.Responsable||'',link:f.LinkArchivo||'',obs:f.Observaciones||''};}
+function mapDoc(item){var f=item.fields;return{id:item.id,code:f.Codigo||'',nombre:f.NombreDoc||'',tipo:f.Tipo||'',ref:f.Referencia||'',pais:f.Pais||'',cp:f.Contraparte||'',fi:f.FechaInicio?f.FechaInicio.split('T')[0]:'',estado:f.Estado||'Borrador',resp:f.Responsable||'',link:f.LinkArchivo||'',obs:f.Observaciones||''};}
 function mapTema(item){var f=item.fields;return{id:item.id,tit:f.Titulo||'',desc:f.Descripcion||'',resp:f.Responsable||'',pais:f.Pais||'',cli:f.Cliente||'',dead:f.Deadline?f.Deadline.split('T')[0]:'',prio:f.Prioridad||'Media',estado:f.Estado||'No iniciado',fc:f.FechaCierre?f.FechaCierre.split('T')[0]:null,bloqueado:f.Bloqueado||false,bloqQuien:f.BloqQuien||'',bloqQue:f.BloqQue||''};}
 function mapSuelo(item){var f=item.fields;return{id:item.id,sitio:f.Sitio||'',pais:f.Pais||'',cp:f.Contraparte||'',firma:f.FechaFirma?f.FechaFirma.split('T')[0]:'',inicio:f.InicioContrato?f.InicioContrato.split('T')[0]:'',fin:f.FinContrato?f.FinContrato.split('T')[0]:'',precio:f.Precio||'',actualizacion:f.Actualizacion||'',cesion:f.Cesion||'',subarr:f.Subarrendamiento||'',term:f.TerminacionAnticipada||'',inscripto:f.Inscripto||'',titular:f.TitularRegistral||'',obs:f.Observaciones||''};}
 
@@ -584,11 +585,11 @@ function setDashCountry(c){dashCountry=c;renderDash();}
 // ─── DOC TABLE ───────────────────────────────────────────────────────────────
 function docTableHTML(list,actions){
   if(!list.length)return '<tr><td colspan="8" style="padding:30px;text-align:center;color:var(--tx3)">Sin documentos cargados</td></tr>';
-  var head='<thead><tr><th>Código</th><th>Tipo</th><th>Contraparte</th><th>País</th><th>Fecha inicio</th><th>Estado</th><th>Resp.</th>'+(actions?'<th></th>':'')+'</tr></thead>';
+  var head='<thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Contraparte</th><th>País</th><th>Fecha inicio</th><th>Estado</th><th>Resp.</th>'+(actions?'<th></th>':'')+'</tr></thead>';
   var rows=list.map(function(d){
     var sc=SCLASS[d.estado]||'s0';
     var act=actions?'<td><div class="acbtn"><button class="btnedit" onclick="editDoc(\''+d.id+'\')">Editar</button><button class="btnrd" onclick="askDelete(\'doc\',\''+d.id+'\',\''+d.code+'\')">Borrar</button></div></td>':'';
-    return '<tr><td><span class="mono">'+d.code+'</span></td><td>'+d.tipo+'</td><td>'+d.cp+'</td><td>'+d.pais+'</td><td>'+fmtDate(d.fi)+'</td><td><span class="stat '+sc+'">'+d.estado+'</span></td><td>'+d.resp+'</td>'+act+'</tr>';
+    return '<tr><td><span class="mono">'+d.code+'</span></td><td style="font-size:12px">'+d.nombre+'</td><td>'+d.tipo+'</td><td>'+d.cp+'</td><td>'+d.pais+'</td><td>'+fmtDate(d.fi)+'</td><td><span class="stat '+sc+'">'+d.estado+'</span></td><td>'+d.resp+'</td>'+act+'</tr>';
   });
   return head+'<tbody>'+rows.join('')+'</tbody>';
 }
@@ -599,7 +600,7 @@ function renderDocs(){
   var ft=document.getElementById('doc-tipo').value;
   var fp=document.getElementById('doc-pais').value;
   var list=vDocs();
-  if(q)list=list.filter(function(d){return d.code.toLowerCase().indexOf(q)>=0||d.cp.toLowerCase().indexOf(q)>=0||d.ref.toLowerCase().indexOf(q)>=0;});
+  if(q)list=list.filter(function(d){return d.code.toLowerCase().indexOf(q)>=0||d.cp.toLowerCase().indexOf(q)>=0||d.ref.toLowerCase().indexOf(q)>=0||(d.nombre||'').toLowerCase().indexOf(q)>=0;});
   if(ft)list=list.filter(function(d){return d.tipo===ft;});
   if(fp)list=list.filter(function(d){return d.pais===fp;});
   document.getElementById('docs-table').innerHTML=docTableHTML(list,true);
@@ -794,7 +795,7 @@ async function saveTema(){
 // ─── DOC FORM ───────────────────────────────────────────────────────────────
 function openFormDoc(){
   editingDocId=null;document.getElementById('form-doc-title').textContent='Nuevo documento';
-  ['fd-tipo','fd-pais','fd-sitio','fd-cli','fd-cp','fd-link','fd-obs'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
+  ['fd-nombre','fd-tipo','fd-pais','fd-sitio','fd-cli','fd-cp','fd-link','fd-obs'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('fd-fi').value=todayStr();setRefMode('s');
   document.querySelectorAll('.lcbtn').forEach(function(l,i){l.classList.toggle('sel',i===0);});lcState='Borrador';
   updateCode();document.getElementById('form-doc').classList.add('open');
@@ -803,7 +804,7 @@ function closeFormDoc(){document.getElementById('form-doc').classList.remove('op
 function editDoc(id){
   var d=docs.find(function(x){return x.id===id;});if(!d)return;
   editingDocId=id;document.getElementById('form-doc-title').textContent='Editar documento';
-  document.getElementById('fd-tipo').value=d.tipo;document.getElementById('fd-pais').value=d.pais;
+  document.getElementById('fd-nombre').value=d.nombre||'';document.getElementById('fd-tipo').value=d.tipo;document.getElementById('fd-pais').value=d.pais;
   document.getElementById('fd-fi').value=d.fi||'';document.getElementById('fd-cp').value=d.cp||'';
   document.getElementById('fd-resp').value=d.resp||'EG';document.getElementById('fd-link').value=d.link||'';document.getElementById('fd-obs').value=d.obs||'';
   if(CLIENTS.indexOf(d.ref)>=0){setRefMode('c');document.getElementById('fd-cli').value=d.ref;}
@@ -835,7 +836,7 @@ async function saveDoc(){
   var ref=pais;if(refMode==='s'&&sitio)ref=sitio;else if(refMode==='c'&&cli)ref=cli;
   var fecha=document.getElementById('fd-fi').value||todayStr();var yr=fecha.split('-')[0];
   var btn=document.getElementById('save-doc-btn');btn.disabled=true;btn.textContent='Guardando...';
-  var fields={Tipo:tipo,Pais:pais,Referencia:ref,Contraparte:document.getElementById('fd-cp').value||'',FechaInicio:fecha?fecha+'T00:00:00Z':null,Estado:lcState,Responsable:document.getElementById('fd-resp').value,LinkArchivo:document.getElementById('fd-link').value||'',Observaciones:document.getElementById('fd-obs').value||''};
+  var fields={Tipo:tipo,NombreDoc:document.getElementById('fd-nombre').value||'',Pais:pais,Referencia:ref,Contraparte:document.getElementById('fd-cp').value||'',FechaInicio:fecha?fecha+'T00:00:00Z':null,Estado:lcState,Responsable:document.getElementById('fd-resp').value,LinkArchivo:document.getElementById('fd-link').value||'',Observaciones:document.getElementById('fd-obs').value||''};
   try{
     if(editingDocId)await updateListItem(LIST_DOCS,editingDocId,fields);
     else{docSeq++;var seq=String(docSeq).padStart(4,'0');fields.Codigo='ATIS-LEG-'+tipo+'-'+ref+'-'+yr+'-'+seq;await createListItem(LIST_DOCS,fields);}
