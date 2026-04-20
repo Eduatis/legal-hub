@@ -276,7 +276,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div class="pageview" id="page-intoru">
         <div class="filters">
           <div class="sbox"><svg class="sico" width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4" stroke="#1A1916" stroke-width="1.2"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="#1A1916" stroke-width="1.2" stroke-linecap="round"/></svg><input type="text" placeholder="Buscar sitio, lote..." id="intoru-q" oninput="renderINTORU()"></div>
-          <select class="fsel" id="intoru-lote" onchange="renderINTORU()"><option value="">Todos los lotes</option></select>
+          <select class="fsel" id="intoru-pais" onchange="renderINTORU()"><option value="">Todos los países</option><option value="UY">Uruguay</option><option value="AR">Argentina</option><option value="PY">Paraguay</option></select>
           <select class="fsel" id="intoru-cumple" onchange="renderINTORU()"><option value="">Todos</option><option value="Sí">Cumple</option><option value="No">No cumple</option><option value="En análisis">En análisis</option></select>
         </div>
         <div class="card" style="padding:0;overflow:hidden"><div class="dwrap"><table class="dtable" id="intoru-table"></table></div></div>
@@ -455,8 +455,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   <div class="formpanel" onclick="event.stopPropagation()">
     <div class="formtit"><span id="form-intoru-title">Nuevo sitio — INTORU</span><button class="formclose" onclick="closeFormINTORU()">×</button></div>
     <div class="fieldrow">
-      <div class="field" style="margin:0"><label>Lote</label><input type="text" id="fi-lote" placeholder="Ej: Lote 1"></div>
-      <div class="field" style="margin:0"><label>Sitio (código)</label><input type="text" id="fi-sitio" placeholder="Ej: MVD0012" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="field" style="margin:0"><label>Sitio (código)</label><input type="text" id="fi-sitio" placeholder="Ej: ATIS-MON-2086" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="field" style="margin:0"><label>Nombre del sitio</label><input type="text" id="fi-nombre" placeholder="Ej: Cerro Norte"></div>
     </div>
     <div class="field"><label>Cumple parámetros legales</label>
       <select id="fi-cumple">
@@ -1231,28 +1231,23 @@ function cancelDelete(){pendingDelete=null;document.getElementById('confirm-over
 // ─── INTORU ─────────────────────────────────────────────────────────────────
 function mapINTORU(item){
   var f=item.fields;
-  return {id:item.id,lote:f.Lote||'',sitio:f.Sitio||'',cumple:f.CumpleParametros||'En análisis',precio:f.PrecioMaximo||'',modalidad:f.Modalidad||'',cierre:f.FechaCierre?f.FechaCierre.split('T')[0]:'',obs:f.Observaciones||''};
+  return {id:item.id,sitio:f.Sitio||'',nombre:f.Nombre||'',pais:f.Pais||'UY',cumple:f.CumpleParametros||'En análisis',precio:f.PrecioMaximo||'',modalidad:f.Modalidad||'',cierre:f.FechaCierre?f.FechaCierre.split('T')[0]:'',obs:f.Observaciones||''};
 }
 
 function renderINTORU(){
   // Update lote filter dynamically
-  var lotes=[...new Set(intoru.map(function(s){return s.lote;}))].filter(Boolean).sort();
-  var selLote=document.getElementById('intoru-lote');
-  var curLote=selLote.value;
-  selLote.innerHTML='<option value="">Todos los lotes</option>'+lotes.map(function(l){return '<option value="'+l+'"'+(l===curLote?' selected':'')+'>'+l+'</option>';}).join('');
-
   var q=(document.getElementById('intoru-q').value||'').toLowerCase();
-  var fl=document.getElementById('intoru-lote').value;
+  var fp=document.getElementById('intoru-pais').value;
   var fc=document.getElementById('intoru-cumple').value;
   var list=intoru.slice();
-  if(q)list=list.filter(function(s){return s.sitio.toLowerCase().indexOf(q)>=0||s.lote.toLowerCase().indexOf(q)>=0;});
-  if(fl)list=list.filter(function(s){return s.lote===fl;});
+  if(q)list=list.filter(function(s){return s.sitio.toLowerCase().indexOf(q)>=0||(s.nombre||'').toLowerCase().indexOf(q)>=0;});
+  if(fp)list=list.filter(function(s){return s.pais===fp;});
   if(fc)list=list.filter(function(s){return s.cumple===fc;});
 
   var el=document.getElementById('intoru-table');
   if(!list.length){el.innerHTML='<tr><td colspan="8" style="padding:30px;text-align:center;color:var(--tx3)">Sin sitios cargados</td></tr>';return;}
 
-  var head='<thead><tr><th>Lote</th><th>Sitio</th><th>Cumple Parámetros</th><th>Precio Máximo</th><th>Modalidad</th><th>Fecha Cierre</th><th>Observaciones</th><th></th></tr></thead>';
+  var head='<thead><tr><th>Sitio</th><th>Nombre</th><th>País</th><th>Cumple</th><th>Precio Máx.</th><th>Modalidad</th><th>Cierre</th><th>Observaciones</th><th></th></tr></thead>';
   var rows=list.map(function(s){
     var dt=daysTo(s.cierre);
     var vc=dt!==null&&dt<=15?'color:var(--rd);font-weight:500':dt!==null&&dt<=30?'color:var(--am)':'';
@@ -1274,7 +1269,7 @@ function renderINTORU(){
 
 function openFormINTORU(){
   editingIntoruId=null;document.getElementById('form-intoru-title').textContent='Nuevo sitio — INTORU';
-  ['fi-lote','fi-sitio','fi-precio','fi-cierre','fi-obs'].forEach(function(id){document.getElementById(id).value='';});
+  ['fi-nombre','fi-sitio','fi-precio','fi-cierre','fi-obs'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('fi-cumple').value='En análisis';document.getElementById('fi-modalidad').value='';
   document.getElementById('form-intoru').classList.add('open');
 }
@@ -1283,7 +1278,7 @@ function closeFormINTORU(){document.getElementById('form-intoru').classList.remo
 function editINTORU(id){
   var s=intoru.find(function(x){return x.id===id;});if(!s)return;
   editingIntoruId=id;document.getElementById('form-intoru-title').textContent='Editar sitio — INTORU';
-  document.getElementById('fi-lote').value=s.lote;document.getElementById('fi-sitio').value=s.sitio;
+  document.getElementById('fi-nombre').value=s.nombre||'';document.getElementById('fi-sitio').value=s.sitio;
   document.getElementById('fi-cumple').value=s.cumple;document.getElementById('fi-precio').value=s.precio;
   document.getElementById('fi-modalidad').value=s.modalidad;document.getElementById('fi-cierre').value=s.cierre;
   document.getElementById('fi-obs').value=s.obs;
@@ -1293,7 +1288,7 @@ function editINTORU(id){
 async function saveINTORU(){
   var sitio=document.getElementById('fi-sitio').value;if(!sitio){alert('Ingresá el código de sitio.');return;}
   var btn=document.getElementById('save-intoru-btn');btn.disabled=true;btn.textContent='Guardando...';
-  var fields={Lote:document.getElementById('fi-lote').value,Sitio:sitio,CumpleParametros:document.getElementById('fi-cumple').value,PrecioMaximo:document.getElementById('fi-precio').value,Modalidad:document.getElementById('fi-modalidad').value,FechaCierre:document.getElementById('fi-cierre').value?document.getElementById('fi-cierre').value+'T00:00:00Z':null,Observaciones:document.getElementById('fi-obs').value};
+  var fields={Sitio:sitio,Nombre:document.getElementById('fi-nombre').value||'',Pais:'UY',CumpleParametros:document.getElementById('fi-cumple').value,PrecioMaximo:document.getElementById('fi-precio').value,Modalidad:document.getElementById('fi-modalidad').value,FechaCierre:document.getElementById('fi-cierre').value?document.getElementById('fi-cierre').value+'T00:00:00Z':null,Observaciones:document.getElementById('fi-obs').value};
   try{
     if(editingIntoruId)await updateListItem(LIST_INTORU,editingIntoruId,fields);
     else await createListItem(LIST_INTORU,fields);
