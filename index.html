@@ -649,7 +649,16 @@ async function syncAll(){
 
 // ─── FILTERS ────────────────────────────────────────────────────────────────
 function vDocs(){return docs.filter(function(d){return currentUser.scope.indexOf(d.pais)>=0;});}
-function vTemas(){return temas.filter(function(t){return currentUser.scope.indexOf(t.pais)>=0||t.pais==='Global';});}
+function vTemas(){
+  // EG ve todo
+  if(currentUser.ini==='EG') return temas.filter(function(t){return currentUser.scope.indexOf(t.pais)>=0||t.pais==='Global';});
+  // CS y ST: ven sus tareas + tareas de EG bloqueadas que requieren SU intervención
+  return temas.filter(function(t){
+    var esPropia = t.resp===currentUser.ini && (currentUser.scope.indexOf(t.pais)>=0||t.pais==='Global');
+    var bloqParaMi = t.bloqueado && t.bloqQuien && t.bloqQuien.toLowerCase().indexOf(currentUser.ini.toLowerCase())>=0;
+    return esPropia || bloqParaMi;
+  });
+}
 function vSuelos(){return suelos.filter(function(s){return currentUser.scope.indexOf(s.pais)>=0;});}
 function renderAll(){renderDash();renderDocs();renderTemas();renderSuelo();renderINTORU();renderDD();renderAnalytics();}
 
@@ -668,18 +677,27 @@ function renderDash(){
   var v30=activos.filter(function(t){var dt=daysTo(t.dead);return dt!==null&&dt>=0&&dt<=30;}).length;
   var bloqYo=activos.filter(function(t){return t.bloqueado&&t.bloqQuien==='EG';}).length;
   var bloqTercero=activos.filter(function(t){return t.bloqueado&&t.bloqQuien!=='EG';}).length;
+  // Para CS/ST: tareas que requieren SU intervención
+  var bloqParaMi=activos.filter(function(t){return t.bloqueado&&t.bloqQuien&&t.bloqQuien.toLowerCase().indexOf(currentUser.ini.toLowerCase())>=0&&t.resp!==currentUser.ini;}).length;
+  var isEG=currentUser.ini==='EG';
   document.getElementById('dash-metrics').innerHTML=
     '<div class="metric"><div class="metlbl">No iniciados</div><div class="metval">'+noInic+'</div><div class="metsub">Sin comenzar</div></div>'+
     '<div class="metric"><div class="metlbl">En curso</div><div class="metval" style="color:var(--bl)">'+enCurso+'</div><div class="metsub">En progreso</div></div>'+
     '<div class="metric"><div class="metlbl">Vencen en 7 días</div><div class="metval w">'+v7+'</div><div class="metsub">Atención inmediata</div></div>'+
     '<div class="metric"><div class="metlbl">Vencen en 30 días</div><div class="metval" style="color:var(--tx2)">'+v30+'</div><div class="metsub">Próximos a vencer</div></div>';
-  // Segunda fila métricas bloqueo
   var m2=document.getElementById('dash-metrics');
-  m2.style.gridTemplateColumns='repeat(3,minmax(0,1fr)) repeat(2,minmax(0,1fr))';
-  m2.innerHTML+=
-    '<div class="metric" style="border-color:var(--rd-tx);background:var(--rd-bg);grid-column:span 1"><div class="metlbl" style="color:var(--rd-tx)">Requieren mi intervención</div><div class="metval d">'+bloqYo+'</div><div class="metsub" style="color:var(--rd-tx)">Esperan a EG</div></div>'+
-    '<div class="metric" style="border-color:var(--am);background:var(--am-bg);grid-column:span 1"><div class="metlbl" style="color:var(--am-tx)">Bloqueados por tercero</div><div class="metval" style="color:var(--am)">'+bloqTercero+'</div><div class="metsub" style="color:var(--am-tx)">Externos</div></div>';
-  m2.style.gridTemplateColumns='repeat(4,minmax(0,1fr))';
+  if(isEG){
+    m2.style.gridTemplateColumns='repeat(3,minmax(0,1fr)) repeat(2,minmax(0,1fr))';
+    m2.innerHTML+=
+      '<div class="metric" style="border-color:var(--rd-tx);background:var(--rd-bg);grid-column:span 1"><div class="metlbl" style="color:var(--rd-tx)">Requieren mi intervención</div><div class="metval d">'+bloqYo+'</div><div class="metsub" style="color:var(--rd-tx)">Esperan a EG</div></div>'+
+      '<div class="metric" style="border-color:var(--am);background:var(--am-bg);grid-column:span 1"><div class="metlbl" style="color:var(--am-tx)">Bloqueados por tercero</div><div class="metval" style="color:var(--am)">'+bloqTercero+'</div><div class="metsub" style="color:var(--am-tx)">Externos</div></div>';
+    m2.style.gridTemplateColumns='repeat(4,minmax(0,1fr))';
+  } else if(bloqParaMi>0){
+    m2.style.gridTemplateColumns='repeat(3,minmax(0,1fr)) repeat(1,minmax(0,1fr))';
+    m2.innerHTML+=
+      '<div class="metric" style="border-color:var(--rd-tx);background:var(--rd-bg);grid-column:span 1"><div class="metlbl" style="color:var(--rd-tx)">Requieren tu intervención</div><div class="metval d">'+bloqParaMi+'</div><div class="metsub" style="color:var(--rd-tx)">EG necesita tu ayuda</div></div>';
+    m2.style.gridTemplateColumns='repeat(4,minmax(0,1fr))';
+  };
   // Alertas 48hs — Temas + DD + INTORU
   var alertTemas=activos.filter(function(t){var dt=daysTo(t.dead);return dt!==null&&dt<=2;}).map(function(t){var dt=daysTo(t.dead);return {tipo:'TEMAS',label:t.tit,sub:fmtDate(t.dead)+(t.cli?' · '+t.cli:''),dt:dt};});
   var alertDD=dd.filter(function(s){var dt=daysTo(s.plazo);return dt!==null&&dt<=2;}).map(function(s){var dt=daysTo(s.plazo);return {tipo:'DD',label:s.sitio,sub:'Plazo DD · '+fmtDate(s.plazo),dt:dt};});
@@ -922,16 +940,16 @@ async function saveTema(){
     await syncAll();closeFormTema();showToast(editingTemaId?'Tema actualizado':'Tema guardado');
     // Si bloqueado y tiene email, abrir Outlook
     if(bloq && document.getElementById('ft-bloq-email').value){
-      var email=document.getElementById('ft-bloq-email').value;
-      var tit=document.getElementById('ft-tit').value;
-      var resp=document.getElementById('ft-resp').value;
-      var dead=document.getElementById('ft-dead').value;
-      var pais=document.getElementById('ft-pais').value;
-      var que=document.getElementById('ft-bloq-que').value;
+      var emailDest=document.getElementById('ft-bloq-email').value;
+      var titMail=document.getElementById('ft-tit').value;
+      var respMail=document.getElementById('ft-resp').value;
+      var deadMail=document.getElementById('ft-dead').value;
+      var paisMail=document.getElementById('ft-pais').value;
+      var queMail=document.getElementById('ft-bloq-que').value;
       var nombreBloq=document.getElementById('ft-bloq-nombre').value||quien;
-      var asunto=encodeURIComponent('Requiere tu intervención — ' + tit);
-      var cuerpo=encodeURIComponent('Hola '+(nombreBloq||'')+',\n\nEl siguiente tema requiere tu intervención para poder avanzar:\n\nTema: '+tit+'\nQué se necesita: '+que+'\nResponsable del tema: '+resp+'\n'+(dead?'Deadline: '+dead+'\n':'')+'País: '+pais+'\n\nPor favor tomá acción a la brevedad.\n\nSaludos,\nATIS Legal Hub');
-      window.open('mailto:'+email+'?subject='+asunto+'&body='+cuerpo);
+      var asunto=encodeURIComponent('Requiere tu intervención — ' + titMail);
+      var cuerpo=encodeURIComponent('Hola '+(nombreBloq||'')+',\n\nEl siguiente tema en ATIS Legal Hub requiere tu intervención para poder avanzar:\n\nTema: '+titMail+'\nQué se necesita: '+queMail+'\nResponsable del tema: '+respMail+'\n'+(deadMail?'Deadline: '+deadMail+'\n':'')+'País: '+paisMail+'\n\nPor favor tomá acción a la brevedad.\n\nSaludos,\nATIS Legal Hub');
+      window.open('mailto:'+emailDest+'?subject='+asunto+'&body='+cuerpo);
     }
   }catch(e){showToast('Error al guardar: '+e.message,true);console.error(e);}
   btn.disabled=false;btn.textContent='Guardar';
