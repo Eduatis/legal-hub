@@ -197,6 +197,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       </div>
       <div class="navg">
         <div class="navgl">Análisis</div>
+        <div class="navi" id="nav-search" onclick="goTo('search',this)">
+          <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4" stroke="currentColor" stroke-width="1.2"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Búsqueda
+        </div>
         <div class="navi" id="nav-analytics" onclick="goTo('analytics',this)">
           <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1" y="8" width="3" height="5" rx=".5" fill="currentColor" opacity=".5"/><rect x="5.5" y="5" width="3" height="8" rx=".5" fill="currentColor" opacity=".7"/><rect x="10" y="2" width="3" height="11" rx=".5" fill="currentColor"/></svg>Analytics
         </div>
@@ -227,6 +230,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div class="g2">
           <div class="card"><div class="cardh"><div class="cardht">Alertas — vence en 48hs</div><div class="cardhl" onclick="navTo('temas')">Ver todos</div></div><div id="dash-alerts"></div></div>
           <div class="card"><div class="cardh"><div class="cardht">Temas · Prioridad Alta</div><div class="cardhl" onclick="navTo('temas')">Ver todos</div></div><div id="dash-tasks"></div></div>
+        </div>
+        <div class="g2" id="dash-suelo-alerts-wrap" style="display:none">
+          <div class="card"><div class="cardh"><div class="cardht">⚠️ Contratos de Suelo · Vencen en 90 días</div><div class="cardhl" onclick="navTo('suelo')">Ver todos</div></div><div id="dash-suelo-v90"></div></div>
+          <div class="card"><div class="cardh"><div class="cardht">📋 Contratos de Suelo · Vencen en el año</div><div class="cardhl" onclick="navTo('suelo')">Ver todos</div></div><div id="dash-suelo-v365"></div></div>
         </div>
         <div class="g1"><div class="card"><div class="cardh"><div class="cardht">Últimos documentos</div><div class="cardhl" onclick="navTo('documentos')">Ver todos</div></div><div class="dwrap"><table class="dtable" id="dash-docs"></table></div></div></div>
         <div class="g2" id="dash-calendar-wrap" style="display:none">
@@ -290,6 +297,15 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <select class="fsel" id="dd-estado" onchange="renderDD()"><option value="">Todos</option><option value="En proceso">En proceso</option><option value="Inspeccionado">Inspeccionado</option></select>
         </div>
         <div id="dd-list"></div>
+      </div>
+
+      <!-- BUSQUEDA GLOBAL -->
+      <div class="pageview" id="page-search">
+        <div style="position:relative;margin-bottom:16px">
+          <svg style="position:absolute;left:14px;top:50%;transform:translateY(-50%);opacity:.4" width="16" height="16" fill="none" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4" stroke="#1A1916" stroke-width="1.2"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="#1A1916" stroke-width="1.2" stroke-linecap="round"/></svg>
+          <input type="text" id="global-q" placeholder="Buscar en temas, documentos, contratos, INTORU, DD..." style="padding-left:40px;font-size:14px;height:44px;border-radius:var(--r)" oninput="renderGlobalSearch()">
+        </div>
+        <div id="global-results"></div>
       </div>
 
       <!-- ANALYTICS -->
@@ -745,6 +761,31 @@ function renderDash(){
   document.getElementById('dash-docs').innerHTML=docTableHTML(vDocs().slice(0,5),false);
   // Cargar calendario
   loadCalendarDash();
+
+  // Contratos de suelo próximos a vencer
+  var vs = vSuelos().filter(function(s){return s.fin;});
+  var v90  = vs.filter(function(s){var dt=daysTo(s.fin);return dt!==null&&dt>=0&&dt<=90;});
+  var v365 = vs.filter(function(s){var dt=daysTo(s.fin);return dt!==null&&dt>90&&dt<=365;});
+  var wrap = document.getElementById('dash-suelo-alerts-wrap');
+  if(v90.length>0||v365.length>0){
+    wrap.style.display='grid';
+    var renderSueloList = function(list, elId){
+      var el = document.getElementById(elId);
+      if(!list.length){el.innerHTML='<div class="empty">Sin vencimientos</div>';return;}
+      el.innerHTML = list.sort(function(a,b){return new Date(a.fin)-new Date(b.fin);}).slice(0,5).map(function(s){
+        var dt=daysTo(s.fin);
+        var col=dt<=30?'var(--rd)':dt<=90?'var(--am)':'var(--tx2)';
+        return '<div class="aitem"><div class="dot" style="background:'+col+';margin-top:5px"></div>'+
+          '<div style="flex:1"><div style="font-size:12px;font-weight:500"><span class="mono">'+s.sitio+'</span> · '+s.cp+'</div>'+
+          '<div style="font-size:11px;color:var(--tx3);margin-top:2px">'+s.pais+' · Vence: '+fmtDate(s.fin)+'</div></div>'+
+          '<span class="badge" style="background:var(--am-bg);color:var(--am-tx)">'+dt+' días</span></div>';
+      }).join('');
+    };
+    renderSueloList(v90,'dash-suelo-v90');
+    renderSueloList(v365,'dash-suelo-v365');
+  } else {
+    wrap.style.display='none';
+  }
 }
 
 function getNextWorkdays(){
@@ -994,13 +1035,94 @@ function mkChart(id,type,labels,data,colors){
 }
 
 // ─── NAV ────────────────────────────────────────────────────────────────────
+function exportCSV(module){
+  var rows=[], headers=[], filename='';
+  if(module==='temas'){
+    headers=['Título','Responsable','País','Cliente','Deadline','Prioridad','Estado','Bloqueado','Quién bloquea','Qué se necesita'];
+    filename='ATIS_Temas_'+todayStr()+'.csv';
+    rows=vTemas().map(function(t){return [t.tit,t.resp,t.pais,t.cli,t.dead,t.prio,t.estado,t.bloqueado?'Sí':'No',t.bloqQuien,t.bloqQue];});
+  } else if(module==='documentos'){
+    headers=['Código','Nombre','Tipo','País','Contraparte','Fecha Inicio','Estado','Responsable'];
+    filename='ATIS_Documentos_'+todayStr()+'.csv';
+    rows=vDocs().map(function(d){return [d.code,d.nombre,d.tipo,d.pais,d.cp,d.fi,d.estado,d.resp];});
+  } else if(module==='suelo'){
+    headers=['Sitio','País','Contraparte','Fecha Firma','Inicio','Fin','Precio','Actualización','Cesión','Subarrendamiento','Term. Anticipada','Inscripto','Titular Registral','Observaciones'];
+    filename='ATIS_Contratos_Suelo_'+todayStr()+'.csv';
+    rows=vSuelos().map(function(s){return [s.sitio,s.pais,s.cp,s.firma,s.inicio,s.fin,s.precio,s.actualizacion,s.cesion,s.subarr,s.term,s.inscripto,s.titular,s.obs];});
+  } else if(module==='intoru'){
+    headers=['Sitio','Nombre','Cumple Parámetros','Precio Máximo','Modalidad','Fecha Cierre','Observaciones'];
+    filename='ATIS_INTORU_'+todayStr()+'.csv';
+    rows=intoru.map(function(s){return [s.sitio,s.nombre,s.cumple,s.precio,s.modalidad,s.cierre,s.obs];});
+  } else if(module==='dd'){
+    headers=['Sitio','Fase','Plazo','Estado','Trámites','Inscripción','Cesión','Legitimidad','DINACIA','Intendencia','Técnico'];
+    filename='ATIS_DD_UY_'+todayStr()+'.csv';
+    rows=dd.map(function(s){return [s.sitio,s.fase,s.plazo,s.estado,s.tramites,s.inscripcion,s.cesion,s.legitimidad,s.dinacia,s.intendencia,s.tecnico];});
+  }
+  var csv=[headers].concat(rows).map(function(row){return row.map(function(v){var s=String(v===null||v===undefined?'':v);return s.indexOf(',')>=0||s.indexOf('"')>=0||s.indexOf('\n')>=0?'"'+s.replace(/"/g,'""')+'"':s;}).join(',');}).join('\n');
+  var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();
+  showToast('Exportado: '+filename);
+}
+
+function renderGlobalSearch(){
+  var q=(document.getElementById('global-q').value||'').trim().toLowerCase();
+  var el=document.getElementById('global-results');
+  if(q.length<2){el.innerHTML='<div class="empty">Escribí al menos 2 caracteres para buscar</div>';return;}
+
+  var results=[];
+
+  // Temas
+  vTemas().filter(function(t){return t.tit.toLowerCase().indexOf(q)>=0||t.desc.toLowerCase().indexOf(q)>=0;}).forEach(function(t){
+    results.push({tipo:'Tema',icon:'🕐',title:t.tit,sub:t.resp+' · '+t.pais+' · '+fmtDate(t.dead),badge:t.estado,badgeCls:t.estado==='En curso'?'bdb':'bdg',action:"navTo('temas')"});
+  });
+
+  // Documentos
+  vDocs().filter(function(d){return d.code.toLowerCase().indexOf(q)>=0||d.nombre.toLowerCase().indexOf(q)>=0||d.cp.toLowerCase().indexOf(q)>=0;}).forEach(function(d){
+    results.push({tipo:'Documento',icon:'📄',title:(d.nombre||d.code),sub:d.code+' · '+d.pais+' · '+d.cp,badge:d.estado,badgeCls:SCLASS[d.estado]?'stat '+SCLASS[d.estado]:'bdg',action:"navTo('documentos')"});
+  });
+
+  // Contratos de Suelo
+  vSuelos().filter(function(s){return s.sitio.toLowerCase().indexOf(q)>=0||s.cp.toLowerCase().indexOf(q)>=0;}).forEach(function(s){
+    results.push({tipo:'Contrato Suelo',icon:'🏗️',title:s.sitio,sub:s.cp+' · '+s.pais+' · Vence: '+fmtDate(s.fin),badge:s.cesion?'Cesión: '+s.cesion:'',badgeCls:'bdg',action:"navTo('suelo')"});
+  });
+
+  // INTORU
+  intoru.filter(function(s){return s.sitio.toLowerCase().indexOf(q)>=0||(s.nombre||'').toLowerCase().indexOf(q)>=0;}).forEach(function(s){
+    results.push({tipo:'INTORU',icon:'📋',title:s.sitio+(s.nombre?' — '+s.nombre:''),sub:s.cumple+' · '+s.precio,badge:s.cumple,badgeCls:s.cumple==='Sí'?'bdgr':s.cumple==='No'?'bdr':'bda',action:"navTo('intoru')"});
+  });
+
+  // DD
+  dd.filter(function(s){return s.sitio.toLowerCase().indexOf(q)>=0;}).forEach(function(s){
+    results.push({tipo:'DD Sitio UY',icon:'✅',title:s.sitio,sub:'Fase '+s.fase+' · Plazo: '+fmtDate(s.plazo),badge:s.estado,badgeCls:s.estado==='Inspeccionado'?'bdgr':'bda',action:"navTo('dd')"});
+  });
+
+  if(!results.length){el.innerHTML='<div class="card"><div class="empty">Sin resultados para "'+q+'"</div></div>';return;}
+
+  el.innerHTML='<div style="font-size:12px;color:var(--tx3);margin-bottom:10px">'+results.length+' resultado'+(results.length>1?'s':'')+'</div>'+
+    results.map(function(r){
+      return '<div class="card" style="margin-bottom:8px;cursor:pointer;padding:12px 16px" onclick="'+r.action+'">'+
+        '<div style="display:flex;align-items:center;gap:10px">'+
+        '<span style="font-size:16px">'+r.icon+'</span>'+
+        '<div style="flex:1">'+
+          '<div style="display:flex;align-items:center;gap:8px">'+
+            '<span style="font-size:11px;color:var(--tx3);background:var(--surf2);padding:1px 7px;border-radius:20px">'+r.tipo+'</span>'+
+            (r.badge?'<span class="badge '+r.badgeCls+'">'+r.badge+'</span>':'')+
+          '</div>'+
+          '<div style="font-size:13px;font-weight:500;margin-top:3px">'+r.title+'</div>'+
+          '<div style="font-size:11px;color:var(--tx3);margin-top:2px">'+r.sub+'</div>'+
+        '</div>'+
+        '<svg width="12" height="12" fill="none" viewBox="0 0 12 12"><path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'+
+        '</div></div>';
+    }).join('');
+}
+
 function goTo(page,el){
   document.querySelectorAll('.navi').forEach(function(n){n.classList.remove('active');});el.classList.add('active');
   document.querySelectorAll('.pageview').forEach(function(p){p.classList.remove('active');});document.getElementById('page-'+page).classList.add('active');
-  var T={dashboard:'Dashboard',temas:'Temas',documentos:'Documentos',suelo:'Contratos de Suelo',intoru:'INTORU',dd:'DD Sitios Uruguay',analytics:'Analytics'};
-  var S={dashboard:'Resumen general',temas:'Follow-up y gestión',documentos:'Registro documental',suelo:'Matriz de contratos LOC',intoru:'Análisis de Sitios por Lotes — Uruguay',dd:'Due Diligence — Fases 1 y 2',analytics:'Indicadores y gráficos'};
+  var T={dashboard:'Dashboard',temas:'Temas',documentos:'Documentos',suelo:'Contratos de Suelo',intoru:'INTORU',dd:'DD Sitios Uruguay',search:'Búsqueda',analytics:'Analytics'};
+  var S={dashboard:'Resumen general',temas:'Follow-up y gestión',documentos:'Registro documental',suelo:'Matriz de contratos LOC',intoru:'Análisis de Sitios por Lotes — Uruguay',dd:'Due Diligence — Fases 1 y 2',search:'Buscar en todos los módulos',analytics:'Indicadores y gráficos'};
   document.getElementById('tb-title').textContent=T[page]||page;document.getElementById('tb-sub').textContent=S[page]||'';
-  var A={temas:'<button class="btnp" onclick="openFormTema()">+ Nuevo tema</button>',documentos:'<button class="btnp" onclick="openFormDoc()">+ Nuevo documento</button>',suelo:'<button class="btnp" onclick="openFormSuelo()">+ Nuevo contrato</button>',intoru:'<button class="btnp" onclick="openFormINTORU()">+ Nuevo sitio</button>',dd:'<button class="btnp" onclick="openFormDD()">+ Nuevo sitio</button>'};
+  var A={temas:'<button class="btns" onclick="exportCSV(\"temas\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormTema()">+ Nuevo tema</button>',documentos:'<button class="btns" onclick="exportCSV(\"documentos\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDoc()">+ Nuevo documento</button>',suelo:'<button class="btns" onclick="exportCSV(\"suelo\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormSuelo()">+ Nuevo contrato</button>',intoru:'<button class="btns" onclick="exportCSV(\"intoru\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormINTORU()">+ Nuevo sitio</button>',dd:'<button class="btns" onclick="exportCSV(\"dd\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDD()">+ Nuevo sitio</button>'};
   document.getElementById('tb-act').innerHTML=A[page]||'';
   if(page==='analytics')setTimeout(renderAnalytics,100);
 }
