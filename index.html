@@ -1023,6 +1023,11 @@ async function saveSuelo(){
 }
 
 // ─── DELETE ─────────────────────────────────────────────────────────────────
+function ddDelete(id,nm){askDelete('dd',id,nm);}
+function sueloDelete(id,nm){askDelete('suelo',id,nm);}
+function intoruDelete(id,nm){askDelete('intoru',id,nm);}
+function ddEdit(id){editDD(id);}
+function intoruEdit(id){editINTORU(id);}
 function askDelete(type,id,name){
   pendingDelete={type,id};
   document.getElementById('confirm-msg').textContent='Se eliminará "'+name+'" de forma permanente.';
@@ -1077,7 +1082,7 @@ function renderINTORU(){
       '<td>'+modalBadge+'</td>'+
       '<td style="'+vc+'">'+fmtDate(s.cierre)+'</td>'+
       '<td style="font-size:11px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+s.obs+'">'+s.obs+'</td>'+
-      '<td><div class="acbtn"><button class="btnedit" onclick="editINTORU(''+s.id+'')">Editar</button><button class="btnrd" onclick="askDelete('intoru',''+s.id+'',''+s.sitio+'')">Borrar</button></div></td>'+
+      '<td><div class="acbtn"><button class="btnedit" data-id="'+s.id+'" onclick="editINTORU(this.dataset.id)">Editar</button><button class="btnrd" data-id="'+s.id+'" data-nm="'+s.sitio+'" onclick="askDelete(\'intoru\',this.dataset.id,this.dataset.nm)">Borrar</button></div></td>'+
     '</tr>';
   });
   el.innerHTML=head+'<tbody>'+rows.join('')+'</tbody>';
@@ -1143,37 +1148,30 @@ function renderDD(){
   if(fe)list=list.filter(function(s){return s.estado===fe;});
   var el=document.getElementById('dd-list');
   if(!list.length){el.innerHTML='<div class="card"><div class="empty">Sin sitios cargados</div></div>';return;}
-
   var ITEMS_LEGAL=[['tramites','Trámites'],['inscripcion','Inscripción'],['cesion','Cesión y Subarr.'],['legitimidad','Legitimidad']];
   var ITEMS_MUN=[['dinacia','DINACIA'],['intendencia','Intendencia']];
   var ITEMS_ING=[['tecnico','Técnico']];
-
   el.innerHTML=list.map(function(s){
     var dt=daysTo(s.plazo);
     var plazoColor=dt!==null&&dt<=7?'color:var(--rd)':dt!==null&&dt<=30?'color:var(--am)':'';
     var insp=s.estado==='Inspeccionado';
     var estadoBadge=insp?'<span class="badge bdgr" style="font-size:11px">✓ Inspeccionado</span>':'<span class="badge bda" style="font-size:11px">En proceso</span>';
-
-    function sectionHTML(title, color, items){
+    function sectionHTML(title,color,items){
       var rows=items.map(function(it){
-        var key=it[0], label=it[1];
-        var val=s[key]; var comentario=s[key+'C'];
-        var ok=val==='Resuelto';
-        return '<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--brd)">' +
-          '<div style="width:16px;height:16px;border-radius:50%;background:'+(ok?'var(--gr-tx)':'var(--rd-bg)')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">' +
-          '<span style="font-size:9px;color:'+(ok?'#fff':'var(--rd-tx)')+'font-weight:700">'+(ok?'✓':'!')+' </span></div>' +
-          '<div style="flex:1"><div style="font-size:12px;font-weight:500;color:'+(ok?'var(--tx3)':'var(--tx)')+'">'+label+'</div>' +
+        var key=it[0],label=it[1],val=s[key],comentario=s[key+'C'],ok=val==='Resuelto';
+        return '<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--brd)">'+
+          '<div style="width:16px;height:16px;border-radius:50%;background:'+(ok?'var(--gr-tx)':'var(--rd-bg)')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">'+
+          '<span style="font-size:9px;color:'+(ok?'#fff':'var(--rd-tx)')+';font-weight:700">'+(ok?'✓':'!')+'</span></div>'+
+          '<div style="flex:1"><div style="font-size:12px;font-weight:500;color:'+(ok?'var(--tx3)':'var(--tx)')+'">'+label+'</div>'+
           (comentario&&!ok?'<div style="font-size:11px;color:var(--am-tx);margin-top:2px">'+comentario+'</div>':'')+
-          '</div>' +
-          '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:'+(ok?'var(--gr-bg)':'var(--rd-bg)')+';color:'+(ok?'var(--gr-tx)':'var(--rd-tx)')+'">'+val+'</span>' +
+          '</div>'+
+          '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:'+(ok?'var(--gr-bg)':'var(--rd-bg)')+';color:'+(ok?'var(--gr-tx)':'var(--rd-tx)')+'">'+val+'</span>'+
         '</div>';
       }).join('');
       return '<div style="margin-bottom:8px"><div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:'+color+';padding:6px 0 4px">'+title+'</div>'+rows+'</div>';
     }
-
     var pendientes=[].concat(ITEMS_LEGAL,ITEMS_MUN,ITEMS_ING).filter(function(it){return s[it[0]]==='Pendiente';}).length;
-
-    return '<div class="card" style="margin-bottom:12px'+(insp?';opacity:.7':'')+'">'+
+    return '<div class="card" style="margin-bottom:12px'+(insp?';opacity:.7':'')+'" data-id="'+s.id+'">'+
       '<div class="cardh" style="margin-bottom:10px">'+
       '<div style="display:flex;align-items:center;gap:10px">'+
       '<span class="mono" style="font-size:13px">'+s.sitio+'</span>'+
@@ -1183,8 +1181,8 @@ function renderDD(){
       '<div style="display:flex;align-items:center;gap:10px">'+
       (pendientes>0?'<span style="font-size:11px;color:var(--tx3)">'+pendientes+' pendiente'+(pendientes>1?'s':'')+'</span>':'')+
       '<span style="font-size:11px;'+plazoColor+'">Plazo: '+fmtDate(s.plazo)+'</span>'+
-      '<button class="btnedit" onclick="editDD(''+s.id+'')">Editar</button>'+
-      '<button class="btnrd" onclick="askDelete('dd',''+s.id+'',''+s.sitio+'')">Borrar</button>'+
+      '<button class="btnedit" data-id="'+s.id+'" onclick="editDD(this.dataset.id)">Editar</button>'+
+      '<button class="btnrd" data-id="'+s.id+'" data-nm="'+s.sitio+'" onclick="ddDelete(this.dataset.id,this.dataset.nm)">Borrar</button>'+
       '</div></div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">'+
       sectionHTML('⚖️ Legal','var(--bl)',ITEMS_LEGAL)+
