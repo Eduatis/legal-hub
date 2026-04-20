@@ -229,6 +229,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <div class="card"><div class="cardh"><div class="cardht">Temas · Prioridad Alta</div><div class="cardhl" onclick="navTo('temas')">Ver todos</div></div><div id="dash-tasks"></div></div>
         </div>
         <div class="g1"><div class="card"><div class="cardh"><div class="cardht">Últimos documentos</div><div class="cardhl" onclick="navTo('documentos')">Ver todos</div></div><div class="dwrap"><table class="dtable" id="dash-docs"></table></div></div></div>
+        <div class="g2" id="dash-calendar-wrap" style="display:none">
+          <div class="card" id="dash-cal-hoy"><div class="cardh"><div class="cardht" id="dash-cal-hoy-title">Reuniones de hoy</div></div><div id="dash-cal-hoy-list"><div class="empty">Cargando...</div></div></div>
+          <div class="card" id="dash-cal-prox"><div class="cardh"><div class="cardht" id="dash-cal-prox-title">Reuniones del próximo día hábil</div></div><div id="dash-cal-prox-list"><div class="empty">Cargando...</div></div></div>
+        </div>
       </div>
 
       <!-- TEMAS -->
@@ -343,8 +347,19 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <option value="tercero">Tercero externo</option>
         </select>
       </div>
-      <div class="field" id="tercero-nombre-field" style="display:none"><label>Nombre del tercero</label><input type="text" id="ft-bloq-nombre" placeholder="Ej: Telecom, Municipalidad de Tigre..."></div>
-      <div class="field"><label>Email de quien debe intervenir</label><input type="email" id="ft-bloq-email" placeholder="Ej: marcelo.rodriguez@atis-group.com"></div>
+      <div class="field" id="tercero-nombre-field" style="display:none"><label>Nombre del tercero (si es externo)</label><input type="text" id="ft-bloq-nombre" placeholder="Ej: Telecom, Municipalidad de Tigre..."></div>
+      <div class="field"><label>Persona de ATIS que debe intervenir</label>
+        <div style="position:relative">
+          <input type="text" id="ft-bloq-search" placeholder="Buscar por nombre o email..." oninput="searchATISUsers(this.value)" autocomplete="off" style="padding-right:32px">
+          <div id="ft-bloq-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surf);border:1px solid var(--brd2);border-radius:var(--rs);z-index:100;max-height:200px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.1)"></div>
+        </div>
+        <input type="hidden" id="ft-bloq-email" value="">
+        <input type="hidden" id="ft-bloq-nombre" value="">
+        <div id="ft-bloq-selected" style="display:none;margin-top:6px;padding:6px 10px;background:var(--bl-bg);border-radius:var(--rs);font-size:12px;display:flex;align-items:center;justify-content:space-between">
+          <span id="ft-bloq-selected-name" style="color:var(--bl)"></span>
+          <button onclick="clearBloqUser()" style="background:none;border:none;color:var(--tx3);cursor:pointer;font-size:14px;padding:0">×</button>
+        </div>
+      </div>
       <div class="field"><label>¿Qué se necesita para continuar?</label><textarea id="ft-bloq-que" placeholder="Ej: Revisión y firma del borrador, respuesta del propietario..."></textarea></div>
     </div>
     <div style="display:flex;gap:8px;margin-top:16px">
@@ -628,7 +643,7 @@ async function deleteListItem(listName,id){
 
 // ─── MAP ────────────────────────────────────────────────────────────────────
 function mapDoc(item){var f=item.fields;return{id:item.id,code:f.Codigo||'',nombre:f.NombreDoc||'',tipo:f.Tipo||'',ref:f.Referencia||'',pais:f.Pais||'',cp:f.Contraparte||'',fi:f.FechaInicio?f.FechaInicio.split('T')[0]:'',estado:f.Estado||'Borrador',resp:f.Responsable||'',link:f.LinkArchivo||'',obs:f.Observaciones||''};}
-function mapTema(item){var f=item.fields;return{id:item.id,tit:f.Titulo||'',desc:f.Descripcion||'',resp:f.Responsable||'',pais:f.Pais||'',cli:f.Cliente||'',dead:f.Deadline?f.Deadline.split('T')[0]:'',prio:f.Prioridad||'Media',estado:f.Estado||'No iniciado',fc:f.FechaCierre?f.FechaCierre.split('T')[0]:null,bloqueado:f.Bloqueado||false,bloqQuien:f.BloqQuien||'',bloqQue:f.BloqQue||''};}
+function mapTema(item){var f=item.fields;return{id:item.id,tit:f.Titulo||'',desc:f.Descripcion||'',resp:f.Responsable||'',pais:f.Pais||'',cli:f.Cliente||'',dead:f.Deadline?f.Deadline.split('T')[0]:'',prio:f.Prioridad||'Media',estado:f.Estado||'No iniciado',fc:f.FechaCierre?f.FechaCierre.split('T')[0]:null,bloqueado:f.Bloqueado||false,bloqQuien:f.BloqQuien||'',bloqQue:f.BloqQue||'',bloqEmail:f.BloqEmail||'',bloqNombre:f.BloqNombre||''};}
 function mapSuelo(item){var f=item.fields;return{id:item.id,sitio:f.Sitio||'',pais:f.Pais||'',cp:f.Contraparte||'',firma:f.FechaFirma?f.FechaFirma.split('T')[0]:'',inicio:f.InicioContrato?f.InicioContrato.split('T')[0]:'',fin:f.FinContrato?f.FinContrato.split('T')[0]:'',precio:f.Precio||'',actualizacion:f.Actualizacion||'',cesion:f.Cesion||'',subarr:f.Subarrendamiento||'',term:f.TerminacionAnticipada||'',inscripto:f.Inscripto||'',titular:f.TitularRegistral||'',obs:f.Observaciones||''};}
 
 // ─── SYNC ───────────────────────────────────────────────────────────────────
@@ -728,6 +743,97 @@ function renderDash(){
   }).join(''):'<div class="empty">Sin temas de alta prioridad</div>';
   // Últimos docs
   document.getElementById('dash-docs').innerHTML=docTableHTML(vDocs().slice(0,5),false);
+  // Cargar calendario
+  loadCalendarDash();
+}
+
+function getNextWorkdays(){
+  var d = new Date(); d.setHours(0,0,0,0);
+  var dow = d.getDay(); // 0=Dom,1=Lun...5=Vie,6=Sab
+  var days = [];
+  if(dow===6||dow===0){
+    // Sábado o domingo: solo mostrar el lunes
+    var lunes = new Date(d);
+    lunes.setDate(d.getDate() + (dow===0?1:2));
+    days = [null, lunes]; // null = no mostrar hoy
+  } else if(dow===5){
+    // Viernes: hoy + lunes
+    var lunes = new Date(d);
+    lunes.setDate(d.getDate()+3);
+    days = [d, lunes];
+  } else {
+    // Lun-Jue: hoy + mañana
+    var manana = new Date(d);
+    manana.setDate(d.getDate()+1);
+    days = [d, manana];
+  }
+  return days;
+}
+
+async function loadCalendarDash(){
+  var days = getNextWorkdays();
+  var wrap = document.getElementById('dash-calendar-wrap');
+  var calHoyCard = document.getElementById('dash-cal-hoy');
+  if(!days[0]){
+    // Fin de semana: solo mostrar próximo día hábil
+    calHoyCard.style.display='none';
+    wrap.style.gridTemplateColumns='1fr';
+  } else {
+    calHoyCard.style.display='';
+    wrap.style.gridTemplateColumns='';
+  }
+  wrap.style.display='grid';
+  try{
+    var token = await getToken();
+    var fmtISO = function(d){return d.toISOString().split('T')[0];};
+    var dayLabel = function(d){return d.toLocaleDateString('es-AR',{weekday:'long',day:'2-digit',month:'long'});};
+    // Fetch events for both days in parallel
+    var fetches = days.filter(Boolean).map(function(d){
+      var start = fmtISO(d)+'T00:00:00';
+      var end   = fmtISO(d)+'T23:59:59';
+      return fetch('https://graph.microsoft.com/v1.0/me/calendarView?startDateTime='+start+'&endDateTime='+end+'&$select=subject,start,end,onlineMeeting,location&$orderby=start/dateTime&$top=20',{
+        headers:{'Authorization':'Bearer '+token}
+      }).then(function(r){return r.json();});
+    });
+    var results = await Promise.all(fetches);
+    var renderEvents = function(events, containerId, titleId, d){
+      document.getElementById(titleId).textContent = 'Reuniones — '+dayLabel(d);
+      var el = document.getElementById(containerId);
+      var evs = events.value||[];
+      if(!evs.length){el.innerHTML='<div class="empty">Sin reuniones</div>';return;}
+      el.innerHTML = evs.map(function(ev){
+        var startT = new Date(ev.start.dateTime+'Z').toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+        var endT   = new Date(ev.end.dateTime+'Z').toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+        var link = ev.onlineMeeting&&ev.onlineMeeting.joinUrl ? ev.onlineMeeting.joinUrl : null;
+        var loc  = ev.location&&ev.location.displayName ? ev.location.displayName : '';
+        return '<div class="aitem">'+
+          '<div class="dot dotb" style="margin-top:8px"></div>'+
+          '<div style="flex:1">'+
+            '<div style="font-size:12px;font-weight:500">'+ev.subject+'</div>'+
+            '<div style="font-size:11px;color:var(--tx3);margin-top:2px">'+startT+' – '+endT+(loc?' · '+loc:'')+'</div>'+
+          '</div>'+
+          (link?'<a href="'+link+'" target="_blank" style="font-size:11px;padding:3px 9px;border-radius:20px;background:var(--bl-bg);color:var(--bl);text-decoration:none;white-space:nowrap;flex-shrink:0">Unirse</a>':'')+
+        '</div>';
+      }).join('');
+    };
+    var ri = 0;
+    days.forEach(function(d,i){
+      if(!d) return;
+      var containerId = i===0 ? 'dash-cal-hoy-list' : 'dash-cal-prox-list';
+      var titleId     = i===0 ? 'dash-cal-hoy-title' : 'dash-cal-prox-title';
+      renderEvents(results[ri], containerId, titleId, d);
+      ri++;
+    });
+    // Si fin de semana, renderizar solo en prox
+    if(!days[0] && results[0]){
+      renderEvents(results[0],'dash-cal-prox-list','dash-cal-prox-title',days[1]);
+    }
+  }catch(e){
+    console.error('Error cargando calendario:',e);
+    ['dash-cal-hoy-list','dash-cal-prox-list'].forEach(function(id){
+      var el=document.getElementById(id);if(el)el.innerHTML='<div class="empty">No se pudo cargar el calendario</div>';
+    });
+  }
 }
 function setDashCountry(c){dashCountry=c;renderDash();}
 
@@ -902,10 +1008,64 @@ function navTo(page){var el=document.getElementById('nav-'+page);if(el)goTo(page
 
 // ─── TEMA FORM ──────────────────────────────────────────────────────────────
 function toggleBloq(){var show=document.getElementById('ft-bloq').checked;document.getElementById('bloq-fields').style.display=show?'block':'none';}
+
+var _usersCache = null;
+async function searchATISUsers(query){
+  var resultsEl = document.getElementById('ft-bloq-results');
+  if(!query || query.length < 2){resultsEl.style.display='none';return;}
+  try{
+    if(!_usersCache){
+      var token = await getToken();
+      var r = await fetch("https://graph.microsoft.com/v1.0/users?$select=displayName,mail,jobTitle&$top=999&$filter=accountEnabled eq true",{headers:{'Authorization':'Bearer '+token}});
+      var d = await r.json();
+      _usersCache = (d.value||[]).filter(function(u){return u.mail;});
+    }
+    var q = query.toLowerCase();
+    var matches = _usersCache.filter(function(u){
+      return u.displayName.toLowerCase().indexOf(q)>=0 || u.mail.toLowerCase().indexOf(q)>=0;
+    }).slice(0,8);
+    resultsEl.innerHTML = '';
+    if(!matches.length){resultsEl.style.display='none';return;}
+    matches.forEach(function(u){
+      var div = document.createElement('div');
+      div.style.cssText = 'padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--brd);font-size:13px';
+      div.innerHTML = '<div style="font-weight:500">'+u.displayName+'</div><div style="font-size:11px;color:var(--tx3)">'+u.mail+(u.jobTitle?' · '+u.jobTitle:'')+'</div>';
+      div.addEventListener('mouseenter',function(){this.style.background='var(--surf2)';});
+      div.addEventListener('mouseleave',function(){this.style.background='';});
+      div.addEventListener('click',function(){selectBloqUser(u.displayName,u.mail);});
+      resultsEl.appendChild(div);
+    });
+    resultsEl.style.display='block';
+  }catch(e){console.error('Error buscando usuarios:',e);}
+}
+
+function selectBloqUser(name, email){
+  document.getElementById('ft-bloq-email').value = email;
+  document.getElementById('ft-bloq-nombre').value = name;
+  document.getElementById('ft-bloq-search').value = '';
+  document.getElementById('ft-bloq-results').style.display = 'none';
+  document.getElementById('ft-bloq-selected-name').textContent = name + ' — ' + email;
+  document.getElementById('ft-bloq-selected').style.display = 'flex';
+}
+
+function clearBloqUser(){
+  document.getElementById('ft-bloq-email').value = '';
+  document.getElementById('ft-bloq-nombre').value = '';
+  document.getElementById('ft-bloq-search').value = '';
+  document.getElementById('ft-bloq-selected').style.display = 'none';
+}
+
+// Close results when clicking outside
+document.addEventListener('click', function(e){
+  if(!e.target.closest('#ft-bloq-search') && !e.target.closest('#ft-bloq-results')){
+    var r = document.getElementById('ft-bloq-results');
+    if(r) r.style.display='none';
+  }
+});
 function toggleTerceroNombre(){var t=document.getElementById('ft-bloq-quien').value==='tercero';document.getElementById('tercero-nombre-field').style.display=t?'block':'none';}
 function openFormTema(){
   editingTemaId=null;document.getElementById('form-tema-title').textContent='Nuevo tema';
-  ['ft-tit','ft-desc','ft-dead','ft-bloq-nombre','ft-bloq-que','ft-bloq-email'].forEach(function(id){document.getElementById(id).value='';});
+  ['ft-tit','ft-desc','ft-dead','ft-bloq-que','ft-bloq-email','ft-bloq-nombre','ft-bloq-search'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});document.getElementById('ft-bloq-selected').style.display='none';
   document.getElementById('ft-resp').value='EG';document.getElementById('ft-pais').value='Global';
   document.getElementById('ft-cli').value='';document.getElementById('ft-prio').value='Alta';document.getElementById('ft-estado').value='No iniciado';
   document.getElementById('ft-bloq').checked=false;document.getElementById('ft-bloq-quien').value='EG';
@@ -924,6 +1084,14 @@ function editTema(id){
   document.getElementById('ft-bloq-quien').value=t.bloqQuien||'EG';
   document.getElementById('ft-bloq-que').value=t.bloqQue||'';
   document.getElementById('ft-bloq-email').value=t.bloqEmail||'';
+  document.getElementById('ft-bloq-nombre').value=t.bloqNombre||'';
+  document.getElementById('ft-bloq-search').value='';
+  if(t.bloqEmail){
+    document.getElementById('ft-bloq-selected-name').textContent=(t.bloqNombre||t.bloqEmail)+' — '+t.bloqEmail;
+    document.getElementById('ft-bloq-selected').style.display='flex';
+  } else {
+    document.getElementById('ft-bloq-selected').style.display='none';
+  }
   toggleBloq();toggleTerceroNombre();document.getElementById('form-tema').classList.add('open');
 }
 async function saveTema(){
