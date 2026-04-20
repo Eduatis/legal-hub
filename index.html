@@ -930,30 +930,7 @@ async function saveTema(){
       var que=document.getElementById('ft-bloq-que').value;
       var nombreBloq=document.getElementById('ft-bloq-nombre').value||quien;
       var asunto=encodeURIComponent('Requiere tu intervención — ' + tit);
-      var cuerpo=encodeURIComponent(
-        'Hola ' + (nombreBloq||'') + ',
-
-' +
-        'El siguiente tema requiere tu intervención para poder avanzar:
-
-' +
-        'Tema: ' + tit + '
-' +
-        'Qué se necesita: ' + que + '
-' +
-        'Responsable del tema: ' + resp + '
-' +
-        (dead ? 'Deadline: ' + dead + '
-' : '') +
-        'País: ' + pais + '
-
-' +
-        'Por favor tomá acción a la brevedad.
-
-' +
-        'Saludos,
-ATIS Legal Hub'
-      );
+      var cuerpo=encodeURIComponent('Hola '+(nombreBloq||'')+',\n\nEl siguiente tema requiere tu intervención para poder avanzar:\n\nTema: '+tit+'\nQué se necesita: '+que+'\nResponsable del tema: '+resp+'\n'+(dead?'Deadline: '+dead+'\n':'')+'País: '+pais+'\n\nPor favor tomá acción a la brevedad.\n\nSaludos,\nATIS Legal Hub');
       window.open('mailto:'+email+'?subject='+asunto+'&body='+cuerpo);
     }
   }catch(e){showToast('Error al guardar: '+e.message,true);console.error(e);}
