@@ -562,7 +562,7 @@ const LIST_DD = 'DueDiligence_UY';
 const LIST_INTORU = 'INTORU';
 const msalConfig = { auth:{ clientId:CLIENT_ID, authority:'https://login.microsoftonline.com/'+TENANT_ID, redirectUri:window.location.origin+window.location.pathname }, cache:{cacheLocation:'sessionStorage'} };
 const msalInstance = new msal.PublicClientApplication(msalConfig);
-const SCOPES = ['Sites.ReadWrite.All','User.Read'];
+const SCOPES = ['Sites.ReadWrite.All','User.Read','User.ReadBasic.All'];
 
 // ─── STATE ──────────────────────────────────────────────────────────────────
 var TODAY = new Date(); TODAY.setHours(0,0,0,0);
@@ -1016,7 +1016,7 @@ async function searchATISUsers(query){
   try{
     if(!_usersCache){
       var token = await getToken();
-      var r = await fetch("https://graph.microsoft.com/v1.0/users?$select=displayName,mail,jobTitle&$top=999&$filter=accountEnabled eq true",{headers:{'Authorization':'Bearer '+token}});
+      var r = await fetch("https://graph.microsoft.com/v1.0/users?$select=displayName,mail,jobTitle&$top=999",{headers:{'Authorization':'Bearer '+token}});
       var d = await r.json();
       _usersCache = (d.value||[]).filter(function(u){return u.mail;});
     }
@@ -1110,13 +1110,11 @@ async function saveTema(){
     if(bloq && document.getElementById('ft-bloq-email').value){
       var emailDest=document.getElementById('ft-bloq-email').value;
       var titMail=document.getElementById('ft-tit').value;
-      var respMail=document.getElementById('ft-resp').value;
       var deadMail=document.getElementById('ft-dead').value;
       var paisMail=document.getElementById('ft-pais').value;
       var queMail=document.getElementById('ft-bloq-que').value;
-      var nombreBloq=document.getElementById('ft-bloq-nombre').value||quien;
       var asunto=encodeURIComponent('Requiere tu intervención — ' + titMail);
-      var cuerpo=encodeURIComponent('Hola '+(nombreBloq||'')+',\n\nEl siguiente tema en ATIS Legal Hub requiere tu intervención para poder avanzar:\n\nTema: '+titMail+'\nQué se necesita: '+queMail+'\nResponsable del tema: '+respMail+'\n'+(deadMail?'Deadline: '+deadMail+'\n':'')+'País: '+paisMail+'\n\nPor favor tomá acción a la brevedad.\n\nSaludos,\nATIS Legal Hub');
+      var cuerpo=encodeURIComponent('Estimado/a,\n\nEl siguiente tema en ATIS Legal Hub requiere tu intervención para poder avanzar:\n\nTema: '+titMail+'\nQué se necesita: '+queMail+'\n'+(deadMail?'Deadline: '+deadMail+'\n':'')+'País: '+paisMail+'\n\nPor favor tomá acción a la brevedad.\n\nSaludos,\nATIS Legal Hub');
       window.open('mailto:'+emailDest+'?subject='+asunto+'&body='+cuerpo);
     }
   }catch(e){showToast('Error al guardar: '+e.message,true);console.error(e);}
