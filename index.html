@@ -197,6 +197,12 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       </div>
       <div class="navg">
         <div class="navgl">Análisis</div>
+        <div class="navi" id="nav-poderes" onclick="goTo('poderes',this)">
+          <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="2" y="1" width="10" height="12" rx="1.5" stroke="currentColor"/><path d="M5 4h4M5 6.5h4M5 9h2" stroke="currentColor" stroke-linecap="round"/><circle cx="3.5" cy="4" r=".5" fill="currentColor"/></svg>Poderes
+        </div>
+        <div class="navi" id="nav-societario" onclick="goTo('societario',this)">
+          <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="7" cy="4" r="2" stroke="currentColor"/><circle cx="3" cy="9" r="1.5" stroke="currentColor"/><circle cx="11" cy="9" r="1.5" stroke="currentColor"/><path d="M5 7.5C5 6.5 9 6.5 9 7.5M1.5 11C1.5 10 4.5 10 4.5 11M9.5 11C9.5 10 12.5 10 12.5 11" stroke="currentColor" stroke-linecap="round"/></svg>Societario
+        </div>
         <div class="navi" id="nav-search" onclick="goTo('search',this)">
           <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4" stroke="currentColor" stroke-width="1.2"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Búsqueda
         </div>
@@ -236,10 +242,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <div class="card"><div class="cardh"><div class="cardht">📋 Contratos de Suelo · Vencen en el año</div><div class="cardhl" onclick="navTo('suelo')">Ver todos</div></div><div id="dash-suelo-v365"></div></div>
         </div>
         <div class="g1"><div class="card"><div class="cardh"><div class="cardht">Últimos documentos</div><div class="cardhl" onclick="navTo('documentos')">Ver todos</div></div><div class="dwrap"><table class="dtable" id="dash-docs"></table></div></div></div>
-        <div class="g2" id="dash-calendar-wrap" style="display:none">
-          <div class="card" id="dash-cal-hoy"><div class="cardh"><div class="cardht" id="dash-cal-hoy-title">Reuniones de hoy</div></div><div id="dash-cal-hoy-list"><div class="empty">Cargando...</div></div></div>
-          <div class="card" id="dash-cal-prox"><div class="cardh"><div class="cardht" id="dash-cal-prox-title">Reuniones del próximo día hábil</div></div><div id="dash-cal-prox-list"><div class="empty">Cargando...</div></div></div>
-        </div>
+
       </div>
 
       <!-- TEMAS -->
@@ -297,6 +300,38 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <select class="fsel" id="dd-estado" onchange="renderDD()"><option value="">Todos</option><option value="En proceso">En proceso</option><option value="Inspeccionado">Inspeccionado</option></select>
         </div>
         <div id="dd-list"></div>
+      </div>
+
+      <!-- PODERES -->
+      <div class="pageview" id="page-poderes">
+        <div class="filters">
+          <div class="sbox"><svg class="sico" width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4" stroke="#1A1916" stroke-width="1.2"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="#1A1916" stroke-width="1.2" stroke-linecap="round"/></svg><input type="text" placeholder="Buscar apoderado..." id="poder-q" oninput="renderPoderes()"></div>
+          <select class="fsel" id="poder-pais" onchange="renderPoderes()"><option value="">Todos los países</option><option value="AR">Argentina</option><option value="UY">Uruguay</option><option value="PY">Paraguay</option></select>
+          <select class="fsel" id="poder-estado" onchange="renderPoderes()"><option value="">Todos</option><option value="Vigente">Vigente</option><option value="Vencido">Vencido</option></select>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden"><div class="dwrap"><table class="dtable" id="poderes-table"></table></div></div>
+      </div>
+
+      <!-- SOCIETARIO -->
+      <div class="pageview" id="page-societario">
+        <div class="subtabs">
+          <div class="stab active" id="stab-soc-aut" onclick="setSocTab('autoridades')">Autoridades</div>
+          <div class="stab" id="stab-soc-acc" onclick="setSocTab('accionistas')">Estructura Accionaria</div>
+        </div>
+        <div id="soc-aut-section">
+          <div class="filters">
+            <select class="fsel" id="soc-aut-pais" onchange="renderSocAutoridades()"><option value="">Todos los países</option><option value="AR">Argentina</option><option value="UY">Uruguay</option><option value="PY">Paraguay</option></select>
+            <select class="fsel" id="soc-aut-sociedad" onchange="renderSocAutoridades()"><option value="">Todas las sociedades</option></select>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden"><div class="dwrap"><table class="dtable" id="soc-aut-table"></table></div></div>
+        </div>
+        <div id="soc-acc-section" style="display:none">
+          <div class="filters">
+            <select class="fsel" id="soc-acc-pais" onchange="renderSocAccionistas()"><option value="">Todos los países</option><option value="AR">Argentina</option><option value="UY">Uruguay</option><option value="PY">Paraguay</option></select>
+            <select class="fsel" id="soc-acc-sociedad" onchange="renderSocAccionistas()"><option value="">Todas las sociedades</option></select>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden"><div class="dwrap"><table class="dtable" id="soc-acc-table"></table></div></div>
+        </div>
       </div>
 
       <!-- BUSQUEDA GLOBAL -->
@@ -366,7 +401,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div class="field" id="tercero-nombre-field" style="display:none"><label>Nombre del tercero (si es externo)</label><input type="text" id="ft-bloq-nombre" placeholder="Ej: Telecom, Municipalidad de Tigre..."></div>
       <div class="field"><label>Persona de ATIS que debe intervenir</label>
         <div style="position:relative">
-          <input type="text" id="ft-bloq-search" placeholder="Buscar por nombre o email..." oninput="searchATISUsers(this.value)" autocomplete="off" style="padding-right:32px">
+          <input type="text" id="ft-bloq-search" placeholder="Buscar por nombre o email..." oninput="searchATISUsers(this.value)" onfocus="searchATISUsers(this.value)" autocomplete="off" style="padding-right:32px">
           <div id="ft-bloq-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surf);border:1px solid var(--brd2);border-radius:var(--rs);z-index:100;max-height:200px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.1)"></div>
         </div>
         <input type="hidden" id="ft-bloq-email" value="">
@@ -554,6 +589,87 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   </div>
 </div>
 
+<!-- FORM PODER -->
+<div class="formov" id="form-poder" onclick="if(event.target===this)closeFormPoder()">
+  <div class="formpanel" onclick="event.stopPropagation()">
+    <div class="formtit"><span id="form-poder-title">Nuevo poder</span><button class="formclose" onclick="closeFormPoder()">×</button></div>
+    <div class="field"><label>Apoderado</label><input type="text" id="fp-apoderado" placeholder="Nombre del apoderado"></div>
+    <div class="fieldrow">
+      <div class="field" style="margin:0"><label>Tipo de poder</label>
+        <select id="fp-tipo"><option value="General">General</option><option value="Especial">Especial</option><option value="Judicial">Judicial</option><option value="Administrativo">Administrativo</option><option value="Bancario">Bancario</option></select>
+      </div>
+      <div class="field" style="margin:0"><label>País</label>
+        <select id="fp-pais"><option value="AR">Argentina</option><option value="UY">Uruguay</option><option value="PY">Paraguay</option></select>
+      </div>
+    </div>
+    <div class="fieldrow">
+      <div class="field" style="margin:0"><label>Fecha de otorgamiento</label><input type="date" id="fp-fecha-oto"></div>
+      <div class="field" style="margin:0"><label>Fecha de vencimiento</label><input type="date" id="fp-fecha-ven"></div>
+    </div>
+    <div class="field"><label>Link al documento</label><input type="text" id="fp-link" placeholder="URL o ruta de red"></div>
+    <div class="field"><label>Observaciones</label><textarea id="fp-obs"></textarea></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btnp" style="flex:1" id="save-poder-btn" onclick="savePoder()">Guardar</button>
+      <button class="btns" onclick="closeFormPoder()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- FORM AUTORIDAD -->
+<div class="formov" id="form-soc-aut" onclick="if(event.target===this)closeFormSocAut()">
+  <div class="formpanel" onclick="event.stopPropagation()">
+    <div class="formtit"><span id="form-soc-aut-title">Nueva autoridad</span><button class="formclose" onclick="closeFormSocAut()">×</button></div>
+    <div class="fieldrow">
+      <div class="field" style="margin:0"><label>País</label>
+        <select id="fsa-pais" onchange="updateSociedadOptions('fsa-pais','fsa-sociedad')"><option value="AR">Argentina</option><option value="UY">Uruguay</option><option value="PY">Paraguay</option></select>
+      </div>
+      <div class="field" style="margin:0"><label>Sociedad</label><input type="text" id="fsa-sociedad" placeholder="Nombre de la sociedad"></div>
+    </div>
+    <div class="fieldrow">
+      <div class="field" style="margin:0"><label>Cargo</label>
+        <select id="fsa-cargo"><option>Presidente</option><option>Vicepresidente</option><option>Director Titular</option><option>Director Suplente</option><option>Síndico Titular</option><option>Síndico Suplente</option><option>Gerente General</option><option>Secretario</option><option>Tesorero</option></select>
+      </div>
+      <div class="field" style="margin:0"><label>Nombre</label><input type="text" id="fsa-nombre" placeholder="Nombre completo"></div>
+    </div>
+    <div class="fieldrow">
+      <div class="field" style="margin:0"><label>Acta de designación</label><input type="text" id="fsa-acta" placeholder="Ej: Acta Nº 12"></div>
+      <div class="field" style="margin:0"><label>Fecha de designación</label><input type="date" id="fsa-fecha"></div>
+    </div>
+    <div class="field"><label>Vigencia</label><input type="text" id="fsa-vigencia" placeholder="Ej: Hasta AGO 2027, Indefinida"></div>
+    <div class="field"><label>Observaciones</label><textarea id="fsa-obs"></textarea></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btnp" style="flex:1" id="save-soc-aut-btn" onclick="saveSocAut()">Guardar</button>
+      <button class="btns" onclick="closeFormSocAut()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- FORM ACCIONISTA -->
+<div class="formov" id="form-soc-acc" onclick="if(event.target===this)closeFormSocAcc()">
+  <div class="formpanel" onclick="event.stopPropagation()">
+    <div class="formtit"><span id="form-soc-acc-title">Nuevo accionista</span><button class="formclose" onclick="closeFormSocAcc()">×</button></div>
+    <div class="fieldrow">
+      <div class="field" style="margin:0"><label>País</label>
+        <select id="facc-pais"><option value="AR">Argentina</option><option value="UY">Uruguay</option><option value="PY">Paraguay</option></select>
+      </div>
+      <div class="field" style="margin:0"><label>Sociedad</label><input type="text" id="facc-sociedad" placeholder="Nombre de la sociedad"></div>
+    </div>
+    <div class="field"><label>Accionista</label><input type="text" id="facc-accionista" placeholder="Nombre del accionista"></div>
+    <div class="fieldrow">
+      <div class="field" style="margin:0"><label>Tipo de acción</label>
+        <select id="facc-tipo"><option value="Ordinaria">Ordinaria</option><option value="Preferida">Preferida</option></select>
+      </div>
+      <div class="field" style="margin:0"><label>Cantidad de acciones</label><input type="text" id="facc-cantidad" placeholder="Ej: 1.000"></div>
+    </div>
+    <div class="field"><label>Porcentaje (%)</label><input type="text" id="facc-porcentaje" placeholder="Ej: 70%"></div>
+    <div class="field"><label>Observaciones</label><textarea id="facc-obs"></textarea></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btnp" style="flex:1" id="save-soc-acc-btn" onclick="saveSocAcc()">Guardar</button>
+      <button class="btns" onclick="closeFormSocAcc()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- CONFIRM -->
 <div class="confirm-overlay" id="confirm-overlay">
   <div class="confirm-box">
@@ -576,16 +692,19 @@ const LIST_TEMAS = 'Temas_Legal';
 const LIST_SUELO = 'ContratosSuelo';
 const LIST_DD = 'DueDiligence_UY';
 const LIST_INTORU = 'INTORU';
+const LIST_PODERES = 'Poderes_Legal';
+const LIST_SOC_AUT = 'Societario_Autoridades';
+const LIST_SOC_ACC = 'Societario_Accionistas';
 const msalConfig = { auth:{ clientId:CLIENT_ID, authority:'https://login.microsoftonline.com/'+TENANT_ID, redirectUri:window.location.origin+window.location.pathname }, cache:{cacheLocation:'sessionStorage'} };
 const msalInstance = new msal.PublicClientApplication(msalConfig);
-const SCOPES = ['Sites.ReadWrite.All','User.Read','User.ReadBasic.All'];
+const SCOPES = ['Sites.ReadWrite.All','User.Read'];
 
 // ─── STATE ──────────────────────────────────────────────────────────────────
 var TODAY = new Date(); TODAY.setHours(0,0,0,0);
 var currentUser = null, dashCountry = 'Global', anCountry = 'Global';
 var refMode = 's', lcState = 'Borrador', temaTab = 'activos';
-var editingDocId = null, editingTemaId = null, editingSueloId = null, editingDDId = null, editingIntoruId = null, pendingDelete = null;
-var docs = [], temas = [], suelos = [], dd = [], intoru = [], docSeq = 0, siteId = null;
+var editingDocId = null, editingTemaId = null, editingSueloId = null, editingDDId = null, editingIntoruId = null, editingPoderId = null, editingSocAutId = null, editingSocAccId = null, pendingDelete = null;
+var docs = [], temas = [], suelos = [], dd = [], intoru = [], poderes = [], socAut = [], socAcc = [], docSeq = 0, siteId = null;
 var charts = {};
 
 var USERS_MAP = {
@@ -666,12 +785,15 @@ function mapSuelo(item){var f=item.fields;return{id:item.id,sitio:f.Sitio||'',pa
 async function syncAll(){
   var btn=document.getElementById('sync-btn');if(btn){btn.textContent='↻ Actualizando...';btn.disabled=true;}
   try{
-    const results=await Promise.allSettled([getListItems(LIST_DOCS),getListItems(LIST_TEMAS),getListItems(LIST_SUELO),getListItems(LIST_DD),getListItems(LIST_INTORU)]);
+    const results=await Promise.allSettled([getListItems(LIST_DOCS),getListItems(LIST_TEMAS),getListItems(LIST_SUELO),getListItems(LIST_DD),getListItems(LIST_INTORU),getListItems(LIST_PODERES),getListItems(LIST_SOC_AUT),getListItems(LIST_SOC_ACC)]);
     if(results[0].status==='fulfilled')docs=results[0].value.map(mapDoc);
     if(results[1].status==='fulfilled')temas=results[1].value.map(mapTema);
     if(results[2].status==='fulfilled')suelos=results[2].value.map(mapSuelo);
     if(results[3].status==='fulfilled')dd=results[3].value.map(mapDD);
     if(results[4].status==='fulfilled')intoru=results[4].value.map(mapINTORU);
+    if(results[5].status==='fulfilled')poderes=results[5].value.map(mapPoder);
+    if(results[6].status==='fulfilled')socAut=results[6].value.map(mapSocAut);
+    if(results[7].status==='fulfilled')socAcc=results[7].value.map(mapSocAcc);
     docs.forEach(function(d){var m=d.code.match(/-(\d{4})$/);if(m){var n=parseInt(m[1]);if(n>docSeq)docSeq=n;}});
     renderAll();showToast('Datos actualizados');
   }catch(e){showToast('Error al conectar: '+e.message,true);console.error(e);}
@@ -691,7 +813,7 @@ function vTemas(){
   });
 }
 function vSuelos(){return suelos.filter(function(s){return currentUser.scope.indexOf(s.pais)>=0;});}
-function renderAll(){renderDash();renderDocs();renderTemas();renderSuelo();renderINTORU();renderDD();renderAnalytics();}
+function renderAll(){renderDash();renderDocs();renderTemas();renderSuelo();renderINTORU();renderDD();renderPoderes();renderSocAutoridades();renderSocAccionistas();renderAnalytics();}
 
 // ─── DASHBOARD ──────────────────────────────────────────────────────────────
 function renderDash(){
@@ -759,8 +881,6 @@ function renderDash(){
   }).join(''):'<div class="empty">Sin temas de alta prioridad</div>';
   // Últimos docs
   document.getElementById('dash-docs').innerHTML=docTableHTML(vDocs().slice(0,5),false);
-  // Cargar calendario
-  loadCalendarDash();
 
   // Contratos de suelo próximos a vencer
   var vs = vSuelos().filter(function(s){return s.fin;});
@@ -788,94 +908,7 @@ function renderDash(){
   }
 }
 
-function getNextWorkdays(){
-  var d = new Date(); d.setHours(0,0,0,0);
-  var dow = d.getDay(); // 0=Dom,1=Lun...5=Vie,6=Sab
-  var days = [];
-  if(dow===6||dow===0){
-    // Sábado o domingo: solo mostrar el lunes
-    var lunes = new Date(d);
-    lunes.setDate(d.getDate() + (dow===0?1:2));
-    days = [null, lunes]; // null = no mostrar hoy
-  } else if(dow===5){
-    // Viernes: hoy + lunes
-    var lunes = new Date(d);
-    lunes.setDate(d.getDate()+3);
-    days = [d, lunes];
-  } else {
-    // Lun-Jue: hoy + mañana
-    var manana = new Date(d);
-    manana.setDate(d.getDate()+1);
-    days = [d, manana];
-  }
-  return days;
-}
 
-async function loadCalendarDash(){
-  var days = getNextWorkdays();
-  var wrap = document.getElementById('dash-calendar-wrap');
-  var calHoyCard = document.getElementById('dash-cal-hoy');
-  if(!days[0]){
-    // Fin de semana: solo mostrar próximo día hábil
-    calHoyCard.style.display='none';
-    wrap.style.gridTemplateColumns='1fr';
-  } else {
-    calHoyCard.style.display='';
-    wrap.style.gridTemplateColumns='';
-  }
-  wrap.style.display='grid';
-  try{
-    var token = await getToken();
-    var fmtISO = function(d){return d.toISOString().split('T')[0];};
-    var dayLabel = function(d){return d.toLocaleDateString('es-AR',{weekday:'long',day:'2-digit',month:'long'});};
-    // Fetch events for both days in parallel
-    var fetches = days.filter(Boolean).map(function(d){
-      var start = fmtISO(d)+'T00:00:00';
-      var end   = fmtISO(d)+'T23:59:59';
-      return fetch('https://graph.microsoft.com/v1.0/me/calendarView?startDateTime='+start+'&endDateTime='+end+'&$select=subject,start,end,onlineMeeting,location&$orderby=start/dateTime&$top=20',{
-        headers:{'Authorization':'Bearer '+token}
-      }).then(function(r){return r.json();});
-    });
-    var results = await Promise.all(fetches);
-    var renderEvents = function(events, containerId, titleId, d){
-      document.getElementById(titleId).textContent = 'Reuniones — '+dayLabel(d);
-      var el = document.getElementById(containerId);
-      var evs = events.value||[];
-      if(!evs.length){el.innerHTML='<div class="empty">Sin reuniones</div>';return;}
-      el.innerHTML = evs.map(function(ev){
-        var startT = new Date(ev.start.dateTime+'Z').toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
-        var endT   = new Date(ev.end.dateTime+'Z').toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
-        var link = ev.onlineMeeting&&ev.onlineMeeting.joinUrl ? ev.onlineMeeting.joinUrl : null;
-        var loc  = ev.location&&ev.location.displayName ? ev.location.displayName : '';
-        return '<div class="aitem">'+
-          '<div class="dot dotb" style="margin-top:8px"></div>'+
-          '<div style="flex:1">'+
-            '<div style="font-size:12px;font-weight:500">'+ev.subject+'</div>'+
-            '<div style="font-size:11px;color:var(--tx3);margin-top:2px">'+startT+' – '+endT+(loc?' · '+loc:'')+'</div>'+
-          '</div>'+
-          (link?'<a href="'+link+'" target="_blank" style="font-size:11px;padding:3px 9px;border-radius:20px;background:var(--bl-bg);color:var(--bl);text-decoration:none;white-space:nowrap;flex-shrink:0">Unirse</a>':'')+
-        '</div>';
-      }).join('');
-    };
-    var ri = 0;
-    days.forEach(function(d,i){
-      if(!d) return;
-      var containerId = i===0 ? 'dash-cal-hoy-list' : 'dash-cal-prox-list';
-      var titleId     = i===0 ? 'dash-cal-hoy-title' : 'dash-cal-prox-title';
-      renderEvents(results[ri], containerId, titleId, d);
-      ri++;
-    });
-    // Si fin de semana, renderizar solo en prox
-    if(!days[0] && results[0]){
-      renderEvents(results[0],'dash-cal-prox-list','dash-cal-prox-title',days[1]);
-    }
-  }catch(e){
-    console.error('Error cargando calendario:',e);
-    ['dash-cal-hoy-list','dash-cal-prox-list'].forEach(function(id){
-      var el=document.getElementById(id);if(el)el.innerHTML='<div class="empty">No se pudo cargar el calendario</div>';
-    });
-  }
-}
 function setDashCountry(c){dashCountry=c;renderDash();}
 
 // ─── DOC TABLE ───────────────────────────────────────────────────────────────
@@ -1119,10 +1152,10 @@ function renderGlobalSearch(){
 function goTo(page,el){
   document.querySelectorAll('.navi').forEach(function(n){n.classList.remove('active');});el.classList.add('active');
   document.querySelectorAll('.pageview').forEach(function(p){p.classList.remove('active');});document.getElementById('page-'+page).classList.add('active');
-  var T={dashboard:'Dashboard',temas:'Temas',documentos:'Documentos',suelo:'Contratos de Suelo',intoru:'INTORU',dd:'DD Sitios Uruguay',search:'Búsqueda',analytics:'Analytics'};
-  var S={dashboard:'Resumen general',temas:'Follow-up y gestión',documentos:'Registro documental',suelo:'Matriz de contratos LOC',intoru:'Análisis de Sitios por Lotes — Uruguay',dd:'Due Diligence — Fases 1 y 2',search:'Buscar en todos los módulos',analytics:'Indicadores y gráficos'};
+  var T={dashboard:'Dashboard',temas:'Temas',documentos:'Documentos',suelo:'Contratos de Suelo',intoru:'INTORU',dd:'DD Sitios Uruguay',poderes:'Poderes',societario:'Societario',search:'Búsqueda',analytics:'Analytics'};
+  var S={dashboard:'Resumen general',temas:'Follow-up y gestión',documentos:'Registro documental',suelo:'Matriz de contratos LOC',intoru:'Análisis de Sitios por Lotes — Uruguay',dd:'Due Diligence — Fases 1 y 2',poderes:'Registro de poderes vigentes',societario:'Estructura societaria',search:'Buscar en todos los módulos',analytics:'Indicadores y gráficos'};
   document.getElementById('tb-title').textContent=T[page]||page;document.getElementById('tb-sub').textContent=S[page]||'';
-  var A={temas:'<button class="btns" onclick="exportCSV(\"temas\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormTema()">+ Nuevo tema</button>',documentos:'<button class="btns" onclick="exportCSV(\"documentos\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDoc()">+ Nuevo documento</button>',suelo:'<button class="btns" onclick="exportCSV(\"suelo\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormSuelo()">+ Nuevo contrato</button>',intoru:'<button class="btns" onclick="exportCSV(\"intoru\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormINTORU()">+ Nuevo sitio</button>',dd:'<button class="btns" onclick="exportCSV(\"dd\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDD()">+ Nuevo sitio</button>'};
+  var A={poderes:'<button class="btns" onclick="exportCSV(\'poderes\')" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormPoder()">+ Nuevo poder</button>',societario:socTab==="autoridades"?'<button class="btnp" onclick="openFormSocAut()">+ Nueva autoridad</button>':'<button class="btnp" onclick="openFormSocAcc()">+ Nuevo accionista</button>',temas:'<button class="btns" onclick="exportCSV(\"temas\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormTema()">+ Nuevo tema</button>',documentos:'<button class="btns" onclick="exportCSV(\"documentos\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDoc()">+ Nuevo documento</button>',suelo:'<button class="btns" onclick="exportCSV(\"suelo\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormSuelo()">+ Nuevo contrato</button>',intoru:'<button class="btns" onclick="exportCSV(\"intoru\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormINTORU()">+ Nuevo sitio</button>',dd:'<button class="btns" onclick="exportCSV(\"dd\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDD()">+ Nuevo sitio</button>'};
   document.getElementById('tb-act').innerHTML=A[page]||'';
   if(page==='analytics')setTimeout(renderAnalytics,100);
 }
@@ -1131,34 +1164,109 @@ function navTo(page){var el=document.getElementById('nav-'+page);if(el)goTo(page
 // ─── TEMA FORM ──────────────────────────────────────────────────────────────
 function toggleBloq(){var show=document.getElementById('ft-bloq').checked;document.getElementById('bloq-fields').style.display=show?'block':'none';}
 
-var _usersCache = null;
-async function searchATISUsers(query){
-  var resultsEl = document.getElementById('ft-bloq-results');
-  if(!query || query.length < 2){resultsEl.style.display='none';return;}
+// ─── CONTACTOS ATIS ─────────────────────────────────────────────────────────
+var ATIS_CONTACTS_DEFAULT = [
+  {name:'Eduardo Galindo', email:'eduardo.galindo@atis-group.com', ini:'EG'},
+  {name:'Camila Soto',     email:'camila.soto@atis-group.com',     ini:'CS'},
+  {name:'Samira Taboada',  email:'samira.taboada@atis-group.com',  ini:'ST'},
+  {name:'Julian Jackson',  email:'julian.jackson@atis-group.com',  ini:'JJ'}
+];
+
+function getATISContacts(){
   try{
-    if(!_usersCache){
-      var token = await getToken();
-      var r = await fetch("https://graph.microsoft.com/v1.0/users?$select=displayName,mail,jobTitle&$top=999",{headers:{'Authorization':'Bearer '+token}});
-      var d = await r.json();
-      _usersCache = (d.value||[]).filter(function(u){return u.mail;});
+    var saved=localStorage.getItem('atis_contacts');
+    if(saved){
+      var parsed=JSON.parse(saved);
+      // Merge defaults with saved — defaults first, then extras
+      var emails=parsed.map(function(c){return c.email;});
+      var merged=ATIS_CONTACTS_DEFAULT.slice();
+      parsed.forEach(function(c){
+        if(ATIS_CONTACTS_DEFAULT.findIndex(function(d){return d.email===c.email;})<0) merged.push(c);
+      });
+      return merged;
     }
-    var q = query.toLowerCase();
-    var matches = _usersCache.filter(function(u){
-      return u.displayName.toLowerCase().indexOf(q)>=0 || u.mail.toLowerCase().indexOf(q)>=0;
-    }).slice(0,8);
-    resultsEl.innerHTML = '';
-    if(!matches.length){resultsEl.style.display='none';return;}
-    matches.forEach(function(u){
-      var div = document.createElement('div');
-      div.style.cssText = 'padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--brd);font-size:13px';
-      div.innerHTML = '<div style="font-weight:500">'+u.displayName+'</div><div style="font-size:11px;color:var(--tx3)">'+u.mail+(u.jobTitle?' · '+u.jobTitle:'')+'</div>';
-      div.addEventListener('mouseenter',function(){this.style.background='var(--surf2)';});
-      div.addEventListener('mouseleave',function(){this.style.background='';});
-      div.addEventListener('click',function(){selectBloqUser(u.displayName,u.mail);});
-      resultsEl.appendChild(div);
-    });
-    resultsEl.style.display='block';
-  }catch(e){console.error('Error buscando usuarios:',e);}
+  }catch(e){}
+  return ATIS_CONTACTS_DEFAULT.slice();
+}
+
+function saveATISContacts(contacts){
+  try{localStorage.setItem('atis_contacts',JSON.stringify(contacts));}catch(e){}
+}
+
+function addATISContact(name, email){
+  var contacts=getATISContacts();
+  if(contacts.find(function(c){return c.email.toLowerCase()===email.toLowerCase();})){
+    showToast('El contacto ya existe');return;
+  }
+  contacts.push({name:name,email:email,ini:name.split(' ').map(function(w){return w[0];}).join('').substring(0,2).toUpperCase()});
+  saveATISContacts(contacts);
+  showToast('Contacto guardado: '+name);
+}
+function searchATISUsers(query){
+  var resultsEl = document.getElementById('ft-bloq-results');
+  if(!query || query.length < 1){
+    // Show all contacts when empty
+    showContactResults(getATISContacts(), resultsEl);
+    return;
+  }
+  var q = query.toLowerCase();
+  var matches = getATISContacts().filter(function(c){
+    return c.name.toLowerCase().indexOf(q)>=0 || c.email.toLowerCase().indexOf(q)>=0;
+  });
+  showContactResults(matches, resultsEl);
+}
+
+function showContactResults(contacts, resultsEl){
+  resultsEl.innerHTML = '';
+  if(!contacts.length){resultsEl.style.display='none';return;}
+  // Add "nuevo contacto" option at bottom
+  contacts.forEach(function(c){
+    var div = document.createElement('div');
+    div.style.cssText = 'padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--brd);font-size:13px';
+    div.innerHTML = '<div style="display:flex;align-items:center;gap:8px"><div style="width:24px;height:24px;border-radius:50%;background:var(--bl-bg);color:var(--bl);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;flex-shrink:0">'+(c.ini||'?')+'</div><div><div style="font-weight:500">'+c.name+'</div><div style="font-size:11px;color:var(--tx3)">'+c.email+'</div></div></div>';
+    div.addEventListener('mouseenter',function(){this.style.background='var(--surf2)';});
+    div.addEventListener('mouseleave',function(){this.style.background='';});
+    div.addEventListener('click',function(){selectBloqUser(c.name,c.email);});
+    resultsEl.appendChild(div);
+  });
+  // Add new contact button
+  var addDiv = document.createElement('div');
+  addDiv.style.cssText = 'padding:8px 12px;cursor:pointer;font-size:12px;color:var(--bl);border-top:1px solid var(--brd);display:flex;align-items:center;gap:6px';
+  addDiv.innerHTML = '<span style="font-size:16px">+</span> Agregar nuevo contacto';
+  addDiv.addEventListener('click', function(){
+    document.getElementById('ft-bloq-results').style.display='none';
+    showAddContactForm();
+  });
+  resultsEl.appendChild(addDiv);
+  resultsEl.style.display='block';
+}
+
+function showAddContactForm(){
+  var existing = document.getElementById('add-contact-form');
+  if(existing) existing.remove();
+  var form = document.createElement('div');
+  form.id = 'add-contact-form';
+  form.style.cssText = 'margin-top:8px;padding:10px;background:var(--bl-bg);border-radius:var(--rs);border:1px solid var(--bl)';
+  form.innerHTML = '<div style="font-size:11px;font-weight:500;color:var(--bl);margin-bottom:8px">Nuevo contacto ATIS</div>'+
+    '<div style="display:flex;flex-direction:column;gap:6px">'+
+    '<input type="text" id="new-contact-name" placeholder="Nombre completo" style="font-size:12px;padding:5px 8px">'+
+    '<input type="email" id="new-contact-email" placeholder="email@atis-group.com" style="font-size:12px;padding:5px 8px">'+
+    '<div style="display:flex;gap:6px">'+
+    '<button onclick="saveNewContact()" style="flex:1;background:var(--bl);color:#fff;border:none;padding:5px;border-radius:var(--rs);font-size:12px;cursor:pointer">Guardar</button>'+
+    '<button onclick="cancelAddContact()" style="background:var(--surf);border:1px solid var(--brd2);padding:5px 10px;border-radius:var(--rs);font-size:12px;cursor:pointer">Cancelar</button>'+
+    '</div></div>';
+  var bloqFields = document.getElementById('bloq-fields');
+  bloqFields.appendChild(form);
+  document.getElementById('new-contact-name').focus();
+}
+
+function cancelAddContact(){var f=document.getElementById('add-contact-form');if(f)f.remove();}
+function saveNewContact(){
+  var name = document.getElementById('new-contact-name').value.trim();
+  var email = document.getElementById('new-contact-email').value.trim();
+  if(!name||!email){alert('Completá nombre y email.');return;}
+  addATISContact(name, email);
+  document.getElementById('add-contact-form').remove();
 }
 
 function selectBloqUser(name, email){
@@ -1330,6 +1438,9 @@ async function saveSuelo(){
 
 // ─── DELETE ─────────────────────────────────────────────────────────────────
 function ddDelete(id,nm){askDelete('dd',id,nm);}
+function poderDelete(id,nm){askDelete('poder',id,nm);}
+function socAutDelete(id,nm){askDelete('socaut',id,nm);}
+function socAccDelete(id,nm){askDelete('socacc',id,nm);}
 function sueloDelete(id,nm){askDelete('suelo',id,nm);}
 function intoruDelete(id,nm){askDelete('intoru',id,nm);}
 function ddEdit(id){editDD(id);}
@@ -1343,7 +1454,7 @@ async function confirmDelete(){
   if(!pendingDelete)return;
   document.getElementById('confirm-overlay').classList.remove('open');
   showLoading('Eliminando...');
-  var listName=pendingDelete.type==='doc'?LIST_DOCS:pendingDelete.type==='tema'?LIST_TEMAS:pendingDelete.type==='suelo'?LIST_SUELO:pendingDelete.type==='intoru'?LIST_INTORU:LIST_DD;
+  var listName=pendingDelete.type==='doc'?LIST_DOCS:pendingDelete.type==='tema'?LIST_TEMAS:pendingDelete.type==='suelo'?LIST_SUELO:pendingDelete.type==='intoru'?LIST_INTORU:pendingDelete.type==='poder'?LIST_PODERES:pendingDelete.type==='socaut'?LIST_SOC_AUT:pendingDelete.type==='socacc'?LIST_SOC_ACC:LIST_DD;
   try{await deleteListItem(listName,pendingDelete.id);await syncAll();hideLoading();showToast('Eliminado correctamente');}
   catch(e){hideLoading();showToast('Error al eliminar',true);}
   pendingDelete=null;
@@ -1546,6 +1657,157 @@ async function saveDD(){
     await syncAll();closeFormDD();
     showToast(todoResuelto?'✓ Sitio marcado como Inspeccionado':'Sitio guardado');
   }catch(e){showToast('Error al guardar: '+e.message,true);console.error(e);}
+  btn.disabled=false;btn.textContent='Guardar';
+}
+
+// ─── PODERES ────────────────────────────────────────────────────────────────
+function mapPoder(item){var f=item.fields;
+  var fen=f.FechaVencimiento?f.FechaVencimiento.split('T')[0]:'';
+  var estado=fen?( new Date(fen)<TODAY?'Vencido':'Vigente'):'Vigente';
+  return{id:item.id,apoderado:f.Apoderado||'',tipo:f.TipoPoder||'',pais:f.Pais||'',fechaOto:f.FechaOtorgamiento?f.FechaOtorgamiento.split('T')[0]:'',fechaVen:fen,estado:estado,link:f.LinkDocumento||'',obs:f.Observaciones||''};}
+
+function renderPoderes(){
+  var q=(document.getElementById('poder-q').value||'').toLowerCase();
+  var fp=document.getElementById('poder-pais').value;
+  var fe=document.getElementById('poder-estado').value;
+  var list=poderes.filter(function(p){return currentUser.scope.indexOf(p.pais)>=0;});
+  if(q)list=list.filter(function(p){return p.apoderado.toLowerCase().indexOf(q)>=0;});
+  if(fp)list=list.filter(function(p){return p.pais===fp;});
+  if(fe)list=list.filter(function(p){return p.estado===fe;});
+  var el=document.getElementById('poderes-table');
+  if(!list.length){el.innerHTML='<tr><td colspan="8" style="padding:30px;text-align:center;color:var(--tx3)">Sin poderes cargados</td></tr>';return;}
+  el.innerHTML='<thead><tr><th>Apoderado</th><th>Tipo</th><th>País</th><th>Otorgamiento</th><th>Vencimiento</th><th>Estado</th><th>Documento</th><th></th></tr></thead><tbody></tbody>';
+  var tbody=el.querySelector('tbody');
+  list.forEach(function(p){
+    var tr=document.createElement('tr');
+    var sc=p.estado==='Vigente'?'bdgr':'bdr';
+    var linkHtml=p.link?'<a href="'+p.link+'" target="_blank" style="font-size:11px;color:var(--bl)">Ver</a>':'\u2014';
+    tr.innerHTML='<td style="font-weight:500">'+p.apoderado+'</td><td>'+p.tipo+'</td><td>'+p.pais+'</td><td>'+fmtDate(p.fechaOto)+'</td><td>'+fmtDate(p.fechaVen)+'</td><td><span class="badge '+sc+'">'+p.estado+'</span></td><td>'+linkHtml+'</td><td><div class="acbtn"><button class="btnedit">Editar</button><button class="btnrd">Borrar</button></div></td>';
+    tr.querySelector('.btnedit').addEventListener('click',function(){editPoder(p.id);});
+    tr.querySelector('.btnrd').addEventListener('click',function(){askDelete('poder',p.id,p.apoderado);});
+    tbody.appendChild(tr);
+  });
+}
+
+function openFormPoder(){editingPoderId=null;document.getElementById('form-poder-title').textContent='Nuevo poder';['fp-apoderado','fp-fecha-oto','fp-fecha-ven','fp-link','fp-obs'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fp-tipo').value='General';document.getElementById('fp-pais').value='AR';document.getElementById('form-poder').classList.add('open');}
+function closeFormPoder(){document.getElementById('form-poder').classList.remove('open');}
+function editPoder(id){var p=poderes.find(function(x){return x.id===id;});if(!p)return;editingPoderId=id;document.getElementById('form-poder-title').textContent='Editar poder';document.getElementById('fp-apoderado').value=p.apoderado;document.getElementById('fp-tipo').value=p.tipo;document.getElementById('fp-pais').value=p.pais;document.getElementById('fp-fecha-oto').value=p.fechaOto;document.getElementById('fp-fecha-ven').value=p.fechaVen;document.getElementById('fp-link').value=p.link;document.getElementById('fp-obs').value=p.obs;document.getElementById('form-poder').classList.add('open');}
+async function savePoder(){
+  var ap=document.getElementById('fp-apoderado').value;if(!ap){alert('Ingresá el apoderado.');return;}
+  var btn=document.getElementById('save-poder-btn');btn.disabled=true;btn.textContent='Guardando...';
+  var fen=document.getElementById('fp-fecha-ven').value;
+  var estado=fen?(new Date(fen)<TODAY?'Vencido':'Vigente'):'Vigente';
+  var fields={Apoderado:ap,TipoPoder:document.getElementById('fp-tipo').value,Pais:document.getElementById('fp-pais').value,FechaOtorgamiento:document.getElementById('fp-fecha-oto').value?document.getElementById('fp-fecha-oto').value+'T00:00:00Z':null,FechaVencimiento:fen?fen+'T00:00:00Z':null,Estado:estado,LinkDocumento:document.getElementById('fp-link').value,Observaciones:document.getElementById('fp-obs').value};
+  try{if(editingPoderId)await updateListItem(LIST_PODERES,editingPoderId,fields);else await createListItem(LIST_PODERES,fields);await syncAll();closeFormPoder();showToast(editingPoderId?'Poder actualizado':'Poder guardado');}
+  catch(e){showToast('Error: '+e.message,true);}
+  btn.disabled=false;btn.textContent='Guardar';
+}
+
+// ─── SOCIETARIO ──────────────────────────────────────────────────────────────
+var socTab='autoridades';
+function setSocTab(tab){
+  socTab=tab;
+  document.getElementById('stab-soc-aut').classList.toggle('active',tab==='autoridades');
+  document.getElementById('stab-soc-acc').classList.toggle('active',tab==='accionistas');
+  document.getElementById('soc-aut-section').style.display=tab==='autoridades'?'block':'none';
+  document.getElementById('soc-acc-section').style.display=tab==='accionistas'?'block':'none';
+}
+
+function mapSocAut(item){var f=item.fields;return{id:item.id,sociedad:f.Sociedad||'',pais:f.Pais||'',cargo:f.Cargo||'',nombre:f.Nombre||'',acta:f.ActaDesignacion||'',fecha:f.FechaDesignacion?f.FechaDesignacion.split('T')[0]:'',vigencia:f.Vigencia||'',obs:f.Observaciones||''};}
+function mapSocAcc(item){var f=item.fields;return{id:item.id,sociedad:f.Sociedad||'',pais:f.Pais||'',accionista:f.Accionista||'',tipo:f.TipoAccion||'',cantidad:f.Cantidad||'',porcentaje:f.Porcentaje||'',obs:f.Observaciones||''};}
+
+function updateSocFilter(listData,paisId,socId){
+  var fp=document.getElementById(paisId).value;
+  var list=fp?listData.filter(function(x){return x.pais===fp;}):listData;
+  var socs=[...new Set(list.map(function(x){return x.sociedad;}))].filter(Boolean).sort();
+  var sel=document.getElementById(socId);var cur=sel.value;
+  sel.innerHTML='<option value="">Todas las sociedades</option>'+socs.map(function(s){return '<option value="'+s+'"'+(s===cur?' selected':'')+'>'+s+'</option>';}).join('');
+}
+
+function renderSocAutoridades(){
+  updateSocFilter(socAut,'soc-aut-pais','soc-aut-sociedad');
+  var fp=document.getElementById('soc-aut-pais').value;
+  var fs=document.getElementById('soc-aut-sociedad').value;
+  var list=socAut.filter(function(x){return currentUser.scope.indexOf(x.pais)>=0;});
+  if(fp)list=list.filter(function(x){return x.pais===fp;});
+  if(fs)list=list.filter(function(x){return x.sociedad===fs;});
+  var el=document.getElementById('soc-aut-table');
+  if(!list.length){el.innerHTML='<tr><td colspan="7" style="padding:30px;text-align:center;color:var(--tx3)">Sin autoridades cargadas</td></tr>';return;}
+  // Group by sociedad
+  var bySoc={};list.forEach(function(x){if(!bySoc[x.sociedad])bySoc[x.sociedad]=[];bySoc[x.sociedad].push(x);});
+  var head='<thead><tr><th>Cargo</th><th>Nombre</th><th>Acta</th><th>Designación</th><th>Vigencia</th><th>Obs.</th><th></th></tr></thead>';
+  var rows=[];
+  Object.keys(bySoc).sort().forEach(function(soc){
+    rows.push('<tr><td colspan="7" style="background:var(--surf2);font-size:11px;font-weight:600;color:var(--tx2);padding:6px 10px;letter-spacing:.05em">'+soc+' — '+bySoc[soc][0].pais+'</td></tr>');
+    bySoc[soc].forEach(function(x){
+      var tr=["<tr>",
+        "<td><span class=\"badge bdb\" style=\"font-size:10px\">"+x.cargo+"</span></td>",
+        "<td style=\"font-weight:500\">"+x.nombre+"</td>",
+        "<td style=\"font-size:11px\">"+x.acta+"</td>",
+        "<td>"+fmtDate(x.fecha)+"</td>",
+        "<td style=\"font-size:11px\">"+x.vigencia+"</td>",
+        "<td style=\"font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\">"+x.obs+"</td>",
+        "<td><div class=\"acbtn\"><button class=\"btnedit\" data-id=\""+x.id+"\" onclick=\"editSocAut(this.dataset.id)\">Editar</button>",
+        "<button class=\"btnrd\" data-id=\""+x.id+"\" data-nm=\""+x.nombre.replace(/"/g,"")+"\">Borrar</button></div></td>",
+        "</tr>"].join("");
+      rows.push(tr);
+    });
+  });
+  el.innerHTML=head+'<tbody>'+rows.join('')+'</tbody>';
+}
+
+function renderSocAccionistas(){
+  updateSocFilter(socAcc,'soc-acc-pais','soc-acc-sociedad');
+  var fp=document.getElementById('soc-acc-pais').value;
+  var fs=document.getElementById('soc-acc-sociedad').value;
+  var list=socAcc.filter(function(x){return currentUser.scope.indexOf(x.pais)>=0;});
+  if(fp)list=list.filter(function(x){return x.pais===fp;});
+  if(fs)list=list.filter(function(x){return x.sociedad===fs;});
+  var el=document.getElementById('soc-acc-table');
+  if(!list.length){el.innerHTML='<tr><td colspan="7" style="padding:30px;text-align:center;color:var(--tx3)">Sin accionistas cargados</td></tr>';return;}
+  var bySoc={};list.forEach(function(x){if(!bySoc[x.sociedad])bySoc[x.sociedad]=[];bySoc[x.sociedad].push(x);});
+  var head='<thead><tr><th>Accionista</th><th>Tipo de acción</th><th>Cantidad</th><th>%</th><th>Obs.</th><th></th></tr></thead>';
+  var rows=[];
+  Object.keys(bySoc).sort().forEach(function(soc){
+    rows.push('<tr><td colspan="6" style="background:var(--surf2);font-size:11px;font-weight:600;color:var(--tx2);padding:6px 10px;letter-spacing:.05em">'+soc+' — '+bySoc[soc][0].pais+'</td></tr>');
+    bySoc[soc].forEach(function(x){
+      var tipoBadge=x.tipo==="Preferida"?"<span class=\"badge bda\">Preferida</span>":"<span class=\"badge bdg\">Ordinaria</span>";
+      var tr=["<tr>",
+        "<td style=\"font-weight:500\">"+x.accionista+"</td>",
+        "<td>"+tipoBadge+"</td>",
+        "<td>"+x.cantidad+"</td>",
+        "<td style=\"font-weight:500\">"+x.porcentaje+"</td>",
+        "<td style=\"font-size:11px\">"+x.obs+"</td>",
+        "<td><div class=\"acbtn\"><button class=\"btnedit\" data-id=\""+x.id+"\" onclick=\"editSocAcc(this.dataset.id)\">Editar</button>",
+        "<button class=\"btnrd\" data-id=\""+x.id+"\" data-nm=\""+x.accionista.replace(/"/g,"")+"\">Borrar</button></div></td>",
+        "</tr>"].join("");
+      rows.push(tr);
+    });
+  });
+  el.innerHTML=head+'<tbody>'+rows.join('')+'</tbody>';
+}
+
+function openFormSocAut(){editingSocAutId=null;document.getElementById('form-soc-aut-title').textContent='Nueva autoridad';['fsa-sociedad','fsa-nombre','fsa-acta','fsa-vigencia','fsa-obs'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fsa-fecha').value='';document.getElementById('fsa-pais').value='AR';document.getElementById('fsa-cargo').value='Presidente';document.getElementById('form-soc-aut').classList.add('open');}
+function closeFormSocAut(){document.getElementById('form-soc-aut').classList.remove('open');}
+function editSocAut(id){var x=socAut.find(function(s){return s.id===id;});if(!x)return;editingSocAutId=id;document.getElementById('form-soc-aut-title').textContent='Editar autoridad';document.getElementById('fsa-pais').value=x.pais;document.getElementById('fsa-sociedad').value=x.sociedad;document.getElementById('fsa-cargo').value=x.cargo;document.getElementById('fsa-nombre').value=x.nombre;document.getElementById('fsa-acta').value=x.acta;document.getElementById('fsa-fecha').value=x.fecha;document.getElementById('fsa-vigencia').value=x.vigencia;document.getElementById('fsa-obs').value=x.obs;document.getElementById('form-soc-aut').classList.add('open');}
+async function saveSocAut(){
+  var nom=document.getElementById('fsa-nombre').value;if(!nom){alert('Ingresá el nombre.');return;}
+  var btn=document.getElementById('save-soc-aut-btn');btn.disabled=true;btn.textContent='Guardando...';
+  var fields={Sociedad:document.getElementById('fsa-sociedad').value,Pais:document.getElementById('fsa-pais').value,Cargo:document.getElementById('fsa-cargo').value,Nombre:nom,ActaDesignacion:document.getElementById('fsa-acta').value,FechaDesignacion:document.getElementById('fsa-fecha').value?document.getElementById('fsa-fecha').value+'T00:00:00Z':null,Vigencia:document.getElementById('fsa-vigencia').value,Observaciones:document.getElementById('fsa-obs').value};
+  try{if(editingSocAutId)await updateListItem(LIST_SOC_AUT,editingSocAutId,fields);else await createListItem(LIST_SOC_AUT,fields);await syncAll();closeFormSocAut();showToast('Guardado');}
+  catch(e){showToast('Error: '+e.message,true);}
+  btn.disabled=false;btn.textContent='Guardar';
+}
+
+function openFormSocAcc(){editingSocAccId=null;document.getElementById('form-soc-acc-title').textContent='Nuevo accionista';['facc-sociedad','facc-accionista','facc-cantidad','facc-porcentaje','facc-obs'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('facc-pais').value='AR';document.getElementById('facc-tipo').value='Ordinaria';document.getElementById('form-soc-acc').classList.add('open');}
+function closeFormSocAcc(){document.getElementById('form-soc-acc').classList.remove('open');}
+function editSocAcc(id){var x=socAcc.find(function(s){return s.id===id;});if(!x)return;editingSocAccId=id;document.getElementById('form-soc-acc-title').textContent='Editar accionista';document.getElementById('facc-pais').value=x.pais;document.getElementById('facc-sociedad').value=x.sociedad;document.getElementById('facc-accionista').value=x.accionista;document.getElementById('facc-tipo').value=x.tipo;document.getElementById('facc-cantidad').value=x.cantidad;document.getElementById('facc-porcentaje').value=x.porcentaje;document.getElementById('facc-obs').value=x.obs;document.getElementById('form-soc-acc').classList.add('open');}
+async function saveSocAcc(){
+  var ac=document.getElementById('facc-accionista').value;if(!ac){alert('Ingresá el accionista.');return;}
+  var btn=document.getElementById('save-soc-acc-btn');btn.disabled=true;btn.textContent='Guardando...';
+  var fields={Sociedad:document.getElementById('facc-sociedad').value,Pais:document.getElementById('facc-pais').value,Accionista:ac,TipoAccion:document.getElementById('facc-tipo').value,Cantidad:document.getElementById('facc-cantidad').value,Porcentaje:document.getElementById('facc-porcentaje').value,Observaciones:document.getElementById('facc-obs').value};
+  try{if(editingSocAccId)await updateListItem(LIST_SOC_ACC,editingSocAccId,fields);else await createListItem(LIST_SOC_ACC,fields);await syncAll();closeFormSocAcc();showToast('Guardado');}
+  catch(e){showToast('Error: '+e.message,true);}
   btn.disabled=false;btn.textContent='Guardar';
 }
 
