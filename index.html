@@ -1487,13 +1487,14 @@ function renderINTORU(){
     var cumpleBadge=s.cumple==='Sí'?'<span class="badge bdgr">✓ Cumple</span>':s.cumple==='No'?'<span class="badge bdr">✗ No cumple</span>':'<span class="badge bda">En análisis</span>';
     var modalBadge=s.modalidad?'<span class="badge bdb" style="font-size:10px">'+s.modalidad+'</span>':'<span style="color:var(--tx3)">—</span>';
     return '<tr>'+
-      '<td><span class="mono">'+s.lote+'</span></td>'+
       '<td><span class="mono">'+s.sitio+'</span></td>'+
+      '<td style="font-weight:500">'+s.nombre+'</td>'+
+      '<td>'+s.pais+'</td>'+
       '<td>'+cumpleBadge+'</td>'+
       '<td style="white-space:nowrap">'+s.precio+'</td>'+
       '<td>'+modalBadge+'</td>'+
       '<td style="'+vc+'">'+fmtDate(s.cierre)+'</td>'+
-      '<td style="font-size:11px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+s.obs+'">'+s.obs+'</td>'+
+      '<td style="font-size:11px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+s.obs+'">'+s.obs+'</td>'+
       '<td><div class="acbtn"><button class="btnedit" data-id="'+s.id+'" onclick="editINTORU(this.dataset.id)">Editar</button><button class="btnrd" data-id="'+s.id+'" data-nm="'+s.sitio+'" onclick="askDelete(\'intoru\',this.dataset.id,this.dataset.nm)">Borrar</button></div></td>'+
     '</tr>';
   });
@@ -1748,7 +1749,7 @@ function renderSocAutoridades(){
         "<td style=\"font-size:11px\">"+x.vigencia+"</td>",
         "<td style=\"font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\">"+x.obs+"</td>",
         "<td><div class=\"acbtn\"><button class=\"btnedit\" data-id=\""+x.id+"\" onclick=\"editSocAut(this.dataset.id)\">Editar</button>",
-        "<button class=\"btnrd\" data-id=\""+x.id+"\" data-nm=\""+x.nombre.replace(/"/g,"")+"\">Borrar</button></div></td>",
+        "<button class=\"btnrd\" data-id=\""+x.id+"\" data-nm=\""+x.nombre.replace(/"/g,"")+"\" onclick=\"socAutDelete(this.dataset.id,this.dataset.nm)\">Borrar</button></div></td>",
         "</tr>"].join("");
       rows.push(tr);
     });
@@ -1779,7 +1780,7 @@ function renderSocAccionistas(){
         "<td style=\"font-weight:500\">"+x.porcentaje+"</td>",
         "<td style=\"font-size:11px\">"+x.obs+"</td>",
         "<td><div class=\"acbtn\"><button class=\"btnedit\" data-id=\""+x.id+"\" onclick=\"editSocAcc(this.dataset.id)\">Editar</button>",
-        "<button class=\"btnrd\" data-id=\""+x.id+"\" data-nm=\""+x.accionista.replace(/"/g,"")+"\">Borrar</button></div></td>",
+        "<button class=\"btnrd\" data-id=\""+x.id+"\" data-nm=\""+x.accionista.replace(/"/g,"")+"\" onclick=\"socAccDelete(this.dataset.id,this.dataset.nm)\">Borrar</button></div></td>",
         "</tr>"].join("");
       rows.push(tr);
     });
