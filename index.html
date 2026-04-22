@@ -188,10 +188,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div class="navi" id="nav-suelo" onclick="goTo('suelo',this)">
           <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1" y="3" width="12" height="9" rx="1.5" stroke="currentColor"/><path d="M4 3V2a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" stroke="currentColor"/><line x1="1" y1="6" x2="13" y2="6" stroke="currentColor"/></svg>Contratos Suelo
         </div>
-        <div class="navi" id="nav-intoru" onclick="goTo('intoru',this)">
+        <div class="navi" id="nav-intoru" onclick="goTo('intoru',this)" style="display:none">
           <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1" y="1" width="12" height="12" rx="1.5" stroke="currentColor"/><path d="M4 7h6M7 4v6" stroke="currentColor" stroke-linecap="round"/></svg>INTORU
         </div>
-        <div class="navi" id="nav-dd" onclick="goTo('dd',this)">
+        <div class="navi" id="nav-dd" onclick="goTo('dd',this)" style="display:none">
           <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><path d="M2 2h10v10H2z" rx="1" stroke="currentColor"/><path d="M5 5h4M5 7h4M5 9h2" stroke="currentColor" stroke-linecap="round"/><circle cx="3.5" cy="5" r=".5" fill="currentColor"/><circle cx="3.5" cy="7" r=".5" fill="currentColor"/><circle cx="3.5" cy="9" r=".5" fill="currentColor"/></svg>DD Sitios UY
         </div>
       </div>
@@ -286,7 +286,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div class="pageview" id="page-intoru">
         <div class="filters">
           <div class="sbox"><svg class="sico" width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4" stroke="#1A1916" stroke-width="1.2"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="#1A1916" stroke-width="1.2" stroke-linecap="round"/></svg><input type="text" placeholder="Buscar sitio, lote..." id="intoru-q" oninput="renderINTORU()"></div>
-          <select class="fsel" id="intoru-pais" onchange="renderINTORU()"><option value="">Todos los países</option><option value="UY">Uruguay</option><option value="AR">Argentina</option><option value="PY">Paraguay</option></select>
+
           <select class="fsel" id="intoru-cumple" onchange="renderINTORU()"><option value="">Todos</option><option value="Sí">Cumple</option><option value="No">No cumple</option><option value="En análisis">En análisis</option></select>
         </div>
         <div class="card" style="padding:0;overflow:hidden"><div class="dwrap"><table class="dtable" id="intoru-table"></table></div></div>
@@ -743,6 +743,10 @@ async function initApp(account){
   av.textContent=currentUser.ini;av.style.cssText='width:28px;height:28px;font-size:10px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:'+currentUser.bg+';color:'+currentUser.tc;
   document.getElementById('sb-name').textContent=currentUser.name;document.getElementById('sb-role').textContent=currentUser.role;
   document.getElementById('login-screen').style.display='none';
+  // Show/hide UY-only modules based on user scope
+  var hasUY = currentUser.scope.indexOf('UY') >= 0;
+  document.getElementById('nav-intoru').style.display = hasUY ? 'flex' : 'none';
+  document.getElementById('nav-dd').style.display = hasUY ? 'flex' : 'none';
   await syncAll();hideLoading();document.getElementById('app').style.display='block';
 }
 
@@ -1069,6 +1073,19 @@ function mkChart(id,type,labels,data,colors){
 }
 
 // ─── NAV ────────────────────────────────────────────────────────────────────
+function toggleObs(el){
+  var fullText=el.dataset.full||el.textContent;
+  if(el.dataset.expanded==='1'){
+    el.style.whiteSpace='nowrap';el.style.overflow='hidden';el.style.textOverflow='ellipsis';
+    el.style.maxWidth='180px';el.style.background='';el.dataset.expanded='0';
+  } else {
+    el.style.whiteSpace='normal';el.style.overflow='visible';el.style.textOverflow='unset';
+    el.style.maxWidth='400px';el.style.background='var(--bl-bg)';el.style.padding='6px';
+    el.style.borderRadius='4px';el.dataset.expanded='1';
+  }
+  el.textContent=fullText;
+}
+
 function exportCSV(module){
   var rows=[], headers=[], filename='';
   if(module==='temas'){
@@ -1471,17 +1488,15 @@ function mapINTORU(item){
 function renderINTORU(){
   // Update lote filter dynamically
   var q=(document.getElementById('intoru-q').value||'').toLowerCase();
-  var fp=document.getElementById('intoru-pais').value;
   var fc=document.getElementById('intoru-cumple').value;
   var list=intoru.slice();
   if(q)list=list.filter(function(s){return s.sitio.toLowerCase().indexOf(q)>=0||(s.nombre||'').toLowerCase().indexOf(q)>=0;});
-  if(fp)list=list.filter(function(s){return s.pais===fp;});
   if(fc)list=list.filter(function(s){return s.cumple===fc;});
 
   var el=document.getElementById('intoru-table');
   if(!list.length){el.innerHTML='<tr><td colspan="8" style="padding:30px;text-align:center;color:var(--tx3)">Sin sitios cargados</td></tr>';return;}
 
-  var head='<thead><tr><th>Sitio</th><th>Nombre</th><th>País</th><th>Cumple</th><th>Oferta USD</th><th>Precio Máx.</th><th>Modalidad</th><th>Cierre</th><th>Observaciones</th><th></th></tr></thead>';
+  var head='<thead><tr><th>Sitio</th><th>Nombre</th><th>Cumple</th><th>Oferta USD</th><th>Precio Máx.</th><th>Modalidad</th><th>Cierre</th><th>Observaciones</th><th></th></tr></thead>';
   var rows=list.map(function(s){
     var dt=daysTo(s.cierre);
     var vc=dt!==null&&dt<=15?'color:var(--rd);font-weight:500':dt!==null&&dt<=30?'color:var(--am)':'';
@@ -1490,13 +1505,12 @@ function renderINTORU(){
     return '<tr>'+
       '<td><span class="mono">'+s.sitio+'</span></td>'+
       '<td style="font-weight:500">'+s.nombre+'</td>'+
-      '<td>'+s.pais+'</td>'+
       '<td>'+cumpleBadge+'</td>'+
       '<td style="white-space:nowrap">'+s.oferta+'</td>'+
       '<td style="white-space:nowrap">'+s.precio+'</td>'+
       '<td>'+modalBadge+'</td>'+
       '<td style="'+vc+'">'+fmtDate(s.cierre)+'</td>'+
-      '<td style="font-size:11px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+s.obs+'">'+s.obs+'</td>'+
+      '<td style="font-size:11px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;color:var(--tx2)" title="Click para ver completo" onclick="toggleObs(this)" data-full="'+s.obs.replace(/"/g,'&quot;')+'" >'+s.obs+'</td>'+
       '<td><div class="acbtn"><button class="btnedit" data-id="'+s.id+'" onclick="editINTORU(this.dataset.id)">Editar</button><button class="btnrd" data-id="'+s.id+'" data-nm="'+s.sitio+'" onclick="askDelete(\'intoru\',this.dataset.id,this.dataset.nm)">Borrar</button></div></td>'+
     '</tr>';
   });
