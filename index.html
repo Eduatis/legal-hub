@@ -516,6 +516,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <option value="No">No — No cumple</option>
       </select>
     </div>
+    <div class="field"><label>Oferta USD</label><input type="text" id="fi-oferta" placeholder="Ej: USD 50.000"></div>
     <div class="fieldrow">
       <div class="field" style="margin:0"><label>Precio máximo a pagar</label><input type="text" id="fi-precio" placeholder="Ej: USD 120.000"></div>
       <div class="field" style="margin:0"><label>Modalidad de adquisición</label>
@@ -1464,7 +1465,7 @@ function cancelDelete(){pendingDelete=null;document.getElementById('confirm-over
 // ─── INTORU ─────────────────────────────────────────────────────────────────
 function mapINTORU(item){
   var f=item.fields;
-  return {id:item.id,sitio:f.Sitio||'',nombre:f.Nombre||'',pais:f.Pais||'UY',cumple:f.CumpleParametros||'En análisis',precio:f.PrecioMaximo||'',modalidad:f.Modalidad||'',cierre:f.FechaCierre?f.FechaCierre.split('T')[0]:'',obs:f.Observaciones||''};
+  return {id:item.id,sitio:f.Sitio||'',nombre:f.Nombre||'',pais:f.Pais||'UY',cumple:f.CumpleParametros||'En análisis',oferta:f.OfertaUSD||'',precio:f.PrecioMaximo||'',modalidad:f.Modalidad||'',cierre:f.FechaCierre?f.FechaCierre.split('T')[0]:'',obs:f.Observaciones||''};
 }
 
 function renderINTORU(){
@@ -1480,7 +1481,7 @@ function renderINTORU(){
   var el=document.getElementById('intoru-table');
   if(!list.length){el.innerHTML='<tr><td colspan="8" style="padding:30px;text-align:center;color:var(--tx3)">Sin sitios cargados</td></tr>';return;}
 
-  var head='<thead><tr><th>Sitio</th><th>Nombre</th><th>País</th><th>Cumple</th><th>Precio Máx.</th><th>Modalidad</th><th>Cierre</th><th>Observaciones</th><th></th></tr></thead>';
+  var head='<thead><tr><th>Sitio</th><th>Nombre</th><th>País</th><th>Cumple</th><th>Oferta USD</th><th>Precio Máx.</th><th>Modalidad</th><th>Cierre</th><th>Observaciones</th><th></th></tr></thead>';
   var rows=list.map(function(s){
     var dt=daysTo(s.cierre);
     var vc=dt!==null&&dt<=15?'color:var(--rd);font-weight:500':dt!==null&&dt<=30?'color:var(--am)':'';
@@ -1491,6 +1492,7 @@ function renderINTORU(){
       '<td style="font-weight:500">'+s.nombre+'</td>'+
       '<td>'+s.pais+'</td>'+
       '<td>'+cumpleBadge+'</td>'+
+      '<td style="white-space:nowrap">'+s.oferta+'</td>'+
       '<td style="white-space:nowrap">'+s.precio+'</td>'+
       '<td>'+modalBadge+'</td>'+
       '<td style="'+vc+'">'+fmtDate(s.cierre)+'</td>'+
@@ -1503,7 +1505,7 @@ function renderINTORU(){
 
 function openFormINTORU(){
   editingIntoruId=null;document.getElementById('form-intoru-title').textContent='Nuevo sitio — INTORU';
-  ['fi-nombre','fi-sitio','fi-precio','fi-cierre','fi-obs'].forEach(function(id){document.getElementById(id).value='';});
+  ['fi-nombre','fi-sitio','fi-oferta','fi-precio','fi-cierre','fi-obs'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('fi-cumple').value='En análisis';document.getElementById('fi-modalidad').value='';
   document.getElementById('form-intoru').classList.add('open');
 }
@@ -1513,7 +1515,7 @@ function editINTORU(id){
   var s=intoru.find(function(x){return x.id===id;});if(!s)return;
   editingIntoruId=id;document.getElementById('form-intoru-title').textContent='Editar sitio — INTORU';
   document.getElementById('fi-nombre').value=s.nombre||'';document.getElementById('fi-sitio').value=s.sitio;
-  document.getElementById('fi-cumple').value=s.cumple;document.getElementById('fi-precio').value=s.precio;
+  document.getElementById('fi-cumple').value=s.cumple;document.getElementById('fi-oferta').value=s.oferta||'';document.getElementById('fi-precio').value=s.precio;
   document.getElementById('fi-modalidad').value=s.modalidad;document.getElementById('fi-cierre').value=s.cierre;
   document.getElementById('fi-obs').value=s.obs;
   document.getElementById('form-intoru').classList.add('open');
@@ -1522,7 +1524,7 @@ function editINTORU(id){
 async function saveINTORU(){
   var sitio=document.getElementById('fi-sitio').value;if(!sitio){alert('Ingresá el código de sitio.');return;}
   var btn=document.getElementById('save-intoru-btn');btn.disabled=true;btn.textContent='Guardando...';
-  var fields={Sitio:sitio,Nombre:document.getElementById('fi-nombre').value||'',Pais:'UY',CumpleParametros:document.getElementById('fi-cumple').value,PrecioMaximo:document.getElementById('fi-precio').value,Modalidad:document.getElementById('fi-modalidad').value,FechaCierre:document.getElementById('fi-cierre').value?document.getElementById('fi-cierre').value+'T00:00:00Z':null,Observaciones:document.getElementById('fi-obs').value};
+  var fields={Sitio:sitio,Nombre:document.getElementById('fi-nombre').value||'',Pais:'UY',CumpleParametros:document.getElementById('fi-cumple').value,OfertaUSD:document.getElementById('fi-oferta').value||'',PrecioMaximo:document.getElementById('fi-precio').value,Modalidad:document.getElementById('fi-modalidad').value,FechaCierre:document.getElementById('fi-cierre').value?document.getElementById('fi-cierre').value+'T00:00:00Z':null,Observaciones:document.getElementById('fi-obs').value};
   try{
     if(editingIntoruId)await updateListItem(LIST_INTORU,editingIntoruId,fields);
     else await createListItem(LIST_INTORU,fields);
