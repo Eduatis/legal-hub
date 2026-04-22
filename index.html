@@ -320,14 +320,14 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         </div>
         <div id="soc-aut-section">
           <div class="filters">
-            <select class="fsel" id="soc-aut-pais" onchange="renderSocAutoridades()"><option value="">Todos los países</option><option value="AR">Argentina</option><option value="UY">Uruguay</option><option value="PY">Paraguay</option></select>
+            <select class="fsel" id="soc-aut-pais" onchange="renderSocAutoridades()"><option value="">Todos los países</option><option value="AR">Argentina</option><option value="UY">Uruguay</option><option value="PY">Paraguay</option><option value="Global">Global</option></select>
             <select class="fsel" id="soc-aut-sociedad" onchange="renderSocAutoridades()"><option value="">Todas las sociedades</option></select>
           </div>
           <div class="card" style="padding:0;overflow:hidden"><div class="dwrap"><table class="dtable" id="soc-aut-table"></table></div></div>
         </div>
         <div id="soc-acc-section" style="display:none">
           <div class="filters">
-            <select class="fsel" id="soc-acc-pais" onchange="renderSocAccionistas()"><option value="">Todos los países</option><option value="AR">Argentina</option><option value="UY">Uruguay</option><option value="PY">Paraguay</option></select>
+            <select class="fsel" id="soc-acc-pais" onchange="renderSocAccionistas()"><option value="">Todos los países</option><option value="AR">Argentina</option><option value="UY">Uruguay</option><option value="PY">Paraguay</option><option value="Global">Global</option></select>
             <select class="fsel" id="soc-acc-sociedad" onchange="renderSocAccionistas()"><option value="">Todas las sociedades</option></select>
           </div>
           <div class="card" style="padding:0;overflow:hidden"><div class="dwrap"><table class="dtable" id="soc-acc-table"></table></div></div>
@@ -623,7 +623,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <div class="formtit"><span id="form-soc-aut-title">Nueva autoridad</span><button class="formclose" onclick="closeFormSocAut()">×</button></div>
     <div class="fieldrow">
       <div class="field" style="margin:0"><label>País</label>
-        <select id="fsa-pais" onchange="updateSociedadOptions('fsa-pais','fsa-sociedad')"><option value="AR">Argentina</option><option value="UY">Uruguay</option><option value="PY">Paraguay</option></select>
+        <select id="fsa-pais" onchange="updateSociedadOptions('fsa-pais','fsa-sociedad')"><option value="AR">Argentina</option><option value="UY">Uruguay</option><option value="PY">Paraguay</option><option value="Global">Global</option></select>
       </div>
       <div class="field" style="margin:0"><label>Sociedad</label><input type="text" id="fsa-sociedad" placeholder="Nombre de la sociedad"></div>
     </div>
@@ -652,7 +652,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <div class="formtit"><span id="form-soc-acc-title">Nuevo accionista</span><button class="formclose" onclick="closeFormSocAcc()">×</button></div>
     <div class="fieldrow">
       <div class="field" style="margin:0"><label>País</label>
-        <select id="facc-pais"><option value="AR">Argentina</option><option value="UY">Uruguay</option><option value="PY">Paraguay</option></select>
+        <select id="facc-pais"><option value="AR">Argentina</option><option value="UY">Uruguay</option><option value="PY">Paraguay</option><option value="Global">Global</option></select>
       </div>
       <div class="field" style="margin:0"><label>Sociedad</label><input type="text" id="facc-sociedad" placeholder="Nombre de la sociedad"></div>
     </div>
@@ -1747,7 +1747,7 @@ function renderSocAutoridades(){
   updateSocFilter(socAut,'soc-aut-pais','soc-aut-sociedad');
   var fp=document.getElementById('soc-aut-pais').value;
   var fs=document.getElementById('soc-aut-sociedad').value;
-  var list=socAut.filter(function(x){return currentUser.scope.indexOf(x.pais)>=0;});
+  var list=socAut.filter(function(x){return x.pais==='Global'||currentUser.scope.indexOf(x.pais)>=0;});
   if(fp)list=list.filter(function(x){return x.pais===fp;});
   if(fs)list=list.filter(function(x){return x.sociedad===fs;});
   var el=document.getElementById('soc-aut-table');
@@ -1779,7 +1779,7 @@ function renderSocAccionistas(){
   updateSocFilter(socAcc,'soc-acc-pais','soc-acc-sociedad');
   var fp=document.getElementById('soc-acc-pais').value;
   var fs=document.getElementById('soc-acc-sociedad').value;
-  var list=socAcc.filter(function(x){return currentUser.scope.indexOf(x.pais)>=0;});
+  var list=socAcc.filter(function(x){return x.pais==='Global'||currentUser.scope.indexOf(x.pais)>=0;});
   if(fp)list=list.filter(function(x){return x.pais===fp;});
   if(fs)list=list.filter(function(x){return x.sociedad===fs;});
   var el=document.getElementById('soc-acc-table');
