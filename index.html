@@ -1846,34 +1846,44 @@ function renderSocAutoridades(){
   updateSocFilter(socAut,'soc-aut-pais','soc-aut-sociedad');
   var fp=document.getElementById('soc-aut-pais').value;
   var fs=document.getElementById('soc-aut-sociedad').value;
-  var list=socAut.filter(function(x){return x.pais==='Global'||currentUser.scope.indexOf(x.pais)>=0;});
+  var list=socAut.filter(function(x){return currentUser.scope.indexOf(x.pais)>=0||x.pais==='Global'||x.pais==='US';});
   if(fp)list=list.filter(function(x){return x.pais===fp;});
   if(fs)list=list.filter(function(x){return x.sociedad===fs;});
   var el=document.getElementById('soc-aut-table');
   if(!list.length){el.innerHTML='<tr><td colspan="7" style="padding:30px;text-align:center;color:var(--tx3)">Sin autoridades cargadas</td></tr>';return;}
-  // Group by sociedad
   var bySoc={};list.forEach(function(x){if(!bySoc[x.sociedad])bySoc[x.sociedad]=[];bySoc[x.sociedad].push(x);});
-  var head='<thead><tr><th>Cargo</th><th>Nombre</th><th>Acta</th><th>Designación</th><th>Vigencia</th><th>Obs.</th><th></th></tr></thead>';
+  var head='<thead><tr><th>Cargo</th><th>Nombre</th><th>Designacion</th><th>Vencimiento</th><th>Representacion Legal</th><th>Obs.</th><th></th></tr></thead>';
   var rows=[];
   Object.keys(bySoc).sort().forEach(function(soc){
-    rows.push('<tr><td colspan="7" style="background:var(--surf2);font-size:11px;font-weight:600;color:var(--tx2);padding:6px 10px;letter-spacing:.05em">'+soc+' — '+bySoc[soc][0].pais+'</td></tr>');
-    bySoc[soc].forEach(function(x){
-      var tr=["<tr>",
-        "<td><span class=\"badge bdb\" style=\"font-size:10px\">"+x.cargo+"</span></td>",
-        "<td style=\"font-weight:500\">"+x.nombre+"</td>",
-        "<td style=\"font-size:11px\">"+x.acta+"</td>",
-        "<td>"+fmtDate(x.fecha)+"</td>",
-        "<td style=\"font-size:11px\">"+x.vigencia+"</td>",
-        "<td style=\"font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\">"+x.obs+"</td>",
-        "<td><div class=\"acbtn\"><button class=\"btnedit\" data-id=\""+x.id+"\" onclick=\"editSocAut(this.dataset.id)\">Editar</button>",
-        "<button class=\"btnrd\" data-id=\""+x.id+"\" data-nm=\""+x.nombre.replace(/"/g,"")+"\" onclick=\"socAutDelete(this.dataset.id,this.dataset.nm)\">Borrar</button></div></td>",
-        "</tr>"].join("");
-      rows.push(tr);
+    var items=bySoc[soc];
+    var pais=items[0].pais;
+    rows.push('<tr><td colspan="7" style="background:var(--surf2);font-size:11px;font-weight:600;color:var(--tx2);padding:6px 10px;letter-spacing:.05em">'+soc+' — '+pais+'</td></tr>');
+    items.forEach(function(x){
+      var rep='';var obsClean=x.obs||'';
+      var ri=obsClean.indexOf('Representaci');
+      if(ri>=0){
+        var rend=obsClean.indexOf('|',ri);
+        var rpiece=rend>=0?obsClean.substring(ri,rend):obsClean.substring(ri);
+        rep=rpiece.replace(/Representaci[^\:]*:\s*/i,'').trim();
+        obsClean=rend>=0?obsClean.substring(rend+1).trim():'';
+      }
+      var repHtml=rep?('<span style="font-size:11px;color:var(--gr-tx);background:var(--gr-bg);padding:2px 7px;border-radius:20px">'+rep+'</span>'):'<span style="color:var(--tx3)">—</span>';
+      var vigHtml=x.vigencia==='Indefinida'?('<span style="font-size:11px;color:var(--tx3)">Indefinida</span>'):x.vigencia?('<span style="font-size:11px;color:var(--am-tx);background:var(--am-bg);padding:2px 7px;border-radius:20px">'+x.vigencia+'</span>'):'<span style="color:var(--tx3)">—</span>';
+      rows.push('<tr>'+
+        '<td><span class="stat s1" style="font-size:10px">'+x.cargo+'</span></td>'+
+        '<td style="font-weight:500">'+x.nombre+'</td>'+
+        '<td style="font-size:11px">'+fmtDate(x.fecha)+'</td>'+
+        '<td>'+vigHtml+'</td>'+
+        '<td>'+repHtml+'</td>'+
+        '<td style="font-size:11px;color:var(--tx3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+obsClean+'">'+obsClean+'</td>'+
+        '<td><div class="acbtn">'+
+        '<button class="btnedit" data-id="'+x.id+'" onclick="editSocAut(this.dataset.id)">Editar</button>'+
+        '<button class="btnrd" data-id="'+x.id+'" data-nm="'+x.nombre.replace(/"/g,'')+'" onclick="socAutDelete(this.dataset.id,this.dataset.nm)">Borrar</button>'+
+        '</div></td></tr>');
     });
   });
   el.innerHTML=head+'<tbody>'+rows.join('')+'</tbody>';
 }
-
 function renderSocAccionistas(){
   updateSocFilter(socAcc,'soc-acc-pais','soc-acc-sociedad');
   var fp=document.getElementById('soc-acc-pais').value;
