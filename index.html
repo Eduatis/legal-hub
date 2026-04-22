@@ -287,7 +287,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div class="filters">
           <div class="sbox"><svg class="sico" width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4" stroke="#1A1916" stroke-width="1.2"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="#1A1916" stroke-width="1.2" stroke-linecap="round"/></svg><input type="text" placeholder="Buscar sitio, lote..." id="intoru-q" oninput="renderINTORU()"></div>
 
-          <select class="fsel" id="intoru-cumple" onchange="renderINTORU()"><option value="">Todos</option><option value="Sí">Cumple</option><option value="No">No cumple</option><option value="En análisis">En análisis</option></select>
+          <select class="fsel" id="intoru-cumple" onchange="renderINTORU()"><option value="">Todos</option><option value="Sí">Cumple</option><option value="Cumple con regularización">Cumple con regularización</option><option value="No">No cumple</option><option value="En análisis">En análisis</option></select>
         </div>
         <div class="card" style="padding:0;overflow:hidden"><div class="dwrap"><table class="dtable" id="intoru-table"></table></div></div>
       </div>
@@ -513,6 +513,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <select id="fi-cumple">
         <option value="En análisis">En análisis</option>
         <option value="Sí">Sí — Cumple</option>
+        <option value="Cumple con regularización">Cumple pero requiere regularización</option>
         <option value="No">No — No cumple</option>
       </select>
     </div>
@@ -711,7 +712,8 @@ var charts = {};
 var USERS_MAP = {
   'eduardo.galindo@atis-group.com': {name:'Eduardo Galindo',ini:'EG',role:'Global · Legal Manager',bg:'#EEF2FF',tc:'#1B4FD8',scope:['AR','UY','PY']},
   'camila.soto@atis-group.com':     {name:'Camila Soto',    ini:'CS',role:'Legal · AR + UY',       bg:'#DCFCE7',tc:'#15803D',scope:['AR','UY']},
-  'edit.roco@atis-group.com':       {name:'Edit Roco',      ini:'ST',role:'Legal · PY',            bg:'#FEF3C7',tc:'#B45309',scope:['PY']}
+  'edit.roco@atis-group.com':       {name:'Edit Roco',      ini:'ST',role:'Legal · PY',            bg:'#FEF3C7',tc:'#B45309',scope:['PY']},
+  'juanpablo.blanco@atis-group.com':{name:'Juan Pablo Blanco',ini:'JP',role:'INTORU · UY',          bg:'#F0FDF4',tc:'#166534',scope:['UY']}
 };
 var AVC = {EG:{bg:'#EEF2FF',tc:'#1B4FD8'},CS:{bg:'#DCFCE7',tc:'#15803D'},ST:{bg:'#FEF3C7',tc:'#B45309'}};
 var SCLASS = {'Borrador':'s0','En revisión':'s1','Firmado':'s2','Vigente':'s3','En renovación':'s4','Vencido':'s5'};
@@ -1500,7 +1502,7 @@ function renderINTORU(){
   var rows=list.map(function(s){
     var dt=daysTo(s.cierre);
     var vc=dt!==null&&dt<=15?'color:var(--rd);font-weight:500':dt!==null&&dt<=30?'color:var(--am)':'';
-    var cumpleBadge=s.cumple==='Sí'?'<span class="badge bdgr">✓ Cumple</span>':s.cumple==='No'?'<span class="badge bdr">✗ No cumple</span>':'<span class="badge bda">En análisis</span>';
+    var cumpleBadge=s.cumple==='Sí'?'<span class="badge bdgr">✓ Cumple</span>':s.cumple==='No'?'<span class="badge bdr">✗ No cumple</span>':s.cumple==='Cumple con regularización'?'<span class="badge bda" style="background:#FEF9C3;color:#854D0E">⚠ Regularización</span>':'<span class="badge bda">En análisis</span>';
     var modalBadge=s.modalidad?'<span class="badge bdb" style="font-size:10px">'+s.modalidad+'</span>':'<span style="color:var(--tx3)">—</span>';
     return '<tr>'+
       '<td><span class="mono">'+s.sitio+'</span></td>'+
