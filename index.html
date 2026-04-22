@@ -420,7 +420,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
             <select class="fsel" id="soc-acc-pais" onchange="renderSocAccionistas()"><option value="">Todos los países</option><option value="AR">Argentina</option><option value="UY">Uruguay</option><option value="PY">Paraguay</option><option value="Global">Global</option></select>
             <select class="fsel" id="soc-acc-sociedad" onchange="renderSocAccionistas()"><option value="">Todas las sociedades</option></select>
           </div>
-          <div class="card" style="padding:0;overflow:hidden"><div class="dwrap"><table class="dtable" id="soc-acc-table"></table></div></div>
+          <div id="soc-acc-table"></div>
         </div>
       </div>
 
@@ -803,7 +803,8 @@ var USERS_MAP = {
   'eduardo.galindo@atis-group.com': {name:'Eduardo Galindo',ini:'EG',role:'Global · Legal Manager',bg:'#EEF2FF',tc:'#1B4FD8',scope:['AR','UY','PY']},
   'camila.soto@atis-group.com':     {name:'Camila Soto',    ini:'CS',role:'Legal · AR + UY',       bg:'#DCFCE7',tc:'#15803D',scope:['AR','UY']},
   'edit.roco@atis-group.com':       {name:'Edit Roco',      ini:'ST',role:'Legal · PY',            bg:'#FEF3C7',tc:'#B45309',scope:['PY']},
-  'juanpablo.blanco@atis-group.com':{name:'Juan Pablo Blanco',ini:'JP',role:'INTORU · UY',          bg:'#F0FDF4',tc:'#166534',scope:['UY']}
+  'juanpablo.blanco@atis-group.com':{name:'Juan Pablo Blanco',ini:'JP',role:'INTORU · Societario',  bg:'#F0FDF4',tc:'#166534',scope:['UY']},
+  'julian.jackson@atis-group.com':   {name:'Julian Jackson',   ini:'JJ',role:'INTORU · Societario',  bg:'#FDF4FF',tc:'#7E22CE',scope:['UY']}
 };
 var AVC = {EG:{bg:'#EEF2FF',tc:'#1B4FD8'},CS:{bg:'#DCFCE7',tc:'#15803D'},ST:{bg:'#FEF3C7',tc:'#B45309'}};
 var SCLASS = {'Borrador':'s0','En revisión':'s1','Firmado':'s2','Vigente':'s3','En renovación':'s4','Vencido':'s5'};
@@ -840,8 +841,9 @@ async function initApp(account){
   document.getElementById('nav-intoru').style.display = hasUY ? 'flex' : 'none';
   document.getElementById('nav-dd').style.display = hasUY ? 'flex' : 'none';
   // JP solo ve INTORU y Societario — ocultar módulos legales internos
-  var isJP = currentUser.ini === 'JP';
-  if(isJP){
+  // JP y JJ: solo INTORU + Societario + Dashboard
+  var isLimited = currentUser.ini === 'JP' || currentUser.ini === 'JJ';
+  if(isLimited){
     ['nav-temas','nav-documentos','nav-suelo','nav-dd','nav-search','nav-analytics'].forEach(function(id){
       document.getElementById(id).style.display='none';
     });
@@ -1876,45 +1878,68 @@ function renderSocAccionistas(){
   updateSocFilter(socAcc,'soc-acc-pais','soc-acc-sociedad');
   var fp=document.getElementById('soc-acc-pais').value;
   var fs=document.getElementById('soc-acc-sociedad').value;
-  var list=socAcc.filter(function(x){return x.pais==='Global'||currentUser.scope.indexOf(x.pais)>=0;});
+  var list=socAcc.filter(function(x){return currentUser.scope.indexOf(x.pais)>=0||x.pais==='US';});
   if(fp)list=list.filter(function(x){return x.pais===fp;});
   if(fs)list=list.filter(function(x){return x.sociedad===fs;});
   var el=document.getElementById('soc-acc-table');
-  if(!list.length){el.innerHTML='<tr><td colspan="7" style="padding:30px;text-align:center;color:var(--tx3)">Sin accionistas cargados</td></tr>';return;}
+  if(!list.length){el.innerHTML='<div style="padding:30px;text-align:center;color:var(--tx3)">Sin accionistas cargados</div>';return;}
   var bySoc={};list.forEach(function(x){if(!bySoc[x.sociedad])bySoc[x.sociedad]=[];bySoc[x.sociedad].push(x);});
-  var head='<thead><tr><th>Accionista</th><th>Tipo de acción</th><th>Cantidad</th><th>%</th><th>Obs.</th><th></th></tr></thead>';
-  var rows=[];
+  var html='';
+  var COLORS=['#1B4FD8','#15803D','#D97706','#DC2626','#7C3AED','#0369A1'];
   Object.keys(bySoc).sort().forEach(function(soc){
-    rows.push('<tr><td colspan="6" style="background:var(--surf2);font-size:11px;font-weight:600;color:var(--tx2);padding:6px 10px;letter-spacing:.05em">'+soc+' — '+bySoc[soc][0].pais+'</td></tr>');
-    bySoc[soc].forEach(function(x){
-      var tipoBadge=x.tipo==="Preferida"?"<span class=\"badge bda\">Preferida</span>":"<span class=\"badge bdg\">Ordinaria</span>";
-      var tr=["<tr>",
-        "<td style=\"font-weight:500\">"+x.accionista+"</td>",
-        "<td>"+tipoBadge+"</td>",
-        "<td>"+x.cantidad+"</td>",
-        "<td style=\"font-weight:500\">"+x.porcentaje+"</td>",
-        "<td style=\"font-size:11px\">"+x.obs+"</td>",
-        "<td><div class=\"acbtn\"><button class=\"btnedit\" data-id=\""+x.id+"\" onclick=\"editSocAcc(this.dataset.id)\">Editar</button>",
-        "<button class=\"btnrd\" data-id=\""+x.id+"\" data-nm=\""+x.accionista.replace(/"/g,"")+"\" onclick=\"socAccDelete(this.dataset.id,this.dataset.nm)\">Borrar</button></div></td>",
-        "</tr>"].join("");
-      rows.push(tr);
+    var items=bySoc[soc];
+    var pais=items[0].pais;
+    var cid='cs-'+soc.replace(/[^a-zA-Z0-9]/g,'');
+    var lid='ls-'+soc.replace(/[^a-zA-Z0-9]/g,'');
+    html+='<div class="card" style="margin-bottom:16px">';
+    html+='<div style="font-size:13px;font-weight:600;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--brd)">'+soc+' <span style="font-size:11px;color:var(--tx3);font-weight:400">'+pais+'</span></div>';
+    // Torta + leyenda
+    html+='<div style="display:grid;grid-template-columns:160px 1fr;gap:16px;margin-bottom:16px;align-items:center">';
+    html+='<div style="position:relative;height:150px"><canvas id="'+cid+'"></canvas></div>';
+    html+='<div id="'+lid+'"></div></div>';
+    // Tabla 1: Capital social total
+    html+='<div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Capital Social Total</div>';
+    html+='<table class="dtable" style="margin-bottom:14px"><thead><tr><th>Accionista</th><th>%</th><th>Observaciones</th><th></th></tr></thead><tbody>';
+    items.forEach(function(x){
+      html+='<tr><td style="font-weight:500">'+x.accionista+'</td><td><strong>'+x.porcentaje+'</strong></td>';
+      html+='<td style="font-size:11px;color:var(--tx3)">'+x.obs+'</td>';
+      html+='<td><div class="acbtn"><button class="btnedit" data-id="'+x.id+'" onclick="editSocAcc(this.dataset.id)">Editar</button>';
+      html+='<button class="btnrd" data-id="'+x.id+'" data-nm="'+x.accionista.replace(/"/g,'')+'" onclick="socAccDelete(this.dataset.id,this.dataset.nm)">Borrar</button></div></td></tr>';
     });
+    html+='</tbody></table>';
+    // Tabla 2: Ordinarias
+    var ords=items.filter(function(x){return x.tipo==='Ordinaria';});
+    if(ords.length){
+      html+='<div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Acciones Ordinarias</div>';
+      html+='<table class="dtable" style="margin-bottom:14px"><thead><tr><th>Accionista</th><th>Cantidad</th><th>%</th></tr></thead><tbody>';
+      ords.forEach(function(x){html+='<tr><td style="font-weight:500">'+x.accionista+'</td><td>'+x.cantidad+'</td><td><strong>'+x.porcentaje+'</strong></td></tr>';});
+      html+='</tbody></table>';
+    }
+    // Tabla 3: Preferidas
+    var prefs=items.filter(function(x){return x.tipo==='Preferida';});
+    if(prefs.length){
+      html+='<div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Acciones Preferidas</div>';
+      html+='<table class="dtable"><thead><tr><th>Accionista</th><th>Cantidad</th><th>%</th></tr></thead><tbody>';
+      prefs.forEach(function(x){html+='<tr><td style="font-weight:500">'+x.accionista+'</td><td>'+x.cantidad+'</td><td><strong>'+x.porcentaje+'</strong></td></tr>';});
+      html+='</tbody></table>';
+    }
+    html+='</div>';
   });
-  el.innerHTML=head+'<tbody>'+rows.join('')+'</tbody>';
+  el.innerHTML=html;
+  // Render tortas
+  Object.keys(bySoc).sort().forEach(function(soc){
+    var items=bySoc[soc];
+    var cid='cs-'+soc.replace(/[^a-zA-Z0-9]/g,'');
+    var lid='ls-'+soc.replace(/[^a-zA-Z0-9]/g,'');
+    var ctx=document.getElementById(cid);if(!ctx)return;
+    var labels=items.map(function(x){return x.accionista;});
+    var vals=items.map(function(x){return parseFloat((x.porcentaje||'0').replace(',','.').replace('%',''))||0;});
+    if(charts[cid])charts[cid].destroy();
+    charts[cid]=new Chart(ctx,{type:'doughnut',data:{labels:labels,datasets:[{data:vals,backgroundColor:COLORS.slice(0,vals.length),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+    var leg=document.getElementById(lid);
+    if(leg)leg.innerHTML=labels.map(function(l,i){return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div style="width:10px;height:10px;border-radius:2px;background:'+COLORS[i]+';flex-shrink:0"></div><div style="font-size:12px"><div style="font-weight:500">'+l+'</div><div style="color:var(--tx3);font-size:11px">'+items[i].porcentaje+'</div></div></div>';}).join('');
+  });
 }
-
-function openFormSocAut(){editingSocAutId=null;document.getElementById('form-soc-aut-title').textContent='Nueva autoridad';['fsa-sociedad','fsa-nombre','fsa-acta','fsa-vigencia','fsa-obs'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fsa-fecha').value='';document.getElementById('fsa-pais').value='AR';document.getElementById('fsa-cargo').value='Presidente';document.getElementById('form-soc-aut').classList.add('open');}
-function closeFormSocAut(){document.getElementById('form-soc-aut').classList.remove('open');}
-function editSocAut(id){var x=socAut.find(function(s){return s.id===id;});if(!x)return;editingSocAutId=id;document.getElementById('form-soc-aut-title').textContent='Editar autoridad';document.getElementById('fsa-pais').value=x.pais;document.getElementById('fsa-sociedad').value=x.sociedad;document.getElementById('fsa-cargo').value=x.cargo;document.getElementById('fsa-nombre').value=x.nombre;document.getElementById('fsa-acta').value=x.acta;document.getElementById('fsa-fecha').value=x.fecha;document.getElementById('fsa-vigencia').value=x.vigencia;document.getElementById('fsa-obs').value=x.obs;document.getElementById('form-soc-aut').classList.add('open');}
-async function saveSocAut(){
-  var nom=document.getElementById('fsa-nombre').value;if(!nom){alert('Ingresá el nombre.');return;}
-  var btn=document.getElementById('save-soc-aut-btn');btn.disabled=true;btn.textContent='Guardando...';
-  var fields={Sociedad:document.getElementById('fsa-sociedad').value,Pais:document.getElementById('fsa-pais').value,Cargo:document.getElementById('fsa-cargo').value,Nombre:nom,ActaDesignacion:document.getElementById('fsa-acta').value,FechaDesignacion:document.getElementById('fsa-fecha').value?document.getElementById('fsa-fecha').value+'T00:00:00Z':null,Vigencia:document.getElementById('fsa-vigencia').value,Observaciones:document.getElementById('fsa-obs').value};
-  try{if(editingSocAutId)await updateListItem(LIST_SOC_AUT,editingSocAutId,fields);else await createListItem(LIST_SOC_AUT,fields);await syncAll();closeFormSocAut();showToast('Guardado');}
-  catch(e){showToast('Error: '+e.message,true);}
-  btn.disabled=false;btn.textContent='Guardar';
-}
-
 function openFormSocAcc(){editingSocAccId=null;document.getElementById('form-soc-acc-title').textContent='Nuevo accionista';['facc-sociedad','facc-accionista','facc-cantidad','facc-porcentaje','facc-obs'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('facc-pais').value='AR';document.getElementById('facc-tipo').value='Ordinaria';document.getElementById('form-soc-acc').classList.add('open');}
 function closeFormSocAcc(){document.getElementById('form-soc-acc').classList.remove('open');}
 function editSocAcc(id){var x=socAcc.find(function(s){return s.id===id;});if(!x)return;editingSocAccId=id;document.getElementById('form-soc-acc-title').textContent='Editar accionista';document.getElementById('facc-pais').value=x.pais;document.getElementById('facc-sociedad').value=x.sociedad;document.getElementById('facc-accionista').value=x.accionista;document.getElementById('facc-tipo').value=x.tipo;document.getElementById('facc-cantidad').value=x.cantidad;document.getElementById('facc-porcentaje').value=x.porcentaje;document.getElementById('facc-obs').value=x.obs;document.getElementById('form-soc-acc').classList.add('open');}
