@@ -384,9 +384,18 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
       <!-- DUE DILIGENCE -->
       <div class="pageview" id="page-dd">
+        <!-- Contador -->
+        <div id="dd-counters" class="metrics" style="grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:14px"></div>
+        <!-- Subtabs -->
+        <div class="subtabs">
+          <div class="stab active" id="stab-dd-global" onclick="setDDTab('global')">Global</div>
+          <div class="stab" id="stab-dd-legal" onclick="setDDTab('legal')">⚖️ Legal</div>
+          <div class="stab" id="stab-dd-municipal" onclick="setDDTab('municipal')">🏛️ Municipal</div>
+          <div class="stab" id="stab-dd-tecnico" onclick="setDDTab('tecnico')">🔧 Técnico</div>
+        </div>
         <div class="filters">
           <div class="sbox"><svg class="sico" width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4" stroke="#1A1916" stroke-width="1.2"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="#1A1916" stroke-width="1.2" stroke-linecap="round"/></svg><input type="text" placeholder="Buscar sitio..." id="dd-q" oninput="renderDD()"></div>
-          <select class="fsel" id="dd-fase" onchange="renderDD()"><option value="">Todas las fases</option><option value="1">Fase 1</option><option value="2">Fase 2</option></select>
+          <select class="fsel" id="dd-fase" onchange="renderDD()"><option value="">Todas las fases</option><option value="1">Fase 1</option><option value="2">Fase 2</option><option value="3">Fase 3</option></select>
           <select class="fsel" id="dd-estado" onchange="renderDD()"><option value="">Todos</option><option value="En proceso">En proceso</option><option value="Inspeccionado">Inspeccionado</option></select>
         </div>
         <div id="dd-list"></div>
@@ -1652,11 +1661,12 @@ async function saveINTORU(){
 function mapDD(item){
   var f=item.fields;
   return {
-    id:item.id, sitio:f.Sitio||'', fase:f.Fase||'1', plazo:f.Plazo?f.Plazo.split('T')[0]:'', estado:f.Estado||'En proceso',
-    tramites:f.Tramites||'Pendiente', tramitesC:f.TramitesComentario||'',
-    inscripcion:f.Inscripcion||'Pendiente', inscripcionC:f.InscripcionComentario||'',
-    cesion:f.CesionSubarrendamiento||'Pendiente', cesionC:f.CesionComentario||'',
-    legitimidad:f.Legitimidad||'Pendiente', legitimidadC:f.LegitimidadComentario||'',
+    id:item.id, sitio:f.Sitio||'', fase:f.Fase||'1', plazoFecha:f.Plazo?f.Plazo.split('T')[0]:'', estado:f.Estado||'En proceso',
+    inscripcion:f.Inscripcion||'', inscripcionC:f.InscripcionComentario||'',
+    cesion:f.CesionSubarrendamiento||'', cesionC:f.CesionComentario||'',
+    legitimidad:f.Legitimidad||'', legitimidadC:f.LegitimidadComentario||'',
+    plazo:f.Plazo0||'', plazoC:'',
+    comentario:f.TecnicoComentario||'',
     dinacia:f.Dinacia||'Pendiente', dinaciaC:f.DinaciaComentario||'',
     intendencia:f.Intendencia||'Pendiente', intendenciaC:f.IntendenciaComentario||'',
     tecnico:f.Tecnico||'Pendiente', tecnicoC:f.TecnicoComentario||''
@@ -1668,6 +1678,32 @@ function ddAutoEstado(s){
   return items.every(function(v){return v==='Resuelto';}) ? 'Inspeccionado' : 'En proceso';
 }
 
+var ddTab = 'global';
+function setDDTab(tab){
+  ddTab=tab;
+  ['global','legal','municipal','tecnico'].forEach(function(t){
+    document.getElementById('stab-dd-'+t).classList.toggle('active',t===tab);
+  });
+  renderDD();
+}
+
+function ddStatusBadge(val){
+  if(val==='Sí') return '<span style="color:var(--gr-tx);font-weight:600">✓</span>';
+  if(val==='No') return '<span style="color:var(--rd-tx);font-weight:600">✗</span>';
+  return '<span style="color:var(--tx3)">—</span>';
+}
+
+function ddGlobalStatus(s){
+  // Legal items
+  var legal=[s.inscripcion,s.cesion,s.legitimidad,s.plazo];
+  var legalOk=legal.filter(function(v){return v==='Sí';}).length;
+  var legalNo=legal.filter(function(v){return v==='No';}).length;
+  if(s.estado==='Inspeccionado') return 'insp';
+  if(legalNo>0) return 'issues';
+  if(legalOk===legal.filter(function(v){return v!=='';}).length && legalOk>0) return 'ok';
+  return 'pending';
+}
+
 function renderDD(){
   var q=(document.getElementById('dd-q').value||'').toLowerCase();
   var ff=document.getElementById('dd-fase').value;
@@ -1676,51 +1712,88 @@ function renderDD(){
   if(q)list=list.filter(function(s){return s.sitio.toLowerCase().indexOf(q)>=0;});
   if(ff)list=list.filter(function(s){return s.fase===ff;});
   if(fe)list=list.filter(function(s){return s.estado===fe;});
+
+  // Counters
+  var total=list.length;
+  var insp=list.filter(function(s){return s.estado==='Inspeccionado';}).length;
+  var enProceso=total-insp;
+  var f1=list.filter(function(s){return s.fase==='1';}).length;
+  var f2=list.filter(function(s){return s.fase==='2';}).length;
+  var f3=list.filter(function(s){return s.fase==='3';}).length;
+  document.getElementById('dd-counters').innerHTML=
+    '<div class="metric"><div class="metlbl">Total sitios</div><div class="metval" style="color:var(--bl)">'+total+'</div></div>'+
+    '<div class="metric"><div class="metlbl">Inspeccionados</div><div class="metval" style="color:var(--gr-tx)">'+insp+'</div><div class="metsub">'+Math.round(insp/total*100||0)+'%</div></div>'+
+    '<div class="metric"><div class="metlbl">En proceso</div><div class="metval" style="color:var(--am)">'+enProceso+'</div></div>'+
+    '<div class="metric"><div class="metlbl">Fase 1</div><div class="metval" style="font-size:20px">'+f1+'</div></div>'+
+    '<div class="metric"><div class="metlbl">Fase 2</div><div class="metval" style="font-size:20px">'+f2+(f3?' / '+f3:'')+'</div></div>';
+
   var el=document.getElementById('dd-list');
-  if(!list.length){el.innerHTML='<div class="card"><div class="empty">Sin sitios cargados</div></div>';return;}
-  var ITEMS_LEGAL=[['tramites','Trámites'],['inscripcion','Inscripción'],['cesion','Cesión y Subarr.'],['legitimidad','Legitimidad']];
-  var ITEMS_MUN=[['dinacia','DINACIA'],['intendencia','Intendencia']];
-  var ITEMS_ING=[['tecnico','Técnico']];
-  el.innerHTML=list.map(function(s){
-    var dt=daysTo(s.plazo);
-    var plazoColor=dt!==null&&dt<=7?'color:var(--rd)':dt!==null&&dt<=30?'color:var(--am)':'';
-    var insp=s.estado==='Inspeccionado';
-    var estadoBadge=insp?'<span class="badge bdgr" style="font-size:11px">✓ Inspeccionado</span>':'<span class="badge bda" style="font-size:11px">En proceso</span>';
-    function sectionHTML(title,color,items){
-      var rows=items.map(function(it){
-        var key=it[0],label=it[1],val=s[key],comentario=s[key+'C'],ok=val==='Resuelto';
-        return '<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--brd)">'+
-          '<div style="width:16px;height:16px;border-radius:50%;background:'+(ok?'var(--gr-tx)':'var(--rd-bg)')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">'+
-          '<span style="font-size:9px;color:'+(ok?'#fff':'var(--rd-tx)')+';font-weight:700">'+(ok?'✓':'!')+'</span></div>'+
-          '<div style="flex:1"><div style="font-size:12px;font-weight:500;color:'+(ok?'var(--tx3)':'var(--tx)')+'">'+label+'</div>'+
-          (comentario&&!ok?'<div style="font-size:11px;color:var(--am-tx);margin-top:2px">'+comentario+'</div>':'')+
-          '</div>'+
-          '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:'+(ok?'var(--gr-bg)':'var(--rd-bg)')+';color:'+(ok?'var(--gr-tx)':'var(--rd-tx)')+'">'+val+'</span>'+
-        '</div>';
-      }).join('');
-      return '<div style="margin-bottom:8px"><div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:'+color+';padding:6px 0 4px">'+title+'</div>'+rows+'</div>';
-    }
-    var pendientes=[].concat(ITEMS_LEGAL,ITEMS_MUN,ITEMS_ING).filter(function(it){return s[it[0]]==='Pendiente';}).length;
-    return '<div class="card" style="margin-bottom:12px'+(insp?';opacity:.7':'')+'" data-id="'+s.id+'">'+
-      '<div class="cardh" style="margin-bottom:10px">'+
-      '<div style="display:flex;align-items:center;gap:10px">'+
-      '<span class="mono" style="font-size:13px">'+s.sitio+'</span>'+
-      '<span class="badge bdg">Fase '+s.fase+'</span>'+
-      estadoBadge+
-      '</div>'+
-      '<div style="display:flex;align-items:center;gap:10px">'+
-      (pendientes>0?'<span style="font-size:11px;color:var(--tx3)">'+pendientes+' pendiente'+(pendientes>1?'s':'')+'</span>':'')+
-      '<span style="font-size:11px;'+plazoColor+'">Plazo: '+fmtDate(s.plazo)+'</span>'+
-      '<button class="btnedit" data-id="'+s.id+'" onclick="editDD(this.dataset.id)">Editar</button>'+
-      '<button class="btnrd" data-id="'+s.id+'" data-nm="'+s.sitio+'" onclick="ddDelete(this.dataset.id,this.dataset.nm)">Borrar</button>'+
-      '</div></div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">'+
-      sectionHTML('⚖️ Legal','var(--bl)',ITEMS_LEGAL)+
-      sectionHTML('🏛️ Municipal','var(--am-tx)',ITEMS_MUN)+
-      sectionHTML('🔧 Ingeniería','var(--gr-tx)',ITEMS_ING)+
-      '</div></div>';
-  }).join('');
+  if(!list.length){el.innerHTML='<div class="card"><div class="empty">Sin sitios</div></div>';return;}
+
+  if(ddTab==='global') renderDDGlobal(list, el);
+  else if(ddTab==='legal') renderDDLegal(list, el);
+  else if(ddTab==='municipal') renderDDMunicipal(list, el);
+  else renderDDTecnico(list, el);
 }
+
+function renderDDGlobal(list, el){
+  var head='<thead><tr><th>Sitio</th><th>Fase</th><th>Inscripción</th><th>Cesión/Subarr.</th><th>Legitimidad</th><th>Plazo</th><th>Estado</th><th>Comentario</th><th></th></tr></thead>';
+  var rows=list.map(function(s){
+    var insp=s.estado==='Inspeccionado';
+    var estadoBadge=insp?'<span class="badge bdgr">✓ Inspeccionado</span>':'<span class="badge bda">En proceso</span>';
+    var legalItems=[s.inscripcion,s.cesion,s.legitimidad,s.plazo];
+    var hasNo=legalItems.indexOf('No')>=0;
+    var allSi=legalItems.filter(function(v){return v==='Sí';}).length===legalItems.filter(function(v){return v!=='';}).length && legalItems.filter(function(v){return v!=='';}).length>0;
+    var rowStyle=insp?'opacity:.7':'';
+    var obs=s.comentario?'<span style="font-size:11px;color:var(--tx3)" title="'+s.comentario+'">'+s.comentario.substring(0,40)+(s.comentario.length>40?'...':'')+'</span>':'';
+    return '<tr style="'+rowStyle+'"><td><span class="mono">'+s.sitio+'</span></td><td>'+s.fase+'</td>'+
+      '<td>'+ddStatusBadge(s.inscripcion)+'</td>'+
+      '<td>'+ddStatusBadge(s.cesion)+'</td>'+
+      '<td>'+ddStatusBadge(s.legitimidad)+'</td>'+
+      '<td>'+ddStatusBadge(s.plazo)+'</td>'+
+      '<td>'+estadoBadge+'</td>'+
+      '<td>'+obs+'</td>'+
+      '<td><button class="btnedit" data-id="'+s.id+'" onclick="editDD(this.dataset.id)">Editar</button></td></tr>';
+  });
+  el.innerHTML='<div class="card" style="padding:0;overflow:hidden"><div class="dwrap"><table class="dtable"><thead><tr><th>Sitio</th><th>Fase</th><th>Inscripción</th><th>Cesión/Subarr.</th><th>Legitimidad</th><th>Plazo</th><th>Estado</th><th>Comentario</th><th></th></tr></thead><tbody>'+rows.join('')+'</tbody></table></div></div>';
+}
+
+function renderDDLegal(list, el){
+  var rows=list.map(function(s){
+    var insp=s.estado==='Inspeccionado';
+    var estadoBadge=insp?'<span class="badge bdgr">✓</span>':'<span class="badge bda">En proceso</span>';
+    return '<tr style="'+(insp?'opacity:.7':'')+'"><td><span class="mono">'+s.sitio+'</span></td><td>'+s.fase+'</td>'+
+      '<td>'+ddStatusBadge(s.inscripcion)+'</td>'+
+      '<td>'+ddStatusBadge(s.cesion)+'</td>'+
+      '<td>'+ddStatusBadge(s.legitimidad)+'</td>'+
+      '<td>'+ddStatusBadge(s.plazo)+'</td>'+
+      '<td>'+estadoBadge+'</td>'+
+      '<td style="font-size:11px;max-width:250px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" onclick="toggleObs(this)" data-full="'+s.comentario.replace(/"/g,'&quot;')+'" title="'+s.comentario+'">'+s.comentario.substring(0,50)+(s.comentario.length>50?'...':'')+'</td>'+
+      '<td><button class="btnedit" data-id="'+s.id+'" onclick="editDD(this.dataset.id)">Editar</button></td></tr>';
+  });
+  el.innerHTML='<div class="card" style="padding:0;overflow:hidden"><div class="dwrap"><table class="dtable"><thead><tr><th>Sitio</th><th>Fase</th><th>Inscripción</th><th>Cesión/Subarr.</th><th>Legitimidad</th><th>Plazo</th><th>Inspeccionado</th><th>Comentario</th><th></th></tr></thead><tbody>'+rows.join('')+'</tbody></table></div></div>';
+}
+
+function renderDDMunicipal(list, el){
+  var rows=list.map(function(s){
+    return '<tr><td><span class="mono">'+s.sitio+'</span></td><td>'+s.fase+'</td>'+
+      '<td>'+ddStatusBadge(s.dinacia)+(s.dinaciaC?'<div style="font-size:10px;color:var(--tx3)">'+s.dinaciaC+'</div>':'')+'</td>'+
+      '<td>'+ddStatusBadge(s.intendencia)+(s.intendenciaC?'<div style="font-size:10px;color:var(--tx3)">'+s.intendenciaC+'</div>':'')+'</td>'+
+      '<td><button class="btnedit" data-id="'+s.id+'" onclick="editDD(this.dataset.id)">Editar</button></td></tr>';
+  });
+  el.innerHTML='<div class="card" style="padding:0;overflow:hidden"><div class="dwrap"><table class="dtable"><thead><tr><th>Sitio</th><th>Fase</th><th>DINACIA</th><th>Intendencia</th><th></th></tr></thead><tbody>'+rows.join('')+'</tbody></table></div></div>';
+}
+
+function renderDDTecnico(list, el){
+  var rows=list.map(function(s){
+    return '<tr><td><span class="mono">'+s.sitio+'</span></td><td>'+s.fase+'</td>'+
+      '<td>'+ddStatusBadge(s.tecnico)+'</td>'+
+      '<td style="font-size:11px;max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" onclick="toggleObs(this)" data-full="'+s.tecnicoC.replace(/"/g,'&quot;')+'" >'+s.tecnicoC.substring(0,60)+(s.tecnicoC.length>60?'...':'')+'</td>'+
+      '<td><button class="btnedit" data-id="'+s.id+'" onclick="editDD(this.dataset.id)">Editar</button></td></tr>';
+  });
+  el.innerHTML='<div class="card" style="padding:0;overflow:hidden"><div class="dwrap"><table class="dtable"><thead><tr><th>Sitio</th><th>Fase</th><th>Técnico</th><th>Comentario</th><th></th></tr></thead><tbody>'+rows.join('')+'</tbody></table></div></div>';
+}
+
 
 function openFormDD(){
   editingDDId=null;document.getElementById('form-dd-title').textContent='Nuevo sitio — DD Uruguay';
@@ -1761,6 +1834,7 @@ async function saveDD(){
     Sitio:sitio, Fase:document.getElementById('fdd-fase').value,
     Plazo:document.getElementById('fdd-plazo').value?document.getElementById('fdd-plazo').value+'T00:00:00Z':null,
     Estado:todoResuelto?'Inspeccionado':'En proceso',
+    Plazo0:document.getElementById('fdd-plazo-legal').value||'',
     Tramites:tramites, TramitesComentario:document.getElementById('fdd-tramites-c').value,
     Inscripcion:inscripcion, InscripcionComentario:document.getElementById('fdd-inscripcion-c').value,
     CesionSubarrendamiento:cesion, CesionComentario:document.getElementById('fdd-cesion-c').value,
