@@ -2472,7 +2472,23 @@ document.getElementById('fd-fi').value=todayStr();updateCode();
   try{
     await msalInstance.initialize();
     const result=await msalInstance.handleRedirectPromise();
-    if(result)await initApp(result.account);
+    if(result){
+      await initApp(result.account);
+    } else {
+      // Check if already logged in from a previous session
+      const accounts=msalInstance.getAllAccounts();
+      if(accounts.length>0){
+        // Try to get token silently - if it works, init app
+        try{
+          await msalInstance.acquireTokenSilent({scopes:SCOPES,account:accounts[0]});
+          await initApp(accounts[0]);
+        }catch(silentErr){
+          // Silent token failed - need interactive login
+          console.warn('Silent token failed, need login:', silentErr.message);
+          // Show login button but don't auto-redirect
+        }
+      }
+    }
   }catch(e){console.error(e);}
 })();
 </script>
