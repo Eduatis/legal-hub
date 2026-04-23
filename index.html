@@ -136,6 +136,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .empty{text-align:center;padding:40px 20px;color:var(--tx3);font-size:13px}
 .av{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:500;flex-shrink:0}
 /* Analytics */
+
+.dash-item{cursor:pointer;transition:background .1s}
+.dash-item:hover{background:var(--surf2) !important;border-radius:var(--rs)}
+
 .chart-wrap{position:relative;height:220px}
 .yesno{display:flex;gap:8px}
 .yesno label{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;font-weight:normal}
@@ -1065,15 +1069,18 @@ function renderDash(){
     m2.style.gridTemplateColumns='repeat(4,minmax(0,1fr))';
   };
   // Alertas 48hs — Temas + DD + INTORU
-  var alertTemas=activos.filter(function(t){var dt=daysTo(t.dead);return dt!==null&&dt<=2;}).map(function(t){var dt=daysTo(t.dead);return {tipo:'TEMAS',label:t.tit,sub:fmtDate(t.dead)+(t.cli?' · '+t.cli:''),dt:dt};});
-  var alertDD=dd.filter(function(s){var dt=daysTo(s.plazo);return dt!==null&&dt<=2;}).map(function(s){var dt=daysTo(s.plazo);return {tipo:'DD',label:s.sitio,sub:'Plazo DD · '+fmtDate(s.plazo),dt:dt};});
-  var alertINTORU=intoru.filter(function(s){var dt=daysTo(s.cierre);return dt!==null&&dt<=2;}).map(function(s){var dt=daysTo(s.cierre);return {tipo:'INTORU',label:s.sitio,sub:'Cierre · '+fmtDate(s.cierre),dt:dt};});
+  var alertTemas=activos.filter(function(t){var dt=daysTo(t.dead);return dt!==null&&dt<=2;}).map(function(t){var dt=daysTo(t.dead);return {tipo:'TEMAS',label:t.tit,sub:fmtDate(t.dead)+(t.cli?' · '+t.cli:''),dt:dt,id:t.id,sitio:null};});
+  var alertDD=dd.filter(function(s){var dt=daysTo(s.plazoFecha);return dt!==null&&dt<=2;}).map(function(s){var dt=daysTo(s.plazoFecha);return {tipo:'DD',label:s.sitio,sub:'Plazo DD · '+fmtDate(s.plazoFecha),dt:dt,sitio:s.sitio};});
+  var alertINTORU=intoru.filter(function(s){var dt=daysTo(s.cierre);return dt!==null&&dt<=2;}).map(function(s){var dt=daysTo(s.cierre);return {tipo:'INTORU',label:s.sitio,sub:'Cierre · '+fmtDate(s.cierre),dt:dt,sitio:s.sitio};});
   var allAlerts=alertTemas.concat(alertDD).concat(alertINTORU);
   allAlerts.sort(function(a,b){return a.dt-b.dt;});
   var tipColor={'TEMAS':'bdb','DD':'bda','INTORU':'bdr'};
   document.getElementById('dash-alerts').innerHTML=allAlerts.length?allAlerts.map(function(a){
     var r=a.dt<0;
-    return '<div class="aitem"><div class="dot '+(r?'dotr':'dota')+'"></div><div style="flex:1"><div class="adesc">'+a.label+' <span class="badge '+tipColor[a.tipo]+'" style="font-size:9px;vertical-align:middle">'+a.tipo+'</span></div><div class="ameta">'+a.sub+'</div></div><span class="badge '+(r?'bdr':'bda')+'" style="margin-left:8px">'+(a.dt<0?'Vencido':a.dt===0?'Hoy':a.dt+' día'+(a.dt>1?'s':''))+'</span></div>';
+    var nav=a.tipo==='TEMAS'?'navToItem(\'temas\',\''+a.label.replace(/'/g,'').substring(0,20)+'\')'
+            :a.tipo==='DD'?'navToItem(\'dd\',\''+a.sitio+'\')' 
+            :'navToItem(\'intoru\',\''+a.sitio+'\')';
+    return '<div class="aitem dash-item" onclick="'+nav+'"><div class="dot '+(r?'dotr':'dota')+'"></div><div style="flex:1"><div class="adesc">'+a.label+' <span class="badge '+tipColor[a.tipo]+'" style="font-size:9px;vertical-align:middle">'+a.tipo+'</span></div><div class="ameta">'+a.sub+'</div></div><span class="badge '+(r?'bdr':'bda')+'" style="margin-left:8px">'+(a.dt<0?'Vencido':a.dt===0?'Hoy':a.dt+' día'+(a.dt>1?'s':''))+'</span></div>';
   }).join(''):'<div class="empty">Sin alertas próximas</div>';
 
   // INTORU: sitios con cierre en próximos 15 días
@@ -1090,7 +1097,8 @@ function renderDash(){
     var dt=daysTo(t.dead);var dcolor=dt!==null&&dt<=7?'color:var(--rd)':dt!==null&&dt<=30?'color:var(--am)':'';
     var eb=t.estado==='En curso'?'bdb':'bdg';
     var bloqTag=t.bloqueado?'<span class="badge '+(t.bloqQuien==='EG'?'bdr':'bda')+'" style="margin-left:4px">'+(t.bloqQuien==='EG'?'🔴 EG':'🟡 Tercero')+'</span>':'';
-    return '<div class="aitem"><div class="dot dotr"></div><div style="flex:1"><div class="adesc">'+t.tit+bloqTag+'</div><div class="ameta" style="'+dcolor+'">'+fmtDate(t.dead)+(t.cli?' · '+t.cli:'')+'</div></div><span class="badge '+eb+'" style="margin-left:8px">'+t.estado+'</span></div>';
+    var tid=t.id;
+    return '<div class="aitem dash-item" data-tid="'+tid+'" onclick="navToItem(&quot;temas&quot;,null,this.dataset.tid)"><div class="dot dotr"></div><div style="flex:1"><div class="adesc">'+t.tit+bloqTag+'</div><div class="ameta" style="'+dcolor+'">'+fmtDate(t.dead)+(t.cli?' · '+t.cli:'')+'</div></div><span class="badge '+eb+'" style="margin-left:8px">'+t.estado+'</span></div>';
   }).join(''):'<div class="empty">Sin temas de alta prioridad</div>';
   // Últimos docs
   document.getElementById('dash-docs').innerHTML=docTableHTML(vDocs().slice(0,5),false);
@@ -1108,7 +1116,8 @@ function renderDash(){
       el.innerHTML = list.sort(function(a,b){return new Date(a.fin)-new Date(b.fin);}).slice(0,5).map(function(s){
         var dt=daysTo(s.fin);
         var col=dt<=30?'var(--rd)':dt<=90?'var(--am)':'var(--tx2)';
-        return '<div class="aitem"><div class="dot" style="background:'+col+';margin-top:5px"></div>'+
+        var ssitio=s.sitio;
+        return '<div class="aitem dash-item" data-ss="'+ssitio+'" onclick="navToItem(&quot;suelo&quot;,this.dataset.ss)"><div class="dot" style="background:'+col+';margin-top:5px"></div>'+
           '<div style="flex:1"><div style="font-size:12px;font-weight:500"><span class="mono">'+s.sitio+'</span> · '+s.cp+'</div>'+
           '<div style="font-size:11px;color:var(--tx3);margin-top:2px">'+s.pais+' · Vence: '+fmtDate(s.fin)+'</div></div>'+
           '<span class="badge" style="background:var(--am-bg);color:var(--am-tx)">'+dt+' días</span></div>';
@@ -1386,6 +1395,40 @@ function goTo(page,el){
   if(page==='analytics')setTimeout(renderAnalytics,100);
 }
 function navTo(page){var el=document.getElementById('nav-'+page);if(el)goTo(page,el);}
+
+function navToItem(page, searchId, temaId){
+  navTo(page);
+  setTimeout(function(){
+    if(page==='temas'){
+      if(temaId){
+        // Scroll to and highlight the specific tema
+        var items=document.querySelectorAll('#temas-list .titem');
+        items.forEach(function(el){el.style.background='';});
+        // Find by tema id via edit button
+        var btn=document.querySelector('[onclick*="editTema(\''+temaId+'\')"]');
+        if(btn){
+          var item=btn.closest('.titem');
+          if(item){
+            item.scrollIntoView({behavior:'smooth',block:'center'});
+            item.style.background='var(--bl-bg)';
+            item.style.borderRadius='var(--rs)';
+            setTimeout(function(){item.style.background='';},2500);
+          }
+        }
+      }
+      if(searchId){
+        var q=document.getElementById('tema-q');
+        if(q){q.value=searchId;renderTemas();}
+      }
+    } else if(page==='suelo'){
+      if(searchId){var q=document.getElementById('suelo-q');if(q){q.value=searchId;renderSuelo();}}
+    } else if(page==='dd'){
+      if(searchId){var q=document.getElementById('dd-q');if(q){q.value=searchId;renderDD();}}
+    } else if(page==='intoru'){
+      if(searchId){var q=document.getElementById('intoru-q');if(q){q.value=searchId;renderINTORU();}}
+    }
+  }, 150);
+}
 
 // ─── TEMA FORM ──────────────────────────────────────────────────────────────
 function toggleBloq(){var show=document.getElementById('ft-bloq').checked;document.getElementById('bloq-fields').style.display=show?'block':'none';}
