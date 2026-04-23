@@ -1146,8 +1146,9 @@ function renderDash(){
     return '<div class="aitem dash-item" data-tid="'+tid+'" onclick="navToItem(&quot;temas&quot;,null,this.dataset.tid)"><div class="dot dotr"></div><div style="flex:1"><div class="adesc">'+t.tit+bloqTag+'</div><div class="ameta" style="'+dcolor+'">'+fmtDate(t.dead)+(t.cli?' · '+t.cli:'')+'</div></div><span class="badge '+eb+'" style="margin-left:8px">'+t.estado+'</span></div>';
   }).join(''):'<div class="empty">Sin temas de alta prioridad</div>';
   // Fechas Clave
+  var _scope=currentUser&&currentUser.scope?currentUser.scope:['AR','UY','PY'];
   var proxFechas=fechas.filter(function(f){
-    return (currentUser.scope.indexOf(f.pais)>=0||f.pais==='Global') && daysTo(f.fecha)!==null && daysTo(f.fecha)<=180;
+    return (_scope.indexOf(f.pais)>=0||f.pais==='Global'||!f.pais) && daysTo(f.fecha)!==null && daysTo(f.fecha)<=180;
   }).sort(function(a,b){return new Date(a.fecha)-new Date(b.fecha);}).slice(0,5);
   var fechasWrap=document.getElementById('dash-fechas-wrap');
   if(proxFechas.length>0){
@@ -1472,6 +1473,9 @@ function goTo(page,el){
   var A={fechas:'<button class="btnp" onclick="openFormFecha()">+ Nueva fecha clave</button>',mla:'<button class="btnp" onclick="openFormMLA()">+ Nuevo MLA</button>',inm:'<button class="btnp" onclick="openFormInm()">+ Nuevo inmueble</button>',poderes:'<button class="btns" onclick="exportCSV(\'poderes\')" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormPoder()">+ Nuevo poder</button>',societario:socTab==="autoridades"?'<button class="btnp" onclick="openFormSocAut()">+ Nueva autoridad</button>':'<button class="btnp" onclick="openFormSocAcc()">+ Nuevo accionista</button>',temas:'<button class="btns" onclick="exportCSV(\"temas\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormTema()">+ Nuevo tema</button>',documentos:'<button class="btns" onclick="exportCSV(\"documentos\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDoc()">+ Nuevo documento</button>',suelo:'<button class="btns" onclick="exportCSV(\"suelo\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormSuelo()">+ Nuevo contrato</button>',intoru:'<button class="btns" onclick="exportCSV(\"intoru\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormINTORU()">+ Nuevo sitio</button>',dd:'<button class="btns" onclick="exportCSV(\"dd\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDD()">+ Nuevo sitio</button>'};
   document.getElementById('tb-act').innerHTML=A[page]||'';
   if(page==='analytics')setTimeout(renderAnalytics,100);
+  if(page==='fechas')setTimeout(renderFechas,50);
+  if(page==='mla')setTimeout(renderMLA,50);
+  if(page==='inm')setTimeout(renderInm,50);
 }
 function navTo(page){var el=document.getElementById('nav-'+page);if(el)goTo(page,el);}
 
@@ -2287,13 +2291,17 @@ var CAT_COLORS = {
 };
 
 function renderFechas(){
-  var fc=document.getElementById('fechas-cat').value;
-  var fp=document.getElementById('fechas-pais').value;
-  var list=fechas.filter(function(f){return currentUser.scope.indexOf(f.pais)>=0||f.pais==='Global';});
+  var catEl=document.getElementById('fechas-cat');
+  var paisEl=document.getElementById('fechas-pais');
+  var el=document.getElementById('fechas-list');
+  if(!el)return;
+  var fc=catEl?catEl.value:'';
+  var fp=paisEl?paisEl.value:'';
+  var scope=currentUser&&currentUser.scope?currentUser.scope:['AR','UY','PY'];
+  var list=fechas.filter(function(f){return scope.indexOf(f.pais)>=0||f.pais==='Global'||!f.pais;});
   if(fc)list=list.filter(function(f){return f.cat===fc;});
   if(fp)list=list.filter(function(f){return f.pais===fp;});
   list.sort(function(a,b){return new Date(a.fecha)-new Date(b.fecha);});
-  var el=document.getElementById('fechas-list');
   if(!list.length){el.innerHTML='<div class="card"><div class="empty">Sin fechas clave cargadas</div></div>';return;}
   el.innerHTML=list.map(function(f){
     var dt=daysTo(f.fecha);
