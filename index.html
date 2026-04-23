@@ -360,6 +360,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div id="tfilter-activos" class="filters">
           <div class="sbox"><svg class="sico" width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4" stroke="#1A1916" stroke-width="1.2"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="#1A1916" stroke-width="1.2" stroke-linecap="round"/></svg><input type="text" placeholder="Buscar temas..." id="tema-q" oninput="renderTemas()"></div>
           <select class="fsel" id="tema-estado" onchange="renderTemas()"><option value="">Todos los estados</option><option>No iniciado</option><option>En curso</option></select>
+          <select class="fsel" id="tema-dead" onchange="renderTemas()" style="display:none"><option value="">Todos</option><option value="7">Vencen en 7 días</option><option value="30">Vencen en 30 días</option></select>
           <select class="fsel" id="tema-resp" onchange="renderTemas()"><option value="">Todos</option><option>EG</option><option>CS</option><option>ST</option></select>
           <select class="fsel" id="tema-pais" onchange="renderTemas()"><option value="">Todos los países</option><option>AR</option><option>UY</option><option>PY</option><option>Global</option></select>
         </div>
@@ -1096,10 +1097,10 @@ function renderDash(){
   var bloqParaMi=activos.filter(function(t){return t.bloqueado&&t.bloqQuien&&t.bloqQuien.toLowerCase().indexOf(currentUser.ini.toLowerCase())>=0&&t.resp!==currentUser.ini;}).length;
   var isEG=currentUser.ini==='EG';
   document.getElementById('dash-metrics').innerHTML=
-    '<div class="metric"><div class="metlbl">No iniciados</div><div class="metval">'+noInic+'</div><div class="metsub">Sin comenzar</div></div>'+
-    '<div class="metric"><div class="metlbl">En curso</div><div class="metval" style="color:var(--bl)">'+enCurso+'</div><div class="metsub">En progreso</div></div>'+
-    '<div class="metric"><div class="metlbl">Vencen en 7 días</div><div class="metval w">'+v7+'</div><div class="metsub">Atención inmediata</div></div>'+
-    '<div class="metric"><div class="metlbl">Vencen en 30 días</div><div class="metval" style="color:var(--tx2)">'+v30+'</div><div class="metsub">Próximos a vencer</div></div>';
+    '<div class="metric dash-item" onclick="navToFilter(\'No iniciado\')" style="cursor:pointer"><div class="metlbl">No iniciados</div><div class="metval">'+noInic+'</div><div class="metsub">Sin comenzar ↗</div></div>'+
+    '<div class="metric dash-item" onclick="navToFilter(\'En curso\')" style="cursor:pointer"><div class="metlbl">En curso</div><div class="metval" style="color:var(--bl)">'+enCurso+'</div><div class="metsub">En progreso ↗</div></div>'+
+    '<div class="metric dash-item" onclick="navToFilter(\'v7\')" style="cursor:pointer"><div class="metlbl">Vencen en 7 días</div><div class="metval" style="color:var(--am)">'+v7+'</div><div class="metsub">Atención inmediata ↗</div></div>'+
+    '<div class="metric dash-item" onclick="navToFilter(\'v30\')" style="cursor:pointer"><div class="metlbl">Vencen en 30 días</div><div class="metval" style="color:var(--tx2)">'+v30+'</div><div class="metsub">Próximos a vencer ↗</div></div>';
   var m2=document.getElementById('dash-metrics');
   if(isEG){
     m2.style.gridTemplateColumns='repeat(3,minmax(0,1fr)) repeat(2,minmax(0,1fr))';
@@ -1271,6 +1272,8 @@ function renderTemas(){
     if(fe)list=list.filter(function(t){return t.estado===fe;});
     if(fr)list=list.filter(function(t){return t.resp===fr;});
     if(fp)list=list.filter(function(t){return t.pais===fp;});
+    var fd=document.getElementById('tema-dead').value;
+    if(fd){var fdN=parseInt(fd);list=list.filter(function(t){var dt=daysTo(t.dead);return dt!==null&&dt>=0&&dt<=fdN;});}
   }else{
     var q2=(document.getElementById('cerrado-q').value||'').toLowerCase();
     list=vt.filter(function(t){return t.estado==='Cerrado';});
@@ -1478,6 +1481,34 @@ function goTo(page,el){
   if(page==='inm')setTimeout(renderInm,50);
 }
 function navTo(page){var el=document.getElementById('nav-'+page);if(el)goTo(page,el);}
+
+function navToFilter(filter){
+  var navEl=document.getElementById('nav-temas');
+  goTo('temas', navEl);
+  setTimeout(function(){
+    // Always go to activos tab
+    temaTab='activos';
+    document.getElementById('tab-activos')&&document.getElementById('tab-activos').classList.add('active');
+    document.getElementById('tab-cerrados')&&document.getElementById('tab-cerrados').classList.remove('active');
+    // Reset all filters
+    var sel=document.getElementById('tema-estado');
+    var sdead=document.getElementById('tema-dead');
+    var sq=document.getElementById('tema-q');
+    if(sel) sel.value='';
+    if(sdead) sdead.value='';
+    if(sq) sq.value='';
+    // Apply target filter
+    if(filter==='No iniciado'||filter==='En curso'){
+      if(sel) sel.value=filter;
+    } else if(filter==='v7'){
+      if(sdead) sdead.value='7';
+    } else if(filter==='v30'){
+      if(sdead) sdead.value='30';
+    }
+    renderTemas();
+    document.getElementById('temas-list')?.scrollIntoView({behavior:'smooth',block:'start'});
+  }, 150);
+}
 
 function navToItem(page, searchId, temaId){
   navTo(page);
