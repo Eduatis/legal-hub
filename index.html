@@ -940,7 +940,7 @@ const LIST_SOC_ACC = 'Societario_Accionistas';
 const LIST_MLA = 'MLA_Legal';
 const LIST_FECHAS = 'FechasClaves';
 const LIST_INM = 'Inmuebles_Propios_UY';
-const msalConfig = { auth:{ clientId:CLIENT_ID, authority:'https://login.microsoftonline.com/'+TENANT_ID, redirectUri:window.location.origin+window.location.pathname }, cache:{cacheLocation:'sessionStorage'} };
+const msalConfig = { auth:{ clientId:CLIENT_ID, authority:'https://login.microsoftonline.com/'+TENANT_ID, redirectUri:window.location.origin+window.location.pathname }, cache:{cacheLocation:'localStorage', storeAuthStateInCookie:true} };
 const msalInstance = new msal.PublicClientApplication(msalConfig);
 const SCOPES = ['Sites.ReadWrite.All','User.Read'];
 
