@@ -1147,7 +1147,7 @@ function renderDash(){
   }).join(''):'<div class="empty">Sin temas de alta prioridad</div>';
   // Fechas Clave
   var proxFechas=fechas.filter(function(f){
-    return (currentUser.scope.indexOf(f.pais)>=0||f.pais==='Global') && daysTo(f.fecha)!==null && daysTo(f.fecha)<=60;
+    return (currentUser.scope.indexOf(f.pais)>=0||f.pais==='Global') && daysTo(f.fecha)!==null && daysTo(f.fecha)<=180;
   }).sort(function(a,b){return new Date(a.fecha)-new Date(b.fecha);}).slice(0,5);
   var fechasWrap=document.getElementById('dash-fechas-wrap');
   if(proxFechas.length>0){
@@ -1156,7 +1156,8 @@ function renderDash(){
       var dt=daysTo(f.fecha);
       var vencida=dt<0;
       var urgente=dt>=0&&dt<=7;
-      var col=vencida?'var(--rd)':urgente?'#F97316':'var(--am)';
+      var proximo=dt>7&&dt<=30;
+      var col=vencida?'var(--rd)':urgente?'#F97316':proximo?'var(--am)':'var(--bl)';
       var dtTxt=vencida?'Vencida':dt===0?'HOY':dt+' días';
       var cols=CAT_COLORS[f.cat]?CAT_COLORS[f.cat].split(':'):['#F0EFE9','#6B6A64'];
       return '<div class="aitem dash-item" data-navf="fechas" onclick="navTo(this.dataset.navf)" style="border-left:3px solid '+col+';padding-left:10px">'+
@@ -2128,7 +2129,7 @@ function setSocTab(tab){
 }
 
 function mapSocAut(item){var f=item.fields;return{id:item.id,sociedad:f.Sociedad||'',pais:f.Pais||'',cargo:f.Cargo||'',nombre:f.Nombre||'',acta:f.ActaDesignacion||'',fecha:f.FechaDesignacion?f.FechaDesignacion.split('T')[0]:'',vigencia:f.Vigencia||'',obs:f.Observaciones||''};}
-function mapFecha(item){var f=item.fields;return{id:item.id,desc:f.Descripcion||'',fecha:f.Fecha?f.Fecha.split('T')[0]:'',cat:f.Categoria||'',pais:f.Pais||'',modulo:f.Modulo||'',ref:f.RefSitio||'',obs:f.Observaciones||''};}
+function mapFecha(item){var f=item.fields;var rawF=f.Fecha||f.EventDate||'';return{id:item.id,desc:f.Descripcion||f.Title||'',fecha:rawF?rawF.split('T')[0]:'',cat:f.Categoria||'',pais:f.Pais||'',modulo:f.Modulo||'',ref:f.RefSitio||'',obs:f.Observaciones||''};}
 function mapMLA(item){var f=item.fields;return{id:item.id,contraparte:f.Contraparte||'',pais:f.Pais||'',sitios:f.Sitios||'',firmaFecha:f.FechaFirma?f.FechaFirma.split('T')[0]:'',vencFecha:f.FechaVencimiento?f.FechaVencimiento.split('T')[0]:'',plazo:f.Plazo||'',precio:f.PrecioBase||'',actualizacion:f.Actualizacion||'',term:f.TerminacionAnticipada||'',cesion:f.Cesion||'',subarr:f.Subarrendamiento||'',estado:f.Estado||'Vigente',link:f.LinkDocumento||'',obs:f.Observaciones||''};}
 function mapInm(item){var f=item.fields;return{id:item.id,sitio:f.Sitio||'',nombre:f.Nombre||'',tipo:f.Tipo||'',direccion:f.Direccion||'',departamento:f.Departamento||'',fechaAdq:f.FechaAdquisicion?f.FechaAdquisicion.split('T')[0]:'',titular:f.TitularRegistral||'',contraparte:f.Contraparte||'',precio:f.Precio||'',inscripto:f.Inscripto||'',vencUsuf:f.VencimientoUsufructo?f.VencimientoUsufructo.split('T')[0]:'',link:f.LinkDocumento||'',obs:f.Observaciones||''};}
 function mapSocAcc(item){var f=item.fields;return{id:item.id,sociedad:f.Sociedad||'',pais:f.Pais||'',accionista:f.Accionista||'',tipo:f.TipoAccion||'',cantidad:f.Cantidad||'',porcentaje:f.Porcentaje||'',obs:f.Observaciones||''};}
