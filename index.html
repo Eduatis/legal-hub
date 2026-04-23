@@ -343,6 +343,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div class="pageview active" id="page-dashboard">
         <div class="ctabs" id="dash-ctabs"></div>
         <div class="metrics" id="dash-metrics"></div>
+        <div id="dash-greeting" style="font-size:22px;font-weight:700;color:var(--bl);margin-bottom:4px;padding:0 2px"></div>
         <div class="g2">
           <div class="card"><div class="cardh"><div class="cardht">Alertas — vence en 48hs</div><div class="cardhl" onclick="navTo('temas')">Ver todos</div></div><div id="dash-alerts"></div></div>
           <div class="card"><div class="cardh"><div class="cardht">Temas · Prioridad Alta</div><div class="cardhl" onclick="navTo('temas')">Ver todos</div></div><div id="dash-tasks"></div></div>
@@ -961,10 +962,10 @@ var editingMlaId = null, editingInmId = null, editingFechaId = null;
 var charts = {};
 
 var USERS_MAP = {
-  'eduardo.galindo@atis-group.com': {name:'Eduardo Galindo',ini:'EG',role:'Global · Legal Manager',bg:'#EEF2FF',tc:'#1B4FD8',scope:['AR','UY','PY']},
-  'camila.soto@atis-group.com':     {name:'Camila Soto',    ini:'CS',role:'Legal · AR + UY',       bg:'#DCFCE7',tc:'#15803D',scope:['AR','UY']},
-  'edit.roco@atis-group.com':       {name:'Edit Roco',      ini:'ST',role:'Legal · PY',            bg:'#FEF3C7',tc:'#B45309',scope:['PY']},
-  'juanpablo.blanco@atis-group.com':{name:'Juan Pablo Blanco',ini:'JP',role:'INTORU · Societario',  bg:'#F0FDF4',tc:'#166534',scope:['UY']},
+  'eduardo.galindo@atis-group.com': {name:'Eduardo Galindo',ini:'EG',role:'Global · Legal Manager',greeting:'Hola, Edu 👋',bg:'#EEF2FF',tc:'#1B4FD8',accent:'#3B5BDB',scope:['AR','UY','PY']},
+  'camila.soto@atis-group.com':     {name:'Camila Soto',    ini:'CS',role:'Legal · AR + UY',       greeting:'Hola, Cami 🌸',bg:'#FDF2F8',tc:'#BE185D',accent:'#EC4899',scope:['AR','UY'],theme:'rose'},
+  'edit.roco@atis-group.com':       {name:'Edit Roco',      ini:'ST',role:'Legal · PY',            greeting:'Hola, Edit 😊',bg:'#FFFBEB',tc:'#B45309',accent:'#F59E0B',scope:['PY']},
+  'juanpablo.blanco@atis-group.com':{name:'Juan Pablo Blanco',ini:'JP',role:'INTORU · Societario',greeting:'Hola, JP 👋',  bg:'#F0FDF4',tc:'#166534',scope:['UY']},
   'julian.jackson@atis-group.com':   {name:'Julian Jackson',   ini:'JJ',role:'INTORU · Societario',  bg:'#FDF4FF',tc:'#7E22CE',scope:['UY']}
 };
 var AVC = {EG:{bg:'#EEF2FF',tc:'#1B4FD8'},CS:{bg:'#DCFCE7',tc:'#15803D'},ST:{bg:'#FEF3C7',tc:'#B45309'}};
@@ -989,10 +990,44 @@ async function getToken(){
   const accounts=msalInstance.getAllAccounts();if(!accounts.length)throw new Error('No hay sesión activa');
   const result=await msalInstance.acquireTokenSilent({scopes:SCOPES,account:accounts[0]});return result.accessToken;
 }
+function applyUserTheme(user){
+  var root = document.documentElement;
+  if(user.theme === 'rose'){
+    root.style.setProperty('--bl',     '#EC4899');
+    root.style.setProperty('--bl-bg',  '#FDF2F8');
+    root.style.setProperty('--bl-tx',  '#BE185D');
+    root.style.setProperty('--lnk',    '#EC4899');
+    // Sidebar accent
+    document.querySelectorAll('.navi.active').forEach(function(el){
+      el.style.background = '#FDF2F8';
+      el.style.color = '#BE185D';
+    });
+    // Store for dynamic active states
+    root.style.setProperty('--nav-active-bg', '#FDF2F8');
+    root.style.setProperty('--nav-active-tx', '#BE185D');
+    // Primary button color
+    var style = document.createElement('style');
+    style.id = 'user-theme';
+    style.textContent = [
+      '.btnp { background: #EC4899 !important; }',
+      '.btnp:hover { background: #DB2777 !important; }',
+      '.navi.active { background: #FDF2F8 !important; color: #BE185D !important; }',
+      '.navi.active svg { color: #EC4899 !important; }',
+      '.stat.s1, .badge.bdb { background: #FDF2F8 !important; color: #BE185D !important; }',
+      '.ctab.active { background: #EC4899 !important; }',
+      '.stab.active { border-bottom-color: #EC4899 !important; color: #EC4899 !important; }',
+      'input:focus, select:focus, textarea:focus { border-color: #EC4899 !important; box-shadow: 0 0 0 3px #FCE7F3 !important; }',
+      '.metval.w { color: #EC4899 !important; }',
+    ].join('\n');
+    document.head.appendChild(style);
+  }
+}
+
 async function initApp(account){
   showLoading('Cargando datos...');
   const email=account.username.toLowerCase();
   currentUser=USERS_MAP[email]||{name:account.name||email,ini:email.substring(0,2).toUpperCase(),role:'Legal',bg:'#F0EFE9',tc:'#6B6A64',scope:['AR','UY','PY']};
+  applyUserTheme(currentUser);
   var av=document.getElementById('sb-av');
   av.textContent=currentUser.ini;av.style.cssText='width:28px;height:28px;font-size:10px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:'+currentUser.bg+';color:'+currentUser.tc;
   document.getElementById('sb-name').textContent=currentUser.name;document.getElementById('sb-role').textContent=currentUser.role;
@@ -1089,6 +1124,14 @@ function renderAll(){renderDash();renderDocs();renderTemas();renderSuelo();rende
 function renderDash(){
   var scope=currentUser.scope;
   var countries=scope.length>1?['Global'].concat(scope):scope;
+  // Greeting
+  var greetEl=document.getElementById('dash-greeting');
+  if(greetEl){
+    var hour=new Date().getHours();
+    var timeGreet=hour<12?'Buenos días':hour<19?'Buenas tardes':'Buenas noches';
+    var greeting=currentUser.greeting||(timeGreet+', '+currentUser.name.split(' ')[0]);
+    greetEl.textContent=greeting;
+  }
   document.getElementById('dash-ctabs').innerHTML=countries.map(function(c){
     return '<div class="ctab'+(c===dashCountry?' active':'')+'" onclick="setDashCountry(\''+c+'\')">'+c+'</div>';
   }).join('');
