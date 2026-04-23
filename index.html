@@ -291,6 +291,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div class="navi" id="nav-poderes" onclick="goTo('poderes',this)">
           <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="2" y="1" width="10" height="12" rx="1.5" stroke="currentColor"/><path d="M5 4h4M5 6.5h4M5 9h2" stroke="currentColor" stroke-linecap="round"/><circle cx="3.5" cy="4" r=".5" fill="currentColor"/></svg>Poderes
         </div>
+        <div class="navi" id="nav-fechas" onclick="goTo('fechas',this)">
+          <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1" y="2" width="12" height="11" rx="1.5" stroke="currentColor"/><path d="M4 1v2M10 1v2M1 5h12" stroke="currentColor" stroke-linecap="round"/><circle cx="4.5" cy="8.5" r="1" fill="currentColor"/><circle cx="7" cy="8.5" r="1" fill="var(--rd)"/><circle cx="9.5" cy="8.5" r="1" fill="currentColor"/></svg>Fechas Clave
+        </div>
         <div class="navi" id="nav-mla" onclick="goTo('mla',this)">
           <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1" y="3" width="12" height="9" rx="1.5" stroke="currentColor"/><path d="M4 3V2a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" stroke="currentColor"/><line x1="1" y1="6" x2="13" y2="6" stroke="currentColor"/><line x1="4" y1="9" x2="10" y2="9" stroke="currentColor" stroke-dasharray="1.5 1.5"/></svg>MLA
         </div>
@@ -340,6 +343,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div class="g2" id="dash-suelo-alerts-wrap" style="display:none">
           <div class="card"><div class="cardh"><div class="cardht">⚠️ Contratos de Suelo · Vencen en 90 días</div><div class="cardhl" onclick="navTo('suelo')">Ver todos</div></div><div id="dash-suelo-v90"></div></div>
           <div class="card"><div class="cardh"><div class="cardht">📋 Contratos de Suelo · Vencen en el año</div><div class="cardhl" onclick="navTo('suelo')">Ver todos</div></div><div id="dash-suelo-v365"></div></div>
+        </div>
+        <div class="g1" id="dash-fechas-wrap">
+          <div class="card" style="border-left:3px solid var(--rd)"><div class="cardh"><div class="cardht">📅 Fechas Clave próximas</div><div class="cardhl" onclick="navTo('fechas')">Ver todas</div></div><div id="dash-fechas-list"></div></div>
         </div>
         <div class="g1"><div class="card"><div class="cardh"><div class="cardht">Últimos documentos</div><div class="cardhl" onclick="navTo('documentos')">Ver todos</div></div><div class="dwrap"><table class="dtable" id="dash-docs"></table></div></div></div>
 
@@ -450,6 +456,15 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <input type="text" id="global-q" placeholder="Buscar en temas, documentos, contratos, INTORU, DD..." style="padding-left:40px;font-size:14px;height:44px;border-radius:var(--r)" oninput="renderGlobalSearch()">
         </div>
         <div id="global-results"></div>
+      </div>
+
+      <!-- FECHAS CLAVE -->
+      <div class="pageview" id="page-fechas">
+        <div class="filters">
+          <select class="fsel" id="fechas-cat" onchange="renderFechas()"><option value="">Todas las categorías</option><option>DD</option><option>Societario</option><option>Contratos</option><option>Legal</option><option>Otro</option></select>
+          <select class="fsel" id="fechas-pais" onchange="renderFechas()"><option value="">Todos los países</option><option value="AR">Argentina</option><option value="UY">Uruguay</option><option value="PY">Paraguay</option><option value="Global">Global</option></select>
+        </div>
+        <div id="fechas-list"></div>
       </div>
 
       <!-- MLA -->
@@ -801,6 +816,34 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   </div>
 </div>
 
+<!-- FORM FECHA CLAVE -->
+<div class="formov" id="form-fecha" onclick="if(event.target===this)closeFormFecha()">
+  <div class="formpanel" onclick="event.stopPropagation()">
+    <div class="formtit"><span id="form-fecha-title">Nueva fecha clave</span><button class="formclose" onclick="closeFormFecha()">×</button></div>
+    <div class="field"><label>Descripción</label><input type="text" id="ff-desc" placeholder="Ej: Vencimiento plazo DD Fase 1 y 2"></div>
+    <div class="fieldrow">
+      <div class="field" style="margin:0"><label>Fecha límite</label><input type="date" id="ff-fecha"></div>
+      <div class="field" style="margin:0"><label>Categoría</label>
+        <select id="ff-cat"><option value="DD">DD</option><option value="Societario">Societario</option><option value="Contratos">Contratos</option><option value="Legal">Legal</option><option value="Otro">Otro</option></select>
+      </div>
+    </div>
+    <div class="fieldrow">
+      <div class="field" style="margin:0"><label>País</label>
+        <select id="ff-pais"><option value="Global">Global</option><option value="AR">Argentina</option><option value="UY">Uruguay</option><option value="PY">Paraguay</option></select>
+      </div>
+      <div class="field" style="margin:0"><label>Módulo relacionado</label>
+        <select id="ff-modulo"><option value="">Ninguno</option><option value="temas">Temas</option><option value="dd">DD Sitios UY</option><option value="suelo">Contratos Suelo</option><option value="intoru">INTORU</option><option value="societario">Societario</option></select>
+      </div>
+    </div>
+    <div class="field"><label>Referencia (sitio, expediente, etc.)</label><input type="text" id="ff-ref" placeholder="Ej: DD Fase 1 y 2"></div>
+    <div class="field"><label>Observaciones</label><textarea id="ff-obs" placeholder="Contexto, consecuencias del vencimiento..."></textarea></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btnp" style="flex:1" id="save-fecha-btn" onclick="saveFecha()">Guardar</button>
+      <button class="btns" onclick="closeFormFecha()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- FORM MLA -->
 <div class="formov" id="form-mla" onclick="if(event.target===this)closeFormMLA()">
   <div class="formpanel" onclick="event.stopPropagation()">
@@ -894,6 +937,7 @@ const LIST_PODERES = 'Poderes_Legal';
 const LIST_SOC_AUT = 'Societario_Autoridades';
 const LIST_SOC_ACC = 'Societario_Accionistas';
 const LIST_MLA = 'MLA_Legal';
+const LIST_FECHAS = 'FechasClaves';
 const LIST_INM = 'Inmuebles_Propios_UY';
 const msalConfig = { auth:{ clientId:CLIENT_ID, authority:'https://login.microsoftonline.com/'+TENANT_ID, redirectUri:window.location.origin+window.location.pathname }, cache:{cacheLocation:'sessionStorage'} };
 const msalInstance = new msal.PublicClientApplication(msalConfig);
@@ -904,8 +948,8 @@ var TODAY = new Date(); TODAY.setHours(0,0,0,0);
 var currentUser = null, dashCountry = 'Global', anCountry = 'Global';
 var refMode = 's', lcState = 'Borrador', temaTab = 'activos';
 var editingDocId = null, editingTemaId = null, editingSueloId = null, editingDDId = null, editingIntoruId = null, editingPoderId = null, editingSocAutId = null, editingSocAccId = null, pendingDelete = null;
-var docs = [], temas = [], suelos = [], dd = [], intoru = [], poderes = [], socAut = [], socAcc = [], mla = [], inm = [], docSeq = 0, siteId = null;
-var editingMlaId = null, editingInmId = null;
+var docs = [], temas = [], suelos = [], dd = [], intoru = [], poderes = [], socAut = [], socAcc = [], mla = [], inm = [], fechas = [], docSeq = 0, siteId = null;
+var editingMlaId = null, editingInmId = null, editingFechaId = null;
 var charts = {};
 
 var USERS_MAP = {
@@ -1000,7 +1044,7 @@ function mapSuelo(item){var f=item.fields;return{id:item.id,sitio:f.Sitio||'',pa
 async function syncAll(){
   var btn=document.getElementById('sync-btn');if(btn){btn.textContent='↻ Actualizando...';btn.disabled=true;}
   try{
-    const results=await Promise.allSettled([getListItems(LIST_DOCS),getListItems(LIST_TEMAS),getListItems(LIST_SUELO),getListItems(LIST_DD),getListItems(LIST_INTORU),getListItems(LIST_PODERES),getListItems(LIST_SOC_AUT),getListItems(LIST_SOC_ACC),getListItems(LIST_MLA),getListItems(LIST_INM)]);
+    const results=await Promise.allSettled([getListItems(LIST_DOCS),getListItems(LIST_TEMAS),getListItems(LIST_SUELO),getListItems(LIST_DD),getListItems(LIST_INTORU),getListItems(LIST_PODERES),getListItems(LIST_SOC_AUT),getListItems(LIST_SOC_ACC),getListItems(LIST_MLA),getListItems(LIST_INM),getListItems(LIST_FECHAS)]);
     if(results[0].status==='fulfilled')docs=results[0].value.map(mapDoc);
     if(results[1].status==='fulfilled')temas=results[1].value.map(mapTema);
     if(results[2].status==='fulfilled')suelos=results[2].value.map(mapSuelo);
@@ -1011,6 +1055,7 @@ async function syncAll(){
     if(results[7].status==='fulfilled')socAcc=results[7].value.map(mapSocAcc);
     if(results[8].status==='fulfilled')mla=results[8].value.map(mapMLA);
     if(results[9].status==='fulfilled')inm=results[9].value.map(mapInm);
+    if(results[10].status==='fulfilled')fechas=results[10].value.map(mapFecha);
     docs.forEach(function(d){var m=d.code.match(/-(\d{4})$/);if(m){var n=parseInt(m[1]);if(n>docSeq)docSeq=n;}});
     renderAll();showToast('Datos actualizados');
   }catch(e){showToast('Error al conectar: '+e.message,true);console.error(e);}
@@ -1030,7 +1075,7 @@ function vTemas(){
   });
 }
 function vSuelos(){return suelos.filter(function(s){return currentUser.scope.indexOf(s.pais)>=0;});}
-function renderAll(){renderDash();renderDocs();renderTemas();renderSuelo();renderINTORU();renderDD();renderPoderes();renderSocAutoridades();renderSocAccionistas();renderMLA();renderInm();renderAnalytics();}
+function renderAll(){renderDash();renderDocs();renderTemas();renderSuelo();renderINTORU();renderDD();renderPoderes();renderSocAutoridades();renderSocAccionistas();renderMLA();renderInm();renderFechas();renderAnalytics();}
 
 // ─── DASHBOARD ──────────────────────────────────────────────────────────────
 function renderDash(){
@@ -1100,6 +1145,39 @@ function renderDash(){
     var tid=t.id;
     return '<div class="aitem dash-item" data-tid="'+tid+'" onclick="navToItem(&quot;temas&quot;,null,this.dataset.tid)"><div class="dot dotr"></div><div style="flex:1"><div class="adesc">'+t.tit+bloqTag+'</div><div class="ameta" style="'+dcolor+'">'+fmtDate(t.dead)+(t.cli?' · '+t.cli:'')+'</div></div><span class="badge '+eb+'" style="margin-left:8px">'+t.estado+'</span></div>';
   }).join(''):'<div class="empty">Sin temas de alta prioridad</div>';
+  // Fechas Clave
+  var proxFechas=fechas.filter(function(f){
+    return (currentUser.scope.indexOf(f.pais)>=0||f.pais==='Global') && daysTo(f.fecha)!==null && daysTo(f.fecha)<=60;
+  }).sort(function(a,b){return new Date(a.fecha)-new Date(b.fecha);}).slice(0,5);
+  var fechasWrap=document.getElementById('dash-fechas-wrap');
+  if(proxFechas.length>0){
+    fechasWrap.style.display='block';
+    document.getElementById('dash-fechas-list').innerHTML=proxFechas.map(function(f){
+      var dt=daysTo(f.fecha);
+      var vencida=dt<0;
+      var urgente=dt>=0&&dt<=7;
+      var col=vencida?'var(--rd)':urgente?'#F97316':'var(--am)';
+      var dtTxt=vencida?'Vencida':dt===0?'HOY':dt+' días';
+      var cols=CAT_COLORS[f.cat]?CAT_COLORS[f.cat].split(':'):['#F0EFE9','#6B6A64'];
+      return '<div class="aitem dash-item" data-navf="fechas" onclick="navTo(this.dataset.navf)" style="border-left:3px solid '+col+';padding-left:10px">'+
+        '<div style="flex:1">'+
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+
+            '<span style="background:'+cols[0]+';color:'+cols[1]+';font-size:10px;padding:1px 6px;border-radius:20px">'+f.cat+'</span>'+
+            (f.pais&&f.pais!=='Global'?'<span style="font-size:11px;color:var(--tx3)">'+f.pais+'</span>':'')+
+          '</div>'+
+          '<div style="font-size:13px;font-weight:500">'+f.desc+'</div>'+
+          (f.ref?'<div style="font-size:11px;color:var(--tx3)">'+f.ref+'</div>':'')+
+        '</div>'+
+        '<div style="text-align:right">'+
+          '<div style="font-size:12px;font-weight:500;color:'+col+'">'+dtTxt+'</div>'+
+          '<div style="font-size:11px;color:var(--tx3)">'+fmtDate(f.fecha)+'</div>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+  } else {
+    fechasWrap.style.display='none';
+  }
+
   // Últimos docs
   document.getElementById('dash-docs').innerHTML=docTableHTML(vDocs().slice(0,5),false);
 
@@ -1387,10 +1465,10 @@ function renderGlobalSearch(){
 function goTo(page,el){
   document.querySelectorAll('.navi').forEach(function(n){n.classList.remove('active');});el.classList.add('active');
   document.querySelectorAll('.pageview').forEach(function(p){p.classList.remove('active');});document.getElementById('page-'+page).classList.add('active');
-  var T={dashboard:'Dashboard',temas:'Temas',documentos:'Documentos',suelo:'Contratos de Suelo',intoru:'INTORU',dd:'DD Sitios Uruguay',poderes:'Poderes',societario:'Societario',mla:'MLA',inm:'Inmuebles Propios UY',search:'Búsqueda',analytics:'Analytics'};
-  var S={dashboard:'Resumen general',temas:'Follow-up y gestión',documentos:'Registro documental',suelo:'Matriz de contratos LOC',intoru:'Análisis de Sitios por Lotes — Uruguay',dd:'Due Diligence — Fases 1 y 2',poderes:'Registro de poderes vigentes',societario:'Estructura societaria',mla:'Master Lease Agreements',inm:'Inmuebles adquiridos en Uruguay',search:'Buscar en todos los módulos',analytics:'Indicadores y gráficos'};
+  var T={dashboard:'Dashboard',temas:'Temas',documentos:'Documentos',suelo:'Contratos de Suelo',intoru:'INTORU',dd:'DD Sitios Uruguay',poderes:'Poderes',societario:'Societario',fechas:'Fechas Clave',mla:'MLA',inm:'Inmuebles Propios UY',search:'Búsqueda',analytics:'Analytics'};
+  var S={dashboard:'Resumen general',temas:'Follow-up y gestión',documentos:'Registro documental',suelo:'Matriz de contratos LOC',intoru:'Análisis de Sitios por Lotes — Uruguay',dd:'Due Diligence — Fases 1 y 2',poderes:'Registro de poderes vigentes',societario:'Estructura societaria',fechas:'Vencimientos y plazos institucionales',mla:'Master Lease Agreements',inm:'Inmuebles adquiridos en Uruguay',search:'Buscar en todos los módulos',analytics:'Indicadores y gráficos'};
   document.getElementById('tb-title').textContent=T[page]||page;document.getElementById('tb-sub').textContent=S[page]||'';
-  var A={mla:'<button class="btnp" onclick="openFormMLA()">+ Nuevo MLA</button>',inm:'<button class="btnp" onclick="openFormInm()">+ Nuevo inmueble</button>',poderes:'<button class="btns" onclick="exportCSV(\'poderes\')" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormPoder()">+ Nuevo poder</button>',societario:socTab==="autoridades"?'<button class="btnp" onclick="openFormSocAut()">+ Nueva autoridad</button>':'<button class="btnp" onclick="openFormSocAcc()">+ Nuevo accionista</button>',temas:'<button class="btns" onclick="exportCSV(\"temas\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormTema()">+ Nuevo tema</button>',documentos:'<button class="btns" onclick="exportCSV(\"documentos\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDoc()">+ Nuevo documento</button>',suelo:'<button class="btns" onclick="exportCSV(\"suelo\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormSuelo()">+ Nuevo contrato</button>',intoru:'<button class="btns" onclick="exportCSV(\"intoru\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormINTORU()">+ Nuevo sitio</button>',dd:'<button class="btns" onclick="exportCSV(\"dd\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDD()">+ Nuevo sitio</button>'};
+  var A={fechas:'<button class="btnp" onclick="openFormFecha()">+ Nueva fecha clave</button>',mla:'<button class="btnp" onclick="openFormMLA()">+ Nuevo MLA</button>',inm:'<button class="btnp" onclick="openFormInm()">+ Nuevo inmueble</button>',poderes:'<button class="btns" onclick="exportCSV(\'poderes\')" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormPoder()">+ Nuevo poder</button>',societario:socTab==="autoridades"?'<button class="btnp" onclick="openFormSocAut()">+ Nueva autoridad</button>':'<button class="btnp" onclick="openFormSocAcc()">+ Nuevo accionista</button>',temas:'<button class="btns" onclick="exportCSV(\"temas\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormTema()">+ Nuevo tema</button>',documentos:'<button class="btns" onclick="exportCSV(\"documentos\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDoc()">+ Nuevo documento</button>',suelo:'<button class="btns" onclick="exportCSV(\"suelo\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormSuelo()">+ Nuevo contrato</button>',intoru:'<button class="btns" onclick="exportCSV(\"intoru\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormINTORU()">+ Nuevo sitio</button>',dd:'<button class="btns" onclick="exportCSV(\"dd\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDD()">+ Nuevo sitio</button>'};
   document.getElementById('tb-act').innerHTML=A[page]||'';
   if(page==='analytics')setTimeout(renderAnalytics,100);
 }
@@ -1723,7 +1801,7 @@ async function confirmDelete(){
   if(!pendingDelete)return;
   document.getElementById('confirm-overlay').classList.remove('open');
   showLoading('Eliminando...');
-  var listName=pendingDelete.type==='doc'?LIST_DOCS:pendingDelete.type==='tema'?LIST_TEMAS:pendingDelete.type==='suelo'?LIST_SUELO:pendingDelete.type==='intoru'?LIST_INTORU:pendingDelete.type==='poder'?LIST_PODERES:pendingDelete.type==='socaut'?LIST_SOC_AUT:pendingDelete.type==='socacc'?LIST_SOC_ACC:pendingDelete.type==='mla'?LIST_MLA:pendingDelete.type==='inm'?LIST_INM:LIST_DD;
+  var listName=pendingDelete.type==='doc'?LIST_DOCS:pendingDelete.type==='tema'?LIST_TEMAS:pendingDelete.type==='suelo'?LIST_SUELO:pendingDelete.type==='intoru'?LIST_INTORU:pendingDelete.type==='poder'?LIST_PODERES:pendingDelete.type==='socaut'?LIST_SOC_AUT:pendingDelete.type==='socacc'?LIST_SOC_ACC:pendingDelete.type==='mla'?LIST_MLA:pendingDelete.type==='inm'?LIST_INM:pendingDelete.type==='fecha'?LIST_FECHAS:LIST_DD;
   try{await deleteListItem(listName,pendingDelete.id);await syncAll();hideLoading();showToast('Eliminado correctamente');}
   catch(e){hideLoading();showToast('Error al eliminar',true);}
   pendingDelete=null;
@@ -2050,6 +2128,7 @@ function setSocTab(tab){
 }
 
 function mapSocAut(item){var f=item.fields;return{id:item.id,sociedad:f.Sociedad||'',pais:f.Pais||'',cargo:f.Cargo||'',nombre:f.Nombre||'',acta:f.ActaDesignacion||'',fecha:f.FechaDesignacion?f.FechaDesignacion.split('T')[0]:'',vigencia:f.Vigencia||'',obs:f.Observaciones||''};}
+function mapFecha(item){var f=item.fields;return{id:item.id,desc:f.Descripcion||'',fecha:f.Fecha?f.Fecha.split('T')[0]:'',cat:f.Categoria||'',pais:f.Pais||'',modulo:f.Modulo||'',ref:f.RefSitio||'',obs:f.Observaciones||''};}
 function mapMLA(item){var f=item.fields;return{id:item.id,contraparte:f.Contraparte||'',pais:f.Pais||'',sitios:f.Sitios||'',firmaFecha:f.FechaFirma?f.FechaFirma.split('T')[0]:'',vencFecha:f.FechaVencimiento?f.FechaVencimiento.split('T')[0]:'',plazo:f.Plazo||'',precio:f.PrecioBase||'',actualizacion:f.Actualizacion||'',term:f.TerminacionAnticipada||'',cesion:f.Cesion||'',subarr:f.Subarrendamiento||'',estado:f.Estado||'Vigente',link:f.LinkDocumento||'',obs:f.Observaciones||''};}
 function mapInm(item){var f=item.fields;return{id:item.id,sitio:f.Sitio||'',nombre:f.Nombre||'',tipo:f.Tipo||'',direccion:f.Direccion||'',departamento:f.Departamento||'',fechaAdq:f.FechaAdquisicion?f.FechaAdquisicion.split('T')[0]:'',titular:f.TitularRegistral||'',contraparte:f.Contraparte||'',precio:f.Precio||'',inscripto:f.Inscripto||'',vencUsuf:f.VencimientoUsufructo?f.VencimientoUsufructo.split('T')[0]:'',link:f.LinkDocumento||'',obs:f.Observaciones||''};}
 function mapSocAcc(item){var f=item.fields;return{id:item.id,sociedad:f.Sociedad||'',pais:f.Pais||'',accionista:f.Accionista||'',tipo:f.TipoAccion||'',cantidad:f.Cantidad||'',porcentaje:f.Porcentaje||'',obs:f.Observaciones||''};}
@@ -2196,6 +2275,68 @@ document.addEventListener('click',function(e){
     document.getElementById('sidebar-overlay').style.display='none';
   }
 });
+
+// ─── FECHAS CLAVE ────────────────────────────────────────────────────────────
+var CAT_COLORS = {
+  'DD':'#EEF2FF:#1B4FD8',
+  'Societario':'#FEF3C7:#B45309',
+  'Contratos':'#DCFCE7:#15803D',
+  'Legal':'#FEE2E2:#B91C1C',
+  'Otro':'#F0EFE9:#6B6A64'
+};
+
+function renderFechas(){
+  var fc=document.getElementById('fechas-cat').value;
+  var fp=document.getElementById('fechas-pais').value;
+  var list=fechas.filter(function(f){return currentUser.scope.indexOf(f.pais)>=0||f.pais==='Global';});
+  if(fc)list=list.filter(function(f){return f.cat===fc;});
+  if(fp)list=list.filter(function(f){return f.pais===fp;});
+  list.sort(function(a,b){return new Date(a.fecha)-new Date(b.fecha);});
+  var el=document.getElementById('fechas-list');
+  if(!list.length){el.innerHTML='<div class="card"><div class="empty">Sin fechas clave cargadas</div></div>';return;}
+  el.innerHTML=list.map(function(f){
+    var dt=daysTo(f.fecha);
+    var vencida=dt!==null&&dt<0;
+    var urgente=dt!==null&&dt>=0&&dt<=7;
+    var proximo=dt!==null&&dt>7&&dt<=30;
+    var bg=vencida?'var(--rd-bg)':urgente?'#FFF7ED':proximo?'var(--am-bg)':'var(--surf)';
+    var border=vencida?'var(--rd)':urgente?'#F97316':proximo?'var(--am)':'var(--brd)';
+    var dtLabel=dt===null?'':dt<0?'<span style="background:var(--rd-bg);color:var(--rd-tx);font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600">Vencida</span>':dt===0?'<span style="background:var(--rd-bg);color:var(--rd-tx);font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600">HOY</span>':dt<=7?'<span style="background:#FFF7ED;color:#C2410C;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600">'+dt+' días</span>':dt<=30?'<span style="background:var(--am-bg);color:var(--am-tx);font-size:11px;padding:2px 8px;border-radius:20px">'+dt+' días</span>':'<span style="font-size:11px;color:var(--tx3)">'+dt+' días</span>';
+    var cols=CAT_COLORS[f.cat]?CAT_COLORS[f.cat].split(':'):['#F0EFE9','#6B6A64'];
+    var catBadge='<span style="background:'+cols[0]+';color:'+cols[1]+';font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500">'+f.cat+'</span>';
+    var modLink=f.modulo?'<span class="cardhl" data-navmod="'+f.modulo+'" onclick="navTo(this.dataset.navmod)" style="font-size:11px">→ Ver módulo</span>':'';
+    return '<div class="card" style="margin-bottom:10px;border-left:3px solid '+border+';background:'+bg+';padding:14px 18px">'+
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">'+
+      '<div style="flex:1">'+
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
+          catBadge+
+          (f.pais&&f.pais!=='Global'?'<span style="font-size:11px;color:var(--tx3)">'+f.pais+'</span>':'')+
+          dtLabel+
+        '</div>'+
+        '<div style="font-size:14px;font-weight:500;margin-bottom:4px">'+f.desc+'</div>'+
+        '<div style="font-size:12px;color:var(--tx2)">📅 '+fmtDate(f.fecha)+(f.ref?' · '+f.ref:'')+'</div>'+
+        (f.obs?'<div style="font-size:11px;color:var(--tx3);margin-top:6px">'+f.obs+'</div>':'')+
+      '</div>'+
+      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">'+
+        (f.modulo?'<span class="cardhl" data-navmod="'+f.modulo+'" onclick="navTo(this.dataset.navmod)" style="font-size:11px">→ Ver módulo</span>':'')+  
+        '<div class="acbtn"><button class="btnedit" data-id="'+f.id+'" onclick="editFecha(this.dataset.id)">Editar</button>'+
+        '<button class="btnrd" data-id="'+f.id+'" data-nm="'+f.desc.substring(0,30).replace(/"/g,'')+'">Borrar</button>',
+      '</div>'+
+      '</div></div>';
+  }).join('');
+}
+
+function openFormFecha(){editingFechaId=null;document.getElementById('form-fecha-title').textContent='Nueva fecha clave';['ff-desc','ff-fecha','ff-ref','ff-obs'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('ff-cat').value='DD';document.getElementById('ff-pais').value='Global';document.getElementById('ff-modulo').value='';document.getElementById('form-fecha').classList.add('open');}
+function closeFormFecha(){document.getElementById('form-fecha').classList.remove('open');}
+function editFecha(id){var f=fechas.find(function(x){return x.id===id;});if(!f)return;editingFechaId=id;document.getElementById('form-fecha-title').textContent='Editar fecha clave';document.getElementById('ff-desc').value=f.desc;document.getElementById('ff-fecha').value=f.fecha;document.getElementById('ff-cat').value=f.cat;document.getElementById('ff-pais').value=f.pais;document.getElementById('ff-modulo').value=f.modulo;document.getElementById('ff-ref').value=f.ref;document.getElementById('ff-obs').value=f.obs;document.getElementById('form-fecha').classList.add('open');}
+async function saveFecha(){
+  var desc=document.getElementById('ff-desc').value;if(!desc){alert('Ingresá una descripción.');return;}
+  var btn=document.getElementById('save-fecha-btn');btn.disabled=true;btn.textContent='Guardando...';
+  var fields={Descripcion:desc,Fecha:document.getElementById('ff-fecha').value?document.getElementById('ff-fecha').value+'T00:00:00Z':null,Categoria:document.getElementById('ff-cat').value,Pais:document.getElementById('ff-pais').value,Modulo:document.getElementById('ff-modulo').value,RefSitio:document.getElementById('ff-ref').value,Observaciones:document.getElementById('ff-obs').value};
+  try{if(editingFechaId)await updateListItem(LIST_FECHAS,editingFechaId,fields);else await createListItem(LIST_FECHAS,fields);await syncAll();closeFormFecha();showToast(editingFechaId?'Fecha actualizada':'Fecha guardada');}
+  catch(e){showToast('Error: '+e.message,true);}
+  btn.disabled=false;btn.textContent='Guardar';
+}
 
 // ─── MLA ─────────────────────────────────────────────────────────────────────
 function renderMLA(){
