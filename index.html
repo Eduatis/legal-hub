@@ -287,6 +287,12 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div class="navi" id="nav-poderes" onclick="goTo('poderes',this)">
           <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="2" y="1" width="10" height="12" rx="1.5" stroke="currentColor"/><path d="M5 4h4M5 6.5h4M5 9h2" stroke="currentColor" stroke-linecap="round"/><circle cx="3.5" cy="4" r=".5" fill="currentColor"/></svg>Poderes
         </div>
+        <div class="navi" id="nav-mla" onclick="goTo('mla',this)">
+          <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1" y="3" width="12" height="9" rx="1.5" stroke="currentColor"/><path d="M4 3V2a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" stroke="currentColor"/><line x1="1" y1="6" x2="13" y2="6" stroke="currentColor"/><line x1="4" y1="9" x2="10" y2="9" stroke="currentColor" stroke-dasharray="1.5 1.5"/></svg>MLA
+        </div>
+        <div class="navi" id="nav-inm" onclick="goTo('inm',this)">
+          <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><path d="M2 12V6l5-4 5 4v6" stroke="currentColor" stroke-linejoin="round"/><rect x="5" y="8" width="4" height="4" stroke="currentColor"/></svg>Inmuebles UY
+        </div>
         <div class="navi" id="nav-societario" onclick="goTo('societario',this)">
           <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="7" cy="4" r="2" stroke="currentColor"/><circle cx="3" cy="9" r="1.5" stroke="currentColor"/><circle cx="11" cy="9" r="1.5" stroke="currentColor"/><path d="M5 7.5C5 6.5 9 6.5 9 7.5M1.5 11C1.5 10 4.5 10 4.5 11M9.5 11C9.5 10 12.5 10 12.5 11" stroke="currentColor" stroke-linecap="round"/></svg>Societario
         </div>
@@ -377,7 +383,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div class="filters">
           <div class="sbox"><svg class="sico" width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4" stroke="#1A1916" stroke-width="1.2"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="#1A1916" stroke-width="1.2" stroke-linecap="round"/></svg><input type="text" placeholder="Buscar sitio, lote..." id="intoru-q" oninput="renderINTORU()"></div>
 
-          <select class="fsel" id="intoru-cumple" onchange="renderINTORU()"><option value="">Todos</option><option value="Sí">Cumple</option><option value="Cumple con regularización">Cumple con regularización</option><option value="No">No cumple</option><option value="En análisis">En análisis</option></select>
+          <select class="fsel" id="intoru-cumple" onchange="renderINTORU()"><option value="">Todos</option><option value="Sí">Cumple</option><option value="Cumple con regularización">Cumple con regularización</option><option value="No">No cumple</option><option value="En análisis">En análisis</option><option value="Activos">Solo activos</option></select>
         </div>
         <div class="card" style="padding:0;overflow:hidden"><div class="dwrap"><table class="dtable" id="intoru-table"></table></div></div>
       </div>
@@ -440,6 +446,25 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <input type="text" id="global-q" placeholder="Buscar en temas, documentos, contratos, INTORU, DD..." style="padding-left:40px;font-size:14px;height:44px;border-radius:var(--r)" oninput="renderGlobalSearch()">
         </div>
         <div id="global-results"></div>
+      </div>
+
+      <!-- MLA -->
+      <div class="pageview" id="page-mla">
+        <div class="filters">
+          <div class="sbox"><svg class="sico" width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4" stroke="#1A1916" stroke-width="1.2"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="#1A1916" stroke-width="1.2" stroke-linecap="round"/></svg><input type="text" placeholder="Buscar contraparte, sitios..." id="mla-q" oninput="renderMLA()"></div>
+          <select class="fsel" id="mla-pais" onchange="renderMLA()"><option value="">Todos los países</option><option value="AR">Argentina</option><option value="UY">Uruguay</option><option value="PY">Paraguay</option></select>
+          <select class="fsel" id="mla-estado" onchange="renderMLA()"><option value="">Todos</option><option value="Vigente">Vigente</option><option value="Vencido">Vencido</option><option value="En negociación">En negociación</option></select>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden"><div class="dwrap"><table class="dtable wide" id="mla-table"></table></div></div>
+      </div>
+
+      <!-- INMUEBLES PROPIOS UY -->
+      <div class="pageview" id="page-inm">
+        <div class="filters">
+          <div class="sbox"><svg class="sico" width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4" stroke="#1A1916" stroke-width="1.2"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="#1A1916" stroke-width="1.2" stroke-linecap="round"/></svg><input type="text" placeholder="Buscar sitio, nombre..." id="inm-q" oninput="renderInm()"></div>
+          <select class="fsel" id="inm-tipo" onchange="renderInm()"><option value="">Todos</option><option value="Compraventa">Compraventa</option><option value="Usufructo">Usufructo</option></select>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden"><div class="dwrap"><table class="dtable" id="inm-table"></table></div></div>
       </div>
 
       <!-- ANALYTICS -->
@@ -614,6 +639,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <option value="Sí">Sí — Cumple</option>
         <option value="Cumple con regularización">Cumple pero requiere regularización</option>
         <option value="No">No — No cumple</option>
+        <option value="Caído">Caído — Negociación cerrada</option>
       </select>
     </div>
     <div class="field"><label>Oferta USD</label><input type="text" id="fi-oferta" placeholder="Ej: USD 50.000"></div>
@@ -771,6 +797,73 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   </div>
 </div>
 
+<!-- FORM MLA -->
+<div class="formov" id="form-mla" onclick="if(event.target===this)closeFormMLA()">
+  <div class="formpanel" onclick="event.stopPropagation()">
+    <div class="formtit"><span id="form-mla-title">Nuevo MLA</span><button class="formclose" onclick="closeFormMLA()">×</button></div>
+    <div class="fieldrow">
+      <div class="field" style="margin:0"><label>Contraparte</label><input type="text" id="fm-contraparte" placeholder="Nombre del cliente"></div>
+      <div class="field" style="margin:0"><label>País</label><select id="fm-pais"><option value="AR">Argentina</option><option value="UY">Uruguay</option><option value="PY">Paraguay</option></select></div>
+    </div>
+    <div class="field"><label>Sitios incluidos</label><textarea id="fm-sitios" placeholder="Lista de sitios o descripción del alcance"></textarea></div>
+    <div class="fieldrow">
+      <div class="field" style="margin:0"><label>Fecha de firma</label><input type="date" id="fm-firma"></div>
+      <div class="field" style="margin:0"><label>Fecha de vencimiento</label><input type="date" id="fm-venc"></div>
+    </div>
+    <div class="field"><label>Plazo</label><input type="text" id="fm-plazo" placeholder="Ej: 5 años, 10 años renovable"></div>
+    <div class="fieldrow">
+      <div class="field" style="margin:0"><label>Precio base</label><input type="text" id="fm-precio" placeholder="Ej: USD 500/sitio/mes"></div>
+      <div class="field" style="margin:0"><label>Actualización</label><input type="text" id="fm-actualizacion" placeholder="Ej: CPI anual, 5% fijo"></div>
+    </div>
+    <div class="field"><label>Cláusula de terminación anticipada</label><input type="text" id="fm-term" placeholder="Ej: 6 meses de preaviso a favor de ambas partes"></div>
+    <div class="fieldrow">
+      <div class="field" style="margin:0"><label>Cesión</label><select id="fm-cesion"><option value="">—</option><option value="Sí">Sí</option><option value="No">No</option></select></div>
+      <div class="field" style="margin:0"><label>Subarrendamiento</label><select id="fm-subarr"><option value="">—</option><option value="Sí">Sí</option><option value="No">No</option></select></div>
+    </div>
+    <div class="field"><label>Estado</label><select id="fm-estado"><option value="Vigente">Vigente</option><option value="En negociación">En negociación</option><option value="Vencido">Vencido</option></select></div>
+    <div class="field"><label>Link al documento</label><input type="text" id="fm-link" placeholder="URL o ruta de red"></div>
+    <div class="field"><label>Observaciones</label><textarea id="fm-obs"></textarea></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btnp" style="flex:1" id="save-mla-btn" onclick="saveMLA()">Guardar</button>
+      <button class="btns" onclick="closeFormMLA()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- FORM INMUEBLE -->
+<div class="formov" id="form-inm" onclick="if(event.target===this)closeFormInm()">
+  <div class="formpanel" onclick="event.stopPropagation()">
+    <div class="formtit"><span id="form-inm-title">Nuevo inmueble propio</span><button class="formclose" onclick="closeFormInm()">×</button></div>
+    <div class="fieldrow">
+      <div class="field" style="margin:0"><label>Código de sitio</label><input type="text" id="fi2-sitio" placeholder="Ej: ATIS-MON-2033" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="field" style="margin:0"><label>Tipo</label><select id="fi2-tipo"><option value="Compraventa">Compraventa</option><option value="Usufructo">Usufructo</option></select></div>
+    </div>
+    <div class="field"><label>Nombre del inmueble</label><input type="text" id="fi2-nombre" placeholder="Ej: Mercado Modelo"></div>
+    <div class="fieldrow">
+      <div class="field" style="margin:0"><label>Departamento</label><input type="text" id="fi2-dpto" placeholder="Ej: Montevideo"></div>
+      <div class="field" style="margin:0"><label>Dirección</label><input type="text" id="fi2-dir" placeholder="Calle y número"></div>
+    </div>
+    <div class="fieldrow">
+      <div class="field" style="margin:0"><label>Fecha de adquisición</label><input type="date" id="fi2-fecha"></div>
+      <div class="field" style="margin:0"><label>Precio</label><input type="text" id="fi2-precio" placeholder="Ej: USD 120.000"></div>
+    </div>
+    <div class="fieldrow">
+      <div class="field" style="margin:0"><label>Titular registral</label><input type="text" id="fi2-titular" placeholder="ATIS GROUP URUGUAY S.A."></div>
+      <div class="field" style="margin:0"><label>Contraparte / Vendedor</label><input type="text" id="fi2-contraparte" placeholder="Nombre del vendedor"></div>
+    </div>
+    <div class="fieldrow">
+      <div class="field" style="margin:0"><label>Inscripto en registro</label><select id="fi2-inscripto"><option value="">—</option><option value="Sí">Sí</option><option value="No">No</option></select></div>
+      <div class="field" style="margin:0"><label>Vencimiento usufructo</label><input type="date" id="fi2-venc-usuf"></div>
+    </div>
+    <div class="field"><label>Link al documento</label><input type="text" id="fi2-link" placeholder="URL o ruta de red"></div>
+    <div class="field"><label>Observaciones</label><textarea id="fi2-obs"></textarea></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btnp" style="flex:1" id="save-inm-btn" onclick="saveInm()">Guardar</button>
+      <button class="btns" onclick="closeFormInm()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- CONFIRM -->
 <div class="confirm-overlay" id="confirm-overlay">
   <div class="confirm-box">
@@ -796,6 +889,8 @@ const LIST_INTORU = 'INTORU';
 const LIST_PODERES = 'Poderes_Legal';
 const LIST_SOC_AUT = 'Societario_Autoridades';
 const LIST_SOC_ACC = 'Societario_Accionistas';
+const LIST_MLA = 'MLA_Legal';
+const LIST_INM = 'Inmuebles_Propios_UY';
 const msalConfig = { auth:{ clientId:CLIENT_ID, authority:'https://login.microsoftonline.com/'+TENANT_ID, redirectUri:window.location.origin+window.location.pathname }, cache:{cacheLocation:'sessionStorage'} };
 const msalInstance = new msal.PublicClientApplication(msalConfig);
 const SCOPES = ['Sites.ReadWrite.All','User.Read'];
@@ -805,7 +900,8 @@ var TODAY = new Date(); TODAY.setHours(0,0,0,0);
 var currentUser = null, dashCountry = 'Global', anCountry = 'Global';
 var refMode = 's', lcState = 'Borrador', temaTab = 'activos';
 var editingDocId = null, editingTemaId = null, editingSueloId = null, editingDDId = null, editingIntoruId = null, editingPoderId = null, editingSocAutId = null, editingSocAccId = null, pendingDelete = null;
-var docs = [], temas = [], suelos = [], dd = [], intoru = [], poderes = [], socAut = [], socAcc = [], docSeq = 0, siteId = null;
+var docs = [], temas = [], suelos = [], dd = [], intoru = [], poderes = [], socAut = [], socAcc = [], mla = [], inm = [], docSeq = 0, siteId = null;
+var editingMlaId = null, editingInmId = null;
 var charts = {};
 
 var USERS_MAP = {
@@ -900,7 +996,7 @@ function mapSuelo(item){var f=item.fields;return{id:item.id,sitio:f.Sitio||'',pa
 async function syncAll(){
   var btn=document.getElementById('sync-btn');if(btn){btn.textContent='↻ Actualizando...';btn.disabled=true;}
   try{
-    const results=await Promise.allSettled([getListItems(LIST_DOCS),getListItems(LIST_TEMAS),getListItems(LIST_SUELO),getListItems(LIST_DD),getListItems(LIST_INTORU),getListItems(LIST_PODERES),getListItems(LIST_SOC_AUT),getListItems(LIST_SOC_ACC)]);
+    const results=await Promise.allSettled([getListItems(LIST_DOCS),getListItems(LIST_TEMAS),getListItems(LIST_SUELO),getListItems(LIST_DD),getListItems(LIST_INTORU),getListItems(LIST_PODERES),getListItems(LIST_SOC_AUT),getListItems(LIST_SOC_ACC),getListItems(LIST_MLA),getListItems(LIST_INM)]);
     if(results[0].status==='fulfilled')docs=results[0].value.map(mapDoc);
     if(results[1].status==='fulfilled')temas=results[1].value.map(mapTema);
     if(results[2].status==='fulfilled')suelos=results[2].value.map(mapSuelo);
@@ -909,6 +1005,8 @@ async function syncAll(){
     if(results[5].status==='fulfilled')poderes=results[5].value.map(mapPoder);
     if(results[6].status==='fulfilled')socAut=results[6].value.map(mapSocAut);
     if(results[7].status==='fulfilled')socAcc=results[7].value.map(mapSocAcc);
+    if(results[8].status==='fulfilled')mla=results[8].value.map(mapMLA);
+    if(results[9].status==='fulfilled')inm=results[9].value.map(mapInm);
     docs.forEach(function(d){var m=d.code.match(/-(\d{4})$/);if(m){var n=parseInt(m[1]);if(n>docSeq)docSeq=n;}});
     renderAll();showToast('Datos actualizados');
   }catch(e){showToast('Error al conectar: '+e.message,true);console.error(e);}
@@ -928,7 +1026,7 @@ function vTemas(){
   });
 }
 function vSuelos(){return suelos.filter(function(s){return currentUser.scope.indexOf(s.pais)>=0;});}
-function renderAll(){renderDash();renderDocs();renderTemas();renderSuelo();renderINTORU();renderDD();renderPoderes();renderSocAutoridades();renderSocAccionistas();renderAnalytics();}
+function renderAll(){renderDash();renderDocs();renderTemas();renderSuelo();renderINTORU();renderDD();renderPoderes();renderSocAutoridades();renderSocAccionistas();renderMLA();renderInm();renderAnalytics();}
 
 // ─── DASHBOARD ──────────────────────────────────────────────────────────────
 function renderDash(){
@@ -1280,10 +1378,10 @@ function renderGlobalSearch(){
 function goTo(page,el){
   document.querySelectorAll('.navi').forEach(function(n){n.classList.remove('active');});el.classList.add('active');
   document.querySelectorAll('.pageview').forEach(function(p){p.classList.remove('active');});document.getElementById('page-'+page).classList.add('active');
-  var T={dashboard:'Dashboard',temas:'Temas',documentos:'Documentos',suelo:'Contratos de Suelo',intoru:'INTORU',dd:'DD Sitios Uruguay',poderes:'Poderes',societario:'Societario',search:'Búsqueda',analytics:'Analytics'};
-  var S={dashboard:'Resumen general',temas:'Follow-up y gestión',documentos:'Registro documental',suelo:'Matriz de contratos LOC',intoru:'Análisis de Sitios por Lotes — Uruguay',dd:'Due Diligence — Fases 1 y 2',poderes:'Registro de poderes vigentes',societario:'Estructura societaria',search:'Buscar en todos los módulos',analytics:'Indicadores y gráficos'};
+  var T={dashboard:'Dashboard',temas:'Temas',documentos:'Documentos',suelo:'Contratos de Suelo',intoru:'INTORU',dd:'DD Sitios Uruguay',poderes:'Poderes',societario:'Societario',mla:'MLA',inm:'Inmuebles Propios UY',search:'Búsqueda',analytics:'Analytics'};
+  var S={dashboard:'Resumen general',temas:'Follow-up y gestión',documentos:'Registro documental',suelo:'Matriz de contratos LOC',intoru:'Análisis de Sitios por Lotes — Uruguay',dd:'Due Diligence — Fases 1 y 2',poderes:'Registro de poderes vigentes',societario:'Estructura societaria',mla:'Master Lease Agreements',inm:'Inmuebles adquiridos en Uruguay',search:'Buscar en todos los módulos',analytics:'Indicadores y gráficos'};
   document.getElementById('tb-title').textContent=T[page]||page;document.getElementById('tb-sub').textContent=S[page]||'';
-  var A={poderes:'<button class="btns" onclick="exportCSV(\'poderes\')" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormPoder()">+ Nuevo poder</button>',societario:socTab==="autoridades"?'<button class="btnp" onclick="openFormSocAut()">+ Nueva autoridad</button>':'<button class="btnp" onclick="openFormSocAcc()">+ Nuevo accionista</button>',temas:'<button class="btns" onclick="exportCSV(\"temas\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormTema()">+ Nuevo tema</button>',documentos:'<button class="btns" onclick="exportCSV(\"documentos\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDoc()">+ Nuevo documento</button>',suelo:'<button class="btns" onclick="exportCSV(\"suelo\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormSuelo()">+ Nuevo contrato</button>',intoru:'<button class="btns" onclick="exportCSV(\"intoru\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormINTORU()">+ Nuevo sitio</button>',dd:'<button class="btns" onclick="exportCSV(\"dd\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDD()">+ Nuevo sitio</button>'};
+  var A={mla:'<button class="btnp" onclick="openFormMLA()">+ Nuevo MLA</button>',inm:'<button class="btnp" onclick="openFormInm()">+ Nuevo inmueble</button>',poderes:'<button class="btns" onclick="exportCSV(\'poderes\')" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormPoder()">+ Nuevo poder</button>',societario:socTab==="autoridades"?'<button class="btnp" onclick="openFormSocAut()">+ Nueva autoridad</button>':'<button class="btnp" onclick="openFormSocAcc()">+ Nuevo accionista</button>',temas:'<button class="btns" onclick="exportCSV(\"temas\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormTema()">+ Nuevo tema</button>',documentos:'<button class="btns" onclick="exportCSV(\"documentos\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDoc()">+ Nuevo documento</button>',suelo:'<button class="btns" onclick="exportCSV(\"suelo\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormSuelo()">+ Nuevo contrato</button>',intoru:'<button class="btns" onclick="exportCSV(\"intoru\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormINTORU()">+ Nuevo sitio</button>',dd:'<button class="btns" onclick="exportCSV(\"dd\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDD()">+ Nuevo sitio</button>'};
   document.getElementById('tb-act').innerHTML=A[page]||'';
   if(page==='analytics')setTimeout(renderAnalytics,100);
 }
@@ -1582,7 +1680,7 @@ async function confirmDelete(){
   if(!pendingDelete)return;
   document.getElementById('confirm-overlay').classList.remove('open');
   showLoading('Eliminando...');
-  var listName=pendingDelete.type==='doc'?LIST_DOCS:pendingDelete.type==='tema'?LIST_TEMAS:pendingDelete.type==='suelo'?LIST_SUELO:pendingDelete.type==='intoru'?LIST_INTORU:pendingDelete.type==='poder'?LIST_PODERES:pendingDelete.type==='socaut'?LIST_SOC_AUT:pendingDelete.type==='socacc'?LIST_SOC_ACC:LIST_DD;
+  var listName=pendingDelete.type==='doc'?LIST_DOCS:pendingDelete.type==='tema'?LIST_TEMAS:pendingDelete.type==='suelo'?LIST_SUELO:pendingDelete.type==='intoru'?LIST_INTORU:pendingDelete.type==='poder'?LIST_PODERES:pendingDelete.type==='socaut'?LIST_SOC_AUT:pendingDelete.type==='socacc'?LIST_SOC_ACC:pendingDelete.type==='mla'?LIST_MLA:pendingDelete.type==='inm'?LIST_INM:LIST_DD;
   try{await deleteListItem(listName,pendingDelete.id);await syncAll();hideLoading();showToast('Eliminado correctamente');}
   catch(e){hideLoading();showToast('Error al eliminar',true);}
   pendingDelete=null;
@@ -1601,7 +1699,10 @@ function renderINTORU(){
   var fc=document.getElementById('intoru-cumple').value;
   var list=intoru.slice();
   if(q)list=list.filter(function(s){return s.sitio.toLowerCase().indexOf(q)>=0||(s.nombre||'').toLowerCase().indexOf(q)>=0;});
-  if(fc)list=list.filter(function(s){return s.cumple===fc;});
+  // Default: hide Caídos unless explicitly filtered
+  if(fc==='Activos'){list=list.filter(function(s){return s.cumple!=='Caído';});}
+  else if(fc){list=list.filter(function(s){return s.cumple===fc;});}
+  else{list=list.filter(function(s){return s.cumple!=='Caído';});}
 
   var el=document.getElementById('intoru-table');
   if(!list.length){el.innerHTML='<tr><td colspan="8" style="padding:30px;text-align:center;color:var(--tx3)">Sin sitios cargados</td></tr>';return;}
@@ -1610,7 +1711,7 @@ function renderINTORU(){
   var rows=list.map(function(s){
     var dt=daysTo(s.cierre);
     var vc=dt!==null&&dt<=15?'color:var(--rd);font-weight:500':dt!==null&&dt<=30?'color:var(--am)':'';
-    var cumpleBadge=s.cumple==='Sí'?'<span class="badge bdgr">✓ Cumple</span>':s.cumple==='No'?'<span class="badge bdr">✗ No cumple</span>':s.cumple==='Cumple con regularización'?'<span class="badge bda" style="background:#FEF9C3;color:#854D0E">⚠ Regularización</span>':'<span class="badge bda">En análisis</span>';
+    var cumpleBadge=s.cumple==='Sí'?'<span class="badge bdgr">✓ Cumple</span>':s.cumple==='No'?'<span class="badge bdr">✗ No cumple</span>':s.cumple==='Cumple con regularización'?'<span class="badge bda" style="background:#FEF9C3;color:#854D0E">⚠ Regularización</span>':s.cumple==='Caído'?'<span class="badge" style="background:#F3F4F6;color:#6B7280">⚫ Caído</span>':'<span class="badge bda">En análisis</span>';
     var modalBadge=s.modalidad?'<span class="badge bdb" style="font-size:10px">'+s.modalidad+'</span>':'<span style="color:var(--tx3)">—</span>';
     return '<tr>'+
       '<td><span class="mono">'+s.sitio+'</span></td>'+
@@ -1906,6 +2007,8 @@ function setSocTab(tab){
 }
 
 function mapSocAut(item){var f=item.fields;return{id:item.id,sociedad:f.Sociedad||'',pais:f.Pais||'',cargo:f.Cargo||'',nombre:f.Nombre||'',acta:f.ActaDesignacion||'',fecha:f.FechaDesignacion?f.FechaDesignacion.split('T')[0]:'',vigencia:f.Vigencia||'',obs:f.Observaciones||''};}
+function mapMLA(item){var f=item.fields;return{id:item.id,contraparte:f.Contraparte||'',pais:f.Pais||'',sitios:f.Sitios||'',firmaFecha:f.FechaFirma?f.FechaFirma.split('T')[0]:'',vencFecha:f.FechaVencimiento?f.FechaVencimiento.split('T')[0]:'',plazo:f.Plazo||'',precio:f.PrecioBase||'',actualizacion:f.Actualizacion||'',term:f.TerminacionAnticipada||'',cesion:f.Cesion||'',subarr:f.Subarrendamiento||'',estado:f.Estado||'Vigente',link:f.LinkDocumento||'',obs:f.Observaciones||''};}
+function mapInm(item){var f=item.fields;return{id:item.id,sitio:f.Sitio||'',nombre:f.Nombre||'',tipo:f.Tipo||'',direccion:f.Direccion||'',departamento:f.Departamento||'',fechaAdq:f.FechaAdquisicion?f.FechaAdquisicion.split('T')[0]:'',titular:f.TitularRegistral||'',contraparte:f.Contraparte||'',precio:f.Precio||'',inscripto:f.Inscripto||'',vencUsuf:f.VencimientoUsufructo?f.VencimientoUsufructo.split('T')[0]:'',link:f.LinkDocumento||'',obs:f.Observaciones||''};}
 function mapSocAcc(item){var f=item.fields;return{id:item.id,sociedad:f.Sociedad||'',pais:f.Pais||'',accionista:f.Accionista||'',tipo:f.TipoAccion||'',cantidad:f.Cantidad||'',porcentaje:f.Porcentaje||'',obs:f.Observaciones||''};}
 
 function updateSocFilter(listData,paisId,socId){
@@ -2050,6 +2153,95 @@ document.addEventListener('click',function(e){
     document.getElementById('sidebar-overlay').style.display='none';
   }
 });
+
+// ─── MLA ─────────────────────────────────────────────────────────────────────
+function renderMLA(){
+  var q=(document.getElementById('mla-q').value||'').toLowerCase();
+  var fp=document.getElementById('mla-pais').value;
+  var fe=document.getElementById('mla-estado').value;
+  var list=mla.filter(function(m){return currentUser.scope.indexOf(m.pais)>=0;});
+  if(q)list=list.filter(function(m){return m.contraparte.toLowerCase().indexOf(q)>=0||(m.sitios||'').toLowerCase().indexOf(q)>=0;});
+  if(fp)list=list.filter(function(m){return m.pais===fp;});
+  if(fe)list=list.filter(function(m){return m.estado===fe;});
+  var el=document.getElementById('mla-table');
+  if(!list.length){el.innerHTML='<tr><td colspan="10" style="padding:30px;text-align:center;color:var(--tx3)">Sin MLAs cargados</td></tr>';return;}
+  var head='<thead><tr><th>Contraparte</th><th>País</th><th>Plazo</th><th>Firma</th><th>Vencimiento</th><th>Precio base</th><th>Actualización</th><th>Term. Anticip.</th><th>Estado</th><th></th></tr></thead>';
+  var rows=list.map(function(m){
+    var dt=daysTo(m.vencFecha);var vc=dt!==null&&dt<=365?'color:var(--am)':'';
+    var sc=m.estado==='Vigente'?'bdgr':m.estado==='Vencido'?'bdr':'bda';
+    var tr=['<tr>',
+      '<td style="font-weight:500">'+m.contraparte+'</td>',
+      '<td>'+m.pais+'</td>',
+      '<td>'+m.plazo+'</td>',
+      '<td>'+fmtDate(m.firmaFecha)+'</td>',
+      '<td style="'+vc+'">'+fmtDate(m.vencFecha)+'</td>',
+      '<td>'+m.precio+'</td>',
+      '<td>'+m.actualizacion+'</td>',
+      '<td style="font-size:11px">'+m.term+'</td>',
+      '<td><span class="badge '+sc+'">'+m.estado+'</span></td>',
+      '<td><div class="acbtn">',
+      '<button class="btnedit" data-id="'+m.id+'" onclick="editMLA(this.dataset.id)">Editar</button>',
+      '<button class="btnrd" data-id="'+m.id+'" data-nm="'+m.contraparte.replace(/"/g,"")+'">Borrar</button>',
+      '</div></td></tr>'].join('');
+    return tr;
+  });
+  el.innerHTML=head+'<tbody>'+rows.join('')+'</tbody>';
+}
+
+function openFormMLA(){editingMlaId=null;document.getElementById('form-mla-title').textContent='Nuevo MLA';['fm-contraparte','fm-sitios','fm-firma','fm-venc','fm-plazo','fm-precio','fm-actualizacion','fm-term','fm-link','fm-obs'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fm-pais').value='AR';document.getElementById('fm-estado').value='Vigente';document.getElementById('fm-cesion').value='';document.getElementById('fm-subarr').value='';document.getElementById('form-mla').classList.add('open');}
+function closeFormMLA(){document.getElementById('form-mla').classList.remove('open');}
+function editMLA(id){var m=mla.find(function(x){return x.id===id;});if(!m)return;editingMlaId=id;document.getElementById('form-mla-title').textContent='Editar MLA';document.getElementById('fm-contraparte').value=m.contraparte;document.getElementById('fm-pais').value=m.pais;document.getElementById('fm-sitios').value=m.sitios;document.getElementById('fm-firma').value=m.firmaFecha;document.getElementById('fm-venc').value=m.vencFecha;document.getElementById('fm-plazo').value=m.plazo;document.getElementById('fm-precio').value=m.precio;document.getElementById('fm-actualizacion').value=m.actualizacion;document.getElementById('fm-term').value=m.term;document.getElementById('fm-cesion').value=m.cesion;document.getElementById('fm-subarr').value=m.subarr;document.getElementById('fm-estado').value=m.estado;document.getElementById('fm-link').value=m.link;document.getElementById('fm-obs').value=m.obs;document.getElementById('form-mla').classList.add('open');}
+async function saveMLA(){
+  var ct=document.getElementById('fm-contraparte').value;if(!ct){alert('Ingresá la contraparte.');return;}
+  var btn=document.getElementById('save-mla-btn');btn.disabled=true;btn.textContent='Guardando...';
+  var fields={Contraparte:ct,Pais:document.getElementById('fm-pais').value,Sitios:document.getElementById('fm-sitios').value,FechaFirma:document.getElementById('fm-firma').value?document.getElementById('fm-firma').value+'T00:00:00Z':null,FechaVencimiento:document.getElementById('fm-venc').value?document.getElementById('fm-venc').value+'T00:00:00Z':null,Plazo:document.getElementById('fm-plazo').value,PrecioBase:document.getElementById('fm-precio').value,Actualizacion:document.getElementById('fm-actualizacion').value,TerminacionAnticipada:document.getElementById('fm-term').value,Cesion:document.getElementById('fm-cesion').value,Subarrendamiento:document.getElementById('fm-subarr').value,Estado:document.getElementById('fm-estado').value,LinkDocumento:document.getElementById('fm-link').value,Observaciones:document.getElementById('fm-obs').value};
+  try{if(editingMlaId)await updateListItem(LIST_MLA,editingMlaId,fields);else await createListItem(LIST_MLA,fields);await syncAll();closeFormMLA();showToast(editingMlaId?'MLA actualizado':'MLA guardado');}
+  catch(e){showToast('Error: '+e.message,true);}
+  btn.disabled=false;btn.textContent='Guardar';
+}
+
+// ─── INMUEBLES PROPIOS ───────────────────────────────────────────────────────
+function renderInm(){
+  var q=(document.getElementById('inm-q').value||'').toLowerCase();
+  var ft=document.getElementById('inm-tipo').value;
+  var list=inm.slice();
+  if(q)list=list.filter(function(i){return i.sitio.toLowerCase().indexOf(q)>=0||(i.nombre||'').toLowerCase().indexOf(q)>=0;});
+  if(ft)list=list.filter(function(i){return i.tipo===ft;});
+  var el=document.getElementById('inm-table');
+  if(!list.length){el.innerHTML='<tr><td colspan="9" style="padding:30px;text-align:center;color:var(--tx3)">Sin inmuebles cargados</td></tr>';return;}
+  var head='<thead><tr><th>Sitio</th><th>Nombre</th><th>Tipo</th><th>Departamento</th><th>Adquisición</th><th>Titular registral</th><th>Precio</th><th>Inscripto</th><th>Venc. Usufructo</th><th></th></tr></thead>';
+  var rows=list.map(function(i){
+    var tipoBadge=i.tipo==='Usufructo'?'<span class="badge bda">Usufructo</span>':'<span class="badge bdb">Compraventa</span>';
+    var vencUsuf=i.vencUsuf?fmtDate(i.vencUsuf):'—';
+    return ['<tr>',
+      '<td><span class="mono">'+i.sitio+'</span></td>',
+      '<td style="font-weight:500">'+i.nombre+'</td>',
+      '<td>'+tipoBadge+'</td>',
+      '<td>'+i.departamento+'</td>',
+      '<td>'+fmtDate(i.fechaAdq)+'</td>',
+      '<td>'+i.titular+'</td>',
+      '<td>'+i.precio+'</td>',
+      '<td>'+yn(i.inscripto)+'</td>',
+      '<td>'+vencUsuf+'</td>',
+      '<td><div class="acbtn">',
+      '<button class="btnedit" data-id="'+i.id+'" onclick="editInm(this.dataset.id)">Editar</button>',
+      '<button class="btnrd" data-id="'+i.id+'" data-nm="'+i.sitio+'">Borrar</button>',
+      '</div></td></tr>'].join('');
+  });
+  el.innerHTML=head+'<tbody>'+rows.join('')+'</tbody>';
+}
+
+function openFormInm(){editingInmId=null;document.getElementById('form-inm-title').textContent='Nuevo inmueble propio';['fi2-sitio','fi2-nombre','fi2-dpto','fi2-dir','fi2-fecha','fi2-precio','fi2-titular','fi2-contraparte','fi2-venc-usuf','fi2-link','fi2-obs'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fi2-tipo').value='Compraventa';document.getElementById('fi2-inscripto').value='';document.getElementById('form-inm').classList.add('open');}
+function closeFormInm(){document.getElementById('form-inm').classList.remove('open');}
+function editInm(id){var x=inm.find(function(i){return i.id===id;});if(!x)return;editingInmId=id;document.getElementById('form-inm-title').textContent='Editar inmueble';document.getElementById('fi2-sitio').value=x.sitio;document.getElementById('fi2-nombre').value=x.nombre;document.getElementById('fi2-tipo').value=x.tipo;document.getElementById('fi2-dpto').value=x.departamento;document.getElementById('fi2-dir').value=x.direccion;document.getElementById('fi2-fecha').value=x.fechaAdq;document.getElementById('fi2-precio').value=x.precio;document.getElementById('fi2-titular').value=x.titular;document.getElementById('fi2-contraparte').value=x.contraparte;document.getElementById('fi2-inscripto').value=x.inscripto;document.getElementById('fi2-venc-usuf').value=x.vencUsuf;document.getElementById('fi2-link').value=x.link;document.getElementById('fi2-obs').value=x.obs;document.getElementById('form-inm').classList.add('open');}
+async function saveInm(){
+  var sitio=document.getElementById('fi2-sitio').value;if(!sitio){alert('Ingresá el código de sitio.');return;}
+  var btn=document.getElementById('save-inm-btn');btn.disabled=true;btn.textContent='Guardando...';
+  var fields={Sitio:sitio,Nombre:document.getElementById('fi2-nombre').value,Tipo:document.getElementById('fi2-tipo').value,Departamento:document.getElementById('fi2-dpto').value,Direccion:document.getElementById('fi2-dir').value,FechaAdquisicion:document.getElementById('fi2-fecha').value?document.getElementById('fi2-fecha').value+'T00:00:00Z':null,Precio:document.getElementById('fi2-precio').value,TitularRegistral:document.getElementById('fi2-titular').value,Contraparte:document.getElementById('fi2-contraparte').value,Inscripto:document.getElementById('fi2-inscripto').value,VencimientoUsufructo:document.getElementById('fi2-venc-usuf').value?document.getElementById('fi2-venc-usuf').value+'T00:00:00Z':null,LinkDocumento:document.getElementById('fi2-link').value,Observaciones:document.getElementById('fi2-obs').value};
+  try{if(editingInmId)await updateListItem(LIST_INM,editingInmId,fields);else await createListItem(LIST_INM,fields);await syncAll();closeFormInm();showToast(editingInmId?'Inmueble actualizado':'Inmueble guardado');}
+  catch(e){showToast('Error: '+e.message,true);}
+  btn.disabled=false;btn.textContent='Guardar';
+}
 
 document.getElementById('fd-fi').value=todayStr();updateCode();
 (async function(){
