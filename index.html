@@ -950,7 +950,7 @@ const LIST_FECHAS = 'FechasClaves';
 const LIST_INM = 'Inmuebles_Propios_UY';
 const msalConfig = { auth:{ clientId:CLIENT_ID, authority:'https://login.microsoftonline.com/'+TENANT_ID, redirectUri:window.location.origin+window.location.pathname }, cache:{cacheLocation:'localStorage', storeAuthStateInCookie:true} };
 const msalInstance = new msal.PublicClientApplication(msalConfig);
-const SCOPES = ['Sites.ReadWrite.All','User.Read'];
+const SCOPES = ['Sites.ReadWrite.All','User.Read','Tasks.ReadWrite'];
 
 // ─── STATE ──────────────────────────────────────────────────────────────────
 var TODAY = new Date(); TODAY.setHours(0,0,0,0);
@@ -990,6 +990,106 @@ async function getToken(){
   const accounts=msalInstance.getAllAccounts();if(!accounts.length)throw new Error('No hay sesión activa');
   const result=await msalInstance.acquireTokenSilent({scopes:SCOPES,account:accounts[0]});return result.accessToken;
 }
+async function createToDoTask(titulo, deadline, notas){
+  try {
+    const token = await getToken();
+    // Get or create ATIS Legal Hub list
+    const listsR = await fetch('https://graph.microsoft.com/v1.0/me/todo/lists', {
+      headers: {'Authorization': 'Bearer ' + token}
+    });
+    const listsD = await listsR.json();
+    var listId = null;
+    if(listsD.value) {
+      var existing = listsD.value.find(function(l){ return l.displayName === 'ATIS Legal Hub'; });
+      listId = existing ? existing.id : null;
+    }
+    // Create list if it doesn't exist
+    if(!listId) {
+      const newList = await fetch('https://graph.microsoft.com/v1.0/me/todo/lists', {
+        method: 'POST',
+        headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
+        body: JSON.stringify({displayName: 'ATIS Legal Hub'})
+      });
+      const newListD = await newList.json();
+      listId = newListD.id;
+    }
+    if(!listId) throw new Error('No se pudo obtener la lista de To Do');
+    // Create task
+    var taskBody = {
+      title: titulo,
+      importance: 'high',
+      body: {content: notas || '', contentType: 'text'}
+    };
+    if(deadline) {
+      taskBody.dueDateTime = {
+        dateTime: deadline + 'T23:59:59',
+        timeZone: 'America/Argentina/Buenos_Aires'
+      };
+      taskBody.reminderDateTime = {
+        dateTime: deadline + 'T09:00:00',
+        timeZone: 'America/Argentina/Buenos_Aires'
+      };
+      taskBody.isReminderOn = true;
+    }
+    const taskR = await fetch('https://graph.microsoft.com/v1.0/me/todo/lists/' + listId + '/tasks', {
+      method: 'POST',
+      headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
+      body: JSON.stringify(taskBody)
+    });
+    const taskD = await taskR.json();
+    if(taskD.id) {
+      showToast('✅ Tarea creada en Microsoft To Do');
+      return true;
+    } else {
+      throw new Error(JSON.stringify(taskD.error));
+    }
+  } catch(e) {
+    showToast('Error en To Do: ' + e.message, true);
+    return false;
+  }
+}
+
+async function completeToDoTask(titulo){
+  try {
+    const token = await getToken();
+    // Find the ATIS Legal Hub list
+    const listsR = await fetch('https://graph.microsoft.com/v1.0/me/todo/lists', {
+      headers: {'Authorization': 'Bearer ' + token}
+    });
+    const listsD = await listsR.json();
+    if(!listsD.value) return false;
+    var atislist = listsD.value.find(function(l){ return l.displayName === 'ATIS Legal Hub'; });
+    if(!atislist) return false; // list doesn't exist, nothing to do
+    // Search tasks for one matching the title
+    const tasksR = await fetch(
+      'https://graph.microsoft.com/v1.0/me/todo/lists/' + atislist.id + '/tasks?$top=100',
+      { headers: {'Authorization': 'Bearer ' + token} }
+    );
+    const tasksD = await tasksR.json();
+    if(!tasksD.value || !tasksD.value.length) return false;
+    // Find matching task (case-insensitive, partial match)
+    var tituloLower = titulo.toLowerCase().substring(0, 40);
+    var active = tasksD.value.filter(function(t){ return t.status !== 'completed'; });
+    var match = active.find(function(t){
+      return t.title && t.title.toLowerCase().indexOf(tituloLower) >= 0;
+    });
+    if(!match) return false;
+    // Mark as completed
+    await fetch(
+      'https://graph.microsoft.com/v1.0/me/todo/lists/' + atislist.id + '/tasks/' + match.id,
+      {
+        method: 'PATCH',
+        headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
+        body: JSON.stringify({status: 'completed', completedDateTime: {dateTime: new Date().toISOString(), timeZone: 'UTC'}})
+      }
+    );
+    return true;
+  } catch(e) {
+    console.warn('To Do complete error:', e.message);
+    return false;
+  }
+}
+
 function applyUserTheme(user){
   var root = document.documentElement;
   if(user.theme === 'rose'){
@@ -1021,6 +1121,40 @@ function applyUserTheme(user){
     ].join('\n');
     document.head.appendChild(style);
   }
+}
+
+function removeTodoPrompt(){var p=document.getElementById('todo-prompt');if(p)p.remove();}
+var pendingTodo = null;
+function showToDoPrompt(titulo, deadline, notas, pais){
+  pendingTodo = {t: titulo, d: deadline, n: (notas||'').substring(0,200)};
+  // Remove any existing prompt
+  var ex = document.getElementById('todo-prompt');
+  if(ex) ex.remove();
+  var d = new Date(deadline);
+  var dateStr = d.toLocaleDateString('es-AR', {day:'2-digit', month:'short', year:'numeric'});
+  var div = document.createElement('div');
+  div.id = 'todo-prompt';
+  div.style.cssText = 'position:fixed;bottom:80px;right:24px;background:var(--surf);border:1px solid var(--brd2);border-radius:12px;padding:16px 20px;width:300px;box-shadow:0 4px 20px rgba(0,0,0,.15);z-index:400;animation:slideIn .2s ease';
+  div.innerHTML = 
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">' +
+      '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect width="20" height="20" rx="4" fill="#2563EB"/><path d="M5 10l3.5 3.5L15 7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      '<div style="font-size:13px;font-weight:600">¿Agregar a Microsoft To Do?</div>' +
+      '<button onclick="removeTodoPrompt()" style="background:none;border:none;color:var(--tx3);cursor:pointer;font-size:18px;line-height:1;margin-left:auto">×</button>' +
+    '</div>' +
+    '<div style="font-size:12px;color:var(--tx2);margin-bottom:12px">' +
+      '<strong>' + titulo + '</strong><br>' +
+      'Deadline: ' + dateStr + ' · ' + pais +
+    '</div>' +
+    '<div style="display:flex;gap:8px">' +
+      '<button data-titulo="" data-deadline="" data-notas="" id="todo-confirm-btn" onclick="pendingTodo&&createToDoTask(pendingTodo.t,pendingTodo.d,pendingTodo.n);removeTodoPrompt()" style="flex:1;background:#2563EB;color:#fff;border:none;padding:7px 12px;border-radius:var(--rs);font-size:12px;cursor:pointer;font-weight:500">✓ Agregar</button>' +
+        'style="flex:1;background:#2563EB;color:#fff;border:none;padding:7px 12px;border-radius:var(--rs);font-size:12px;cursor:pointer;font-weight:500">✓ Agregar</button>' +
+      '<button onclick="removeTodoPrompt()" style="background:var(--surf2);border:1px solid var(--brd2);padding:7px 12px;border-radius:var(--rs);font-size:12px;cursor:pointer;color:var(--tx2)">No gracias</button>' +
+        'style="background:var(--surf2);border:1px solid var(--brd2);padding:7px 12px;border-radius:var(--rs);font-size:12px;cursor:pointer;color:var(--tx2)">No gracias</button>' +
+    '</div>' +
+    '<div style="font-size:10px;color:var(--tx3);margin-top:8px">Se crea en la lista "ATIS Legal Hub" de To Do</div>';
+  document.body.appendChild(div);
+  // Auto-dismiss after 8 seconds
+  setTimeout(function(){ var el=document.getElementById('todo-prompt'); if(el)el.remove(); }, 8000);
 }
 
 async function initApp(account){
@@ -1305,8 +1439,17 @@ function setTemaTab(tab){
 }
 async function cerrarTema(id){
   showLoading('Cerrando tema...');
-  try{await updateListItem(LIST_TEMAS,id,{Estado:'Cerrado',FechaCierre:todayStr()+'T00:00:00Z'});await syncAll();hideLoading();showToast('Tema cerrado');}
-  catch(e){hideLoading();showToast('Error al cerrar tema',true);}
+  try{
+    var t = temas.find(function(x){return x.id===id;});
+    await updateListItem(LIST_TEMAS,id,{Estado:'Cerrado',FechaCierre:todayStr()+'T00:00:00Z'});
+    await syncAll();hideLoading();showToast('Tema cerrado ✓');
+    // Try to complete in To Do silently
+    if(t && t.tit){
+      completeToDoTask(t.tit).then(function(done){
+        if(done) showToast('✅ Marcado como completado en To Do');
+      });
+    }
+  }catch(e){hideLoading();showToast('Error al cerrar tema',true);}
 }
 async function reabrirTema(id){
   showLoading('Reabriendo...');
@@ -1774,7 +1917,18 @@ async function saveTema(){
   try{
     if(editingTemaId)await updateListItem(LIST_TEMAS,editingTemaId,fields);
     else await createListItem(LIST_TEMAS,fields);
+    var savedTit=document.getElementById('ft-tit').value;
+    var savedDead=document.getElementById('ft-dead').value;
+    var savedDesc=document.getElementById('ft-desc').value;
+    var savedPais=document.getElementById('ft-pais').value;
+    var isNew=!editingTemaId;
     await syncAll();closeFormTema();showToast(editingTemaId?'Tema actualizado':'Tema guardado');
+    // Offer To Do export if there's a deadline
+    if(savedDead){
+      setTimeout(function(){
+        showToDoPrompt(savedTit, savedDead, savedDesc, savedPais);
+      }, 800);
+    }
     // Si bloqueado y tiene email, abrir Outlook
     if(bloq && document.getElementById('ft-bloq-email').value){
       var emailDest=document.getElementById('ft-bloq-email').value;
