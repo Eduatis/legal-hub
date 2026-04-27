@@ -950,7 +950,7 @@ const LIST_FECHAS = 'FechasClaves';
 const LIST_INM = 'Inmuebles_Propios_UY';
 const msalConfig = { auth:{ clientId:CLIENT_ID, authority:'https://login.microsoftonline.com/'+TENANT_ID, redirectUri:window.location.origin+window.location.pathname }, cache:{cacheLocation:'localStorage', storeAuthStateInCookie:true} };
 const msalInstance = new msal.PublicClientApplication(msalConfig);
-const SCOPES = ['Sites.ReadWrite.All','User.Read','Tasks.ReadWrite'];
+const SCOPES = ['Sites.ReadWrite.All','User.Read'];
 
 // ─── STATE ──────────────────────────────────────────────────────────────────
 var TODAY = new Date(); TODAY.setHours(0,0,0,0);
@@ -1012,104 +1012,40 @@ async function getToken(){
   const accounts=msalInstance.getAllAccounts();if(!accounts.length)throw new Error('No hay sesión activa');
   const result=await msalInstance.acquireTokenSilent({scopes:SCOPES,account:accounts[0]});return result.accessToken;
 }
-async function createToDoTask(titulo, deadline, notas){
+function createToDoTask(titulo, deadline, notas){
+  // Use To Do deep link — no API permissions needed
+  // ms-to-do://task/new?subject=...&body=...&due=...
+  // Also open web version as fallback
   try {
-    const token = await getToken();
-    // Get or create ATIS Legal Hub list
-    const listsR = await fetch('https://graph.microsoft.com/v1.0/me/todo/lists', {
-      headers: {'Authorization': 'Bearer ' + token}
-    });
-    const listsD = await listsR.json();
-    var listId = null;
-    if(listsD.value) {
-      var existing = listsD.value.find(function(l){ return l.displayName === 'ATIS Legal Hub'; });
-      listId = existing ? existing.id : null;
-    }
-    // Create list if it doesn't exist
-    if(!listId) {
-      const newList = await fetch('https://graph.microsoft.com/v1.0/me/todo/lists', {
-        method: 'POST',
-        headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
-        body: JSON.stringify({displayName: 'ATIS Legal Hub'})
-      });
-      const newListD = await newList.json();
-      listId = newListD.id;
-    }
-    if(!listId) throw new Error('No se pudo obtener la lista de To Do');
-    // Create task
-    var taskBody = {
-      title: titulo,
-      importance: 'high',
-      body: {content: notas || '', contentType: 'text'}
-    };
+    var subject = encodeURIComponent(titulo);
+    var body = encodeURIComponent('[ATIS Legal Hub]' + (notas ? '\n' + notas : ''));
+    // Try desktop app first via protocol
+    var appUrl = 'ms-to-do://task/new?subject=' + subject + '&body=' + body;
     if(deadline) {
-      taskBody.dueDateTime = {
-        dateTime: deadline + 'T23:59:59',
-        timeZone: 'America/Argentina/Buenos_Aires'
-      };
-      taskBody.reminderDateTime = {
-        dateTime: deadline + 'T09:00:00',
-        timeZone: 'America/Argentina/Buenos_Aires'
-      };
-      taskBody.isReminderOn = true;
+      appUrl += '&due=' + deadline;
     }
-    const taskR = await fetch('https://graph.microsoft.com/v1.0/me/todo/lists/' + listId + '/tasks', {
-      method: 'POST',
-      headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
-      body: JSON.stringify(taskBody)
-    });
-    const taskD = await taskR.json();
-    if(taskD.id) {
-      showToast('✅ Tarea creada en Microsoft To Do');
-      return true;
-    } else {
-      throw new Error(JSON.stringify(taskD.error));
-    }
+    // Web fallback — opens To Do web with new task pre-filled
+    var webUrl = 'https://to-do.office.com/tasks/new?subject=' + subject;
+    if(deadline) webUrl += '&due=' + encodeURIComponent(deadline);
+    // Try app first, then web after short delay as fallback
+    window.location.href = appUrl;
+    setTimeout(function(){
+      // If app didn't open (no To Do desktop), open web version
+      window.open(webUrl, '_blank');
+    }, 1500);
+    showToast('✅ Abriendo Microsoft To Do...');
+    return true;
   } catch(e) {
-    showToast('Error en To Do: ' + e.message, true);
+    showToast('Error: ' + e.message, true);
     return false;
   }
 }
 
-async function completeToDoTask(titulo){
-  try {
-    const token = await getToken();
-    // Find the ATIS Legal Hub list
-    const listsR = await fetch('https://graph.microsoft.com/v1.0/me/todo/lists', {
-      headers: {'Authorization': 'Bearer ' + token}
-    });
-    const listsD = await listsR.json();
-    if(!listsD.value) return false;
-    var atislist = listsD.value.find(function(l){ return l.displayName === 'ATIS Legal Hub'; });
-    if(!atislist) return false; // list doesn't exist, nothing to do
-    // Search tasks for one matching the title
-    const tasksR = await fetch(
-      'https://graph.microsoft.com/v1.0/me/todo/lists/' + atislist.id + '/tasks?$top=100',
-      { headers: {'Authorization': 'Bearer ' + token} }
-    );
-    const tasksD = await tasksR.json();
-    if(!tasksD.value || !tasksD.value.length) return false;
-    // Find matching task (case-insensitive, partial match)
-    var tituloLower = titulo.toLowerCase().substring(0, 40);
-    var active = tasksD.value.filter(function(t){ return t.status !== 'completed'; });
-    var match = active.find(function(t){
-      return t.title && t.title.toLowerCase().indexOf(tituloLower) >= 0;
-    });
-    if(!match) return false;
-    // Mark as completed
-    await fetch(
-      'https://graph.microsoft.com/v1.0/me/todo/lists/' + atislist.id + '/tasks/' + match.id,
-      {
-        method: 'PATCH',
-        headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
-        body: JSON.stringify({status: 'completed', completedDateTime: {dateTime: new Date().toISOString(), timeZone: 'UTC'}})
-      }
-    );
-    return true;
-  } catch(e) {
-    console.warn('To Do complete error:', e.message);
-    return false;
-  }
+function completeToDoTask(titulo){
+  // Open To Do so user can manually complete — no API needed
+  // Just show a reminder toast, no automatic completion possible without API
+  showToast('💡 Recordá cerrar "' + titulo.substring(0,30) + '" en To Do también');
+  return false;
 }
 
 function applyUserTheme(user){
@@ -1465,11 +1401,9 @@ async function cerrarTema(id){
     var t = temas.find(function(x){return x.id===id;});
     await updateListItem(LIST_TEMAS,id,{Estado:'Cerrado',FechaCierre:todayStr()+'T00:00:00Z'});
     await syncAll();hideLoading();showToast('Tema cerrado ✓');
-    // Try to complete in To Do silently
+    // Remind user to complete in To Do
     if(t && t.tit){
-      completeToDoTask(t.tit).then(function(done){
-        if(done) showToast('✅ Marcado como completado en To Do');
-      });
+      completeToDoTask(t.tit);
     }
   }catch(e){hideLoading();showToast('Error al cerrar tema',true);}
 }
