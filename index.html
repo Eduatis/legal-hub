@@ -2331,7 +2331,7 @@ function setSocTab(tab){
 
 function mapSocAut(item){var f=item.fields;return{id:item.id,sociedad:f.Sociedad||'',pais:f.Pais||'',cargo:f.Cargo||'',nombre:f.Nombre||'',acta:f.ActaDesignacion||'',fecha:f.FechaDesignacion?f.FechaDesignacion.split('T')[0]:'',vigencia:f.Vigencia||'',obs:f.Observaciones||''};}
 function mapFecha(item){var f=item.fields;var rawF=f.Fecha||f.EventDate||'';return{id:item.id,desc:f.Descripcion||f.Title||'',fecha:rawF?rawF.split('T')[0]:'',cat:f.Categoria||'',pais:f.Pais||'',modulo:f.Modulo||'',ref:f.RefSitio||'',obs:f.Observaciones||''};}
-function mapMLA(item){var f=item.fields;return{id:item.id,contraparte:f.Contraparte||'',pais:f.Pais||'',sitios:f.Sitios||'',firmaFecha:f.FechaFirma?f.FechaFirma.split('T')[0]:'',vencFecha:f.FechaVencimiento?f.FechaVencimiento.split('T')[0]:'',plazo:f.Plazo||'',precio:f.PrecioBase||'',actualizacion:f.Actualizacion||'',term:f.TerminacionAnticipada||'',cesion:f.Cesion||'',subarr:f.Subarrendamiento||'',estado:f.Estado||'Vigente',link:f.LinkDocumento||'',obs:f.Observaciones||''};}
+function mapMLA(item){var f=item.fields;return{id:item.id,nombre:f.Nombre||f.Title||'',contraparte:f.Contraparte||'',pais:f.Pais||'',sitios:f.CantidadContratos||f.Sitios||'',firmaFecha:f.FechaFirma?f.FechaFirma.split('T')[0]:'',vencFecha:f.FechaVencimiento?f.FechaVencimiento.split('T')[0]:'',plazo:f.Plazo||'',precio:f.PrecioBase||'',actualizacion:f.Actualizacion||'',term:f.TerminacionAnticipada||'',cesion:f.Cesion||f.CesionContrato||'',subarr:f.Subarrendamiento||'',estado:f.Estado||'Vigente',link:f.LinkDocumento||'',obs:f.Observaciones||'',moneda:f.Moneda||'',vida:f.VidaRemanente||'',renovacion:f.RenovacionSLA||'',tipoSLA:f.TipoSLA||'',precedencia:f.PrecedenciaSLAMLA||'',aev:f.AEV||'',lineal:f.EspacioLineal||'',suelo:f.EspacioSuelo||'',ran:f.RAN||'',passthrough:f.PassthroughSuelo||'',facturacion:f.PeriodoFacturacion||'',pago:f.PlazoPago||'',descuentos:f.Descuentos||'',derechoRetiro:f.DerechoRetiro||'',derechoSwap:f.DerechoSwap||'',energia:f.EnergiaComercial||''};}
 function mapInm(item){var f=item.fields;return{id:item.id,sitio:f.Sitio||'',nombre:f.Nombre||'',tipo:f.Tipo||'',direccion:f.Direccion||'',departamento:f.Departamento||'',fechaAdq:f.FechaAdquisicion?f.FechaAdquisicion.split('T')[0]:'',titular:f.TitularRegistral||'',contraparte:f.Contraparte||'',precio:f.Precio||'',inscripto:f.Inscripto||'',vencUsuf:f.VencimientoUsufructo?f.VencimientoUsufructo.split('T')[0]:'',link:f.LinkDocumento||'',obs:f.Observaciones||''};}
 function mapSocAcc(item){var f=item.fields;return{id:item.id,sociedad:f.Sociedad||'',pais:f.Pais||'',accionista:f.Accionista||'',tipo:f.TipoAccion||'',cantidad:f.Cantidad||'',porcentaje:f.Porcentaje||'',obs:f.Observaciones||''};}
 
@@ -2594,38 +2594,303 @@ async function saveFecha(){
 }
 
 // ─── MLA ─────────────────────────────────────────────────────────────────────
+function closeMLADetail(){var p=document.getElementById('mla-detail-panel');if(p)p.style.display='none';document.querySelectorAll('.mla-client-card').forEach(function(c){c.style.borderColor='';c.style.background='';});}
+function closeMLACompare(){var p=document.getElementById('mla-compare-panel');if(p)p.style.display='none';document.querySelectorAll('.mla-client-card').forEach(function(c){c.style.borderColor='';c.style.background='';});}
 function renderMLA(){
   var q=(document.getElementById('mla-q').value||'').toLowerCase();
   var fp=document.getElementById('mla-pais').value;
   var fe=document.getElementById('mla-estado').value;
   var list=mla.filter(function(m){return currentUser.scope.indexOf(m.pais)>=0;});
-  if(q)list=list.filter(function(m){return m.contraparte.toLowerCase().indexOf(q)>=0||(m.sitios||'').toLowerCase().indexOf(q)>=0;});
+  if(q)list=list.filter(function(m){return m.contraparte.toLowerCase().indexOf(q)>=0||m.nombre.toLowerCase().indexOf(q)>=0||(m.sitios||'').toLowerCase().indexOf(q)>=0;});
   if(fp)list=list.filter(function(m){return m.pais===fp;});
   if(fe)list=list.filter(function(m){return m.estado===fe;});
-  var el=document.getElementById('mla-table');
-  if(!list.length){el.innerHTML='<tr><td colspan="10" style="padding:30px;text-align:center;color:var(--tx3)">Sin MLAs cargados</td></tr>';return;}
-  var head='<thead><tr><th>Contraparte</th><th>País</th><th>Plazo</th><th>Firma</th><th>Vencimiento</th><th>Precio base</th><th>Actualización</th><th>Term. Anticip.</th><th>Estado</th><th></th></tr></thead>';
-  var rows=list.map(function(m){
-    var dt=daysTo(m.vencFecha);var vc=dt!==null&&dt<=365?'color:var(--am)':'';
-    var sc=m.estado==='Vigente'?'bdgr':m.estado==='Vencido'?'bdr':'bda';
-    var tr=['<tr>',
-      '<td style="font-weight:500">'+m.contraparte+'</td>',
-      '<td>'+m.pais+'</td>',
-      '<td>'+m.plazo+'</td>',
-      '<td>'+fmtDate(m.firmaFecha)+'</td>',
-      '<td style="'+vc+'">'+fmtDate(m.vencFecha)+'</td>',
-      '<td>'+m.precio+'</td>',
-      '<td>'+m.actualizacion+'</td>',
-      '<td style="font-size:11px">'+m.term+'</td>',
-      '<td><span class="badge '+sc+'">'+m.estado+'</span></td>',
-      '<td><div class="acbtn">',
-      '<button class="btnedit" data-id="'+m.id+'" onclick="editMLA(this.dataset.id)">Editar</button>',
-      '<button class="btnrd" data-id="'+m.id+'" data-nm="'+m.contraparte.replace(/"/g,"")+'">Borrar</button>',
-      '</div></td></tr>'].join('');
-    return tr;
+
+  // Render as interactive map grouped by country
+  var el=document.getElementById('mla-table').closest('.card').parentElement;
+  var mapEl=document.getElementById('mla-map');
+  if(!mapEl){
+    // Replace the table card with the map
+    var card=document.getElementById('mla-table').closest('.card');
+    card.style.display='none';
+    var div=document.createElement('div');div.id='mla-map';
+    card.parentElement.insertBefore(div,card);
+    mapEl=div;
+  }
+
+  var byCountry={AR:[],UY:[],PY:[]};
+  list.forEach(function(m){if(byCountry[m.pais])byCountry[m.pais].push(m);});
+
+  var countryInfo={
+    AR:{flag:'🇦🇷',name:'Argentina'},
+    UY:{flag:'🇺🇾',name:'Uruguay'},
+    PY:{flag:'🇵🇾',name:'Paraguay'}
+  };
+
+  var logoMap={
+    'TELECOM':'telecom.com.ar','CLARO':'claro.com.ar','TELEFONICA':'telefonica.com.ar',
+    'ITURAN':'ituran.com','TMU/TIGO':'tigo.com.uy','ANTEL':'antel.com.uy',
+    'TIGO':'tigo.com.py','NUCLEO':'nucleo.com.py'
+  };
+
+  function clientLogoKey(c){
+    var k=c.toUpperCase();
+    for(var key in logoMap){if(k.indexOf(key)>=0||key.indexOf(k.split(' ')[0])>=0)return logoMap[key];}
+    return null;
+  }
+
+  var html='<div style="display:flex;gap:8px;margin-bottom:14px;align-items:center">';
+  html+='<button id="mla-compare-btn" onclick="toggleMLACompare()" style="padding:5px 14px;border-radius:20px;border:0.5px solid var(--brd2);background:var(--surf);font-size:12px;cursor:pointer;color:var(--tx2);transition:all .15s">Comparar MLAs</button>';
+  html+='<span id="mla-compare-hint" style="font-size:11px;color:var(--tx3);display:none">Seleccioná 2 MLAs para comparar lado a lado</span>';
+  html+='</div>';
+
+  html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">';
+
+  ['AR','UY','PY'].forEach(function(cc){
+    var ci=countryInfo[cc];
+    var items=byCountry[cc]||[];
+    html+='<div style="border:0.5px solid var(--brd);border-radius:var(--r);overflow:hidden">';
+    // Header
+    html+='<div style="padding:12px 14px;display:flex;align-items:center;gap:10px;border-bottom:0.5px solid var(--brd);background:var(--surf2)">';
+    html+='<span style="font-size:22px;line-height:1">'+ci.flag+'</span>';
+    html+='<div><div style="font-size:13px;font-weight:500">'+ci.name+'</div>';
+    var total=items.reduce(function(s,m){return s+(parseInt(m.sitios)||0);},0);
+    html+='<div style="font-size:11px;color:var(--tx3)">'+items.length+' MLA'+( items.length!==1?'s':'')+' · '+total+' sitios</div></div></div>';
+    // Client cards
+    html+='<div style="padding:8px">';
+    if(!items.length){html+='<div style="padding:20px;text-align:center;color:var(--tx3);font-size:12px">Sin MLAs</div>';}
+    items.forEach(function(m){
+      var logo=clientLogoKey(m.contraparte);
+      var isSLB=m.nombre&&(m.nombre.toLowerCase().indexOf('lease')>=0||m.nombre.toLowerCase().indexOf('slb')>=0||m.nombre.toLowerCase().indexOf('sale')>=0);
+      html+='<div class="mla-client-card" data-mid="'+m.id+'" onclick="selectMLACard(this,this.dataset.mid)" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--rs);border:0.5px solid var(--brd);background:var(--surf);margin-bottom:7px;cursor:pointer;transition:all .15s">';
+      // Logo
+      html+='<div style="width:32px;height:32px;border-radius:6px;overflow:hidden;background:var(--surf2);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:0.5px solid var(--brd)">';
+      if(logo){
+        html+='<img src="https://logo.clearbit.com/'+logo+'" style="width:100%;height:100%;object-fit:contain;padding:2px" onerror="this.style.display=&quot;none&quot;">';
+      } else {
+        html+='<span style="font-size:9px;font-weight:500;color:var(--tx2)">'+m.contraparte.substring(0,3)+'</span>';
+      }
+      html+='</div>';
+      // Info
+      html+='<div style="flex:1;min-width:0">';
+      html+='<div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.contraparte+'</div>';
+      html+='<div style="font-size:10px;color:var(--tx3);margin-top:1px">'+m.nombre.substring(0,28)+'</div>';
+      html+='</div>';
+      if(isSLB) html+='<span style="background:#FFF3CD;color:#856404;font-size:10px;padding:1px 6px;border-radius:20px;white-space:nowrap;flex-shrink:0">SLB</span>';
+      else if(m.sitios) html+='<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:var(--surf2);color:var(--tx2);white-space:nowrap;flex-shrink:0">'+m.sitios+' sit.</span>';
+      html+='</div>';
+    });
+    html+='</div></div>';
   });
-  el.innerHTML=head+'<tbody>'+rows.join('')+'</tbody>';
+  html+='</div>';
+
+  // Detail panel
+  html+='<div id="mla-detail-panel" style="display:none;margin-top:14px;border:0.5px solid var(--brd);border-radius:var(--r);overflow:hidden"></div>';
+  html+='<div id="mla-compare-panel" style="display:none;margin-top:14px;border:0.5px solid var(--brd);border-radius:var(--r);overflow:hidden"></div>';
+
+  mapEl.innerHTML=html;
 }
+
+var mlaComparing=false, mlaSel1=null, mlaSel2=null;
+
+function toggleMLACompare(){
+  mlaComparing=!mlaComparing;
+  mlaSel1=null; mlaSel2=null;
+  var btn=document.getElementById('mla-compare-btn');
+  if(btn){btn.textContent=mlaComparing?'Cancelar comparación':'Comparar MLAs';btn.style.background=mlaComparing?'var(--bl-bg)':'var(--surf)';btn.style.color=mlaComparing?'var(--bl)':'var(--tx2)';}
+  var hint=document.getElementById('mla-compare-hint');
+  if(hint)hint.style.display=mlaComparing?'inline':'none';
+  document.querySelectorAll('.mla-client-card').forEach(function(c){c.style.borderColor='';c.style.background='';});
+  document.getElementById('mla-detail-panel').style.display='none';
+  document.getElementById('mla-compare-panel').style.display='none';
+}
+
+function selectMLACard(el, id){
+  if(mlaComparing){
+    if(!mlaSel1){
+      mlaSel1=id;
+      el.style.background='var(--am-bg)';el.style.borderColor='var(--am)';
+      document.getElementById('mla-compare-hint').textContent='Ahora seleccioná el segundo MLA';
+      showMLADetail(id, false);
+    } else if(!mlaSel2 && id!==mlaSel1){
+      mlaSel2=id;
+      el.style.background='var(--am-bg)';el.style.borderColor='var(--am)';
+      showMLACompare(mlaSel1, mlaSel2);
+    }
+  } else {
+    document.querySelectorAll('.mla-client-card').forEach(function(c){c.style.borderColor='';c.style.background='';});
+    el.style.background='var(--bl-bg)';el.style.borderColor='var(--bl)';
+    showMLADetail(id, true);
+  }
+}
+
+var mlaDetailTab=0;
+function showMLADetail(id, show){
+  var m=mla.find(function(x){return x.id===id;});
+  if(!m)return;
+  var panel=document.getElementById('mla-detail-panel');
+  if(!panel)return;
+  if(show){panel.style.display='block';}
+  document.getElementById('mla-compare-panel').style.display='none';
+
+  var logoMap2={'TELECOM':'telecom.com.ar','CLARO':'claro.com.ar','TELEFONICA':'telefonica.com.ar','ITURAN':'ituran.com','TMU/TIGO':'tigo.com.uy','ANTEL':'antel.com.uy','TIGO':'tigo.com.py','NUCLEO':'nucleo.com.py'};
+  var logoKey=null;
+  var cu=m.contraparte.toUpperCase();
+  for(var k in logoMap2){if(cu.indexOf(k)>=0||k.indexOf(cu.split(' ')[0])>=0){logoKey=logoMap2[k];break;}}
+
+  var tabs=[
+    {lbl:'💰 Económico',fields:[['Moneda',m.moneda],['Precio base',m.precio],['Actualización',m.actualizacion],['Facturación',m.facturacion],['Plazo de pago',m.pago],['Descuentos',m.descuentos]]},
+    {lbl:'📐 Espacios',fields:[['AEV (m²)',m.aev],['Espacio lineal',m.lineal],['Espacio suelo',m.suelo],['RAN Sharing',m.ran]]},
+    {lbl:'📋 Contractual',fields:[['Tipo SLA',m.tipoSLA],['SLA vs MLA',m.precedencia],['Renovación SLA',m.renovacion],['Term. anticipada',m.term],['Cesión',m.cesion],['Der. retiro',m.derechoRetiro],['Der. swap',m.derechoSwap]]},
+    {lbl:'⚡ Operativo',fields:[['Passthrough suelo',m.passthrough],['Energía comercial',m.energia]]},
+  ];
+
+  var html='<div style="padding:14px 18px;border-bottom:0.5px solid var(--brd);display:flex;align-items:center;justify-content:space-between">';
+  html+='<div style="display:flex;align-items:center;gap:12px">';
+  if(logoKey)html+='<img src="https://logo.clearbit.com/'+logoKey+'" style="width:32px;height:32px;object-fit:contain;border-radius:6px;border:0.5px solid var(--brd)">';
+  html+='<div><div style="font-size:14px;font-weight:500">'+m.contraparte+' — '+m.nombre+'</div><div style="font-size:11px;color:var(--tx3)">'+m.pais+' · '+(m.sitios||'—')+' sitios · '+m.moneda+'</div></div></div>';
+  html+='<button onclick="closeMLADetail()" style="background:none;border:none;font-size:18px;color:var(--tx3);cursor:pointer">×</button>';
+  html+='</div>';
+
+  // Tabs
+  html+='<div style="display:flex;border-bottom:0.5px solid var(--brd);padding:0 18px" id="mla-tabs">';
+  tabs.forEach(function(t,i){
+    html+='<div onclick="setMLATab('+i+')" style="font-size:12px;padding:10px 14px;cursor:pointer;border-bottom:2px solid '+(i===0?'var(--bl)':'transparent')+';margin-bottom:-1px;color:'+(i===0?'var(--bl)':'var(--tx2)')+'" class="mla-tab">'+t.lbl+'</div>';
+  });
+  html+='</div>';
+
+  // Tab bodies
+  tabs.forEach(function(t,i){
+    html+='<div class="mla-tab-body" style="padding:16px 18px;display:'+(i===0?'grid':'none')+';grid-template-columns:1fr 1fr;gap:8px">';
+    t.fields.forEach(function(f){
+      if(!f[1])return;
+      var full=f[1].length>40?'grid-column:span 2':'';
+      html+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);'+full+'">';
+      html+='<div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">'+f[0]+'</div>';
+      html+='<div style="font-size:12px;font-weight:500">'+f[1]+'</div></div>';
+    });
+    html+='</div>';
+  });
+
+  panel.innerHTML=html;
+  mlaDetailTab=0;
+}
+
+function setMLATab(i){
+  mlaDetailTab=i;
+  document.querySelectorAll('.mla-tab').forEach(function(t,j){
+    t.style.borderBottomColor=j===i?'var(--bl)':'transparent';
+    t.style.color=j===i?'var(--bl)':'var(--tx2)';
+  });
+  document.querySelectorAll('.mla-tab-body').forEach(function(b,j){
+    b.style.display=j===i?'grid':'none';
+  });
+}
+
+function showMLACompare(id1, id2){
+  var m1=mla.find(function(x){return x.id===id1;}), m2=mla.find(function(x){return x.id===id2;});
+  if(!m1||!m2)return;
+  var panel=document.getElementById('mla-compare-panel');
+  document.getElementById('mla-detail-panel').style.display='none';
+  panel.style.display='block';
+
+  var logoMap3={'TELECOM':'telecom.com.ar','CLARO':'claro.com.ar','TELEFONICA':'telefonica.com.ar','ITURAN':'ituran.com','TMU/TIGO':'tigo.com.uy','ANTEL':'antel.com.uy','TIGO':'tigo.com.py','NUCLEO':'nucleo.com.py'};
+  function getLogo(c){var cu=c.toUpperCase();for(var k in logoMap3){if(cu.indexOf(k)>=0)return logoMap3[k];}return null;}
+
+  var fields=[
+    ['Moneda','moneda'],['Precio base','precio'],['Actualización','actualizacion'],
+    ['Facturación','facturacion'],['Plazo pago','pago'],['Descuentos','descuentos'],
+    ['AEV','aev'],['Espacio lineal','lineal'],['Espacio suelo','suelo'],['RAN Sharing','ran'],
+    ['Tipo SLA','tipoSLA'],['Renovación SLA','renovacion'],['Term. anticipada','term'],
+    ['Cesión','cesion'],['Der. retiro','derechoRetiro'],['Passthrough suelo','passthrough'],['Energía','energia']
+  ];
+
+  function colHtml(m){
+    var logo=getLogo(m.contraparte);
+    var h='<div style="padding:14px 16px;border-bottom:0.5px solid var(--brd);display:flex;align-items:center;gap:10px">';
+    if(logo)h+='<img src="https://logo.clearbit.com/'+logo+'" style="width:28px;height:28px;object-fit:contain;border-radius:4px;border:0.5px solid var(--brd)">';
+    h+='<div><div style="font-size:13px;font-weight:500">'+m.contraparte+'</div><div style="font-size:11px;color:var(--tx3)">'+m.nombre+' · '+m.pais+'</div></div></div>';
+    h+='<div style="padding:12px 16px">';
+    fields.forEach(function(f){
+      var v=m[f[1]]||'';
+      if(!v)return;
+      var diff=m1[f[1]]!==m2[f[1]];
+      h+='<div style="margin-bottom:10px"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">'+f[0]+'</div>';
+      h+='<div style="font-size:12px;font-weight:500;color:'+(diff?'var(--am-tx)':'var(--tx)')+'">'+v+'</div></div>';
+    });
+    h+='</div>';
+    return h;
+  }
+
+  var html='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--am-bg);border-bottom:0.5px solid var(--brd)">';
+  html+='<span style="font-size:12px;color:var(--am-tx);font-weight:500">Comparando — diferencias resaltadas en naranja</span>';
+  html+='<button onclick="closeMLACompare()" style="background:none;border:none;font-size:16px;color:var(--tx3);cursor:pointer">×</button></div>';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr">';
+  html+='<div style="border-right:0.5px solid var(--brd)">'+colHtml(m1)+'</div>';
+  html+='<div>'+colHtml(m2)+'</div>';
+  html+='</div>';
+  panel.innerHTML=html;
+}
+
+
+function openMLADetail(id){
+  var m=mla.find(function(x){return x.id===id;});
+  if(!m)return;
+  var dt=daysTo(m.vencFecha);
+  var sc=m.estado==='Vigente'?'#15803D':m.estado==='Vencido'?'var(--rd)':'var(--am)';
+  var vid=parseFloat(m.vida||0);
+  var rows=[
+    ['Contraparte', m.contraparte],
+    ['País', m.pais],
+    ['Moneda', m.moneda],
+    ['Cantidad de contratos', m.sitios],
+    ['Fecha de firma', fmtDate(m.firmaFecha)],
+    ['Vencimiento', fmtDate(m.vencFecha)],
+    ['Vida remanente', vid ? vid.toFixed(1)+' años' : '-'],
+    ['Tipo SLA', m.tipoSLA],
+    ['SLA vs MLA', m.precedencia],
+    ['Precio base', m.precio],
+    ['Actualización', m.actualizacion],
+    ['Terminación anticipada', m.term],
+    ['Renovación SLA', m.renovacion],
+    ['AEV (m²)', m.aev],
+    ['Espacio lineal (m)', m.lineal],
+    ['Espacio suelo', m.suelo],
+    ['RAN Sharing', m.ran],
+    ['Passthrough suelo', m.passthrough],
+    ['Período facturación', m.facturacion],
+    ['Plazo de pago', m.pago],
+    ['Descuentos', m.descuentos],
+    ['Cesión/asignación', m.cesion],
+    ['Derecho de retiro', m.derechoRetiro],
+    ['Derecho de swap', m.derechoSwap],
+    ['Energía comercial', m.energia],
+  ].filter(function(r){return r[1];});
+
+  var rowsHtml=rows.map(function(r){
+    return '<tr><td style="font-size:11px;color:var(--tx3);font-weight:500;padding:7px 12px;white-space:nowrap;vertical-align:top;width:180px">'+r[0]+'</td>'+
+           '<td style="font-size:12px;padding:7px 12px;vertical-align:top">'+r[1]+'</td></tr>';
+  }).join('');
+
+  var html='<div style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding-top:40px;overflow-y:auto" id="mla-detail-overlay" onclick="if(event.target===this)removeMlaDetail()">';
+  html+='<div style="background:var(--surf);border-radius:16px;width:660px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.18);margin-bottom:40px">';
+  html+='<div style="padding:20px 24px;border-bottom:1px solid var(--brd);display:flex;align-items:center;justify-content:space-between">';
+  html+='<div>';
+  html+='<div style="font-size:11px;color:var(--tx3);margin-bottom:2px">'+m.pais+' · '+m.contraparte+'</div>';
+  html+='<div style="font-size:18px;font-weight:600">'+m.nombre+'</div>';
+  html+='</div>';
+  html+='<div style="display:flex;align-items:center;gap:10px">';
+  html+='<span class="badge '+(m.estado==='Vigente'?'bdgr':m.estado==='Vencido'?'bdr':'bda')+'">'+m.estado+'</span>';
+  html+='<button onclick="removeMlaDetail()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--tx3);line-height:1">×</button>';
+  html+='</div></div>';
+  html+='<div style="overflow-y:auto;max-height:60vh"><table style="width:100%;border-collapse:collapse">'+rowsHtml+'</table></div>';
+  html+='<div style="padding:16px 24px;border-top:1px solid var(--brd);display:flex;gap:8px">';
+  html+='<button class="btnedit" data-id="'+m.id+'" onclick="closeMLADetail();editMLA(this.dataset.id)">Editar</button>';
+  if(m.link)html+='<a href="'+m.link+'" target="_blank" class="btns" style="text-decoration:none;display:inline-flex;align-items:center">↗ Ver documento</a>';
+  html+='<button class="btnrd" data-id="'+m.id+'" onclick="closeMLADetail();askDelete(&quot;mla&quot;,this.dataset.id,&quot;este MLA&quot;)">Borrar</button>';
+  html+='</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+function removeMlaDetail(){var el=document.getElementById('mla-detail-overlay');if(el)el.remove();}
 
 function openFormMLA(){editingMlaId=null;document.getElementById('form-mla-title').textContent='Nuevo MLA';['fm-contraparte','fm-sitios','fm-firma','fm-venc','fm-plazo','fm-precio','fm-actualizacion','fm-term','fm-link','fm-obs'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fm-pais').value='AR';document.getElementById('fm-estado').value='Vigente';document.getElementById('fm-cesion').value='';document.getElementById('fm-subarr').value='';document.getElementById('form-mla').classList.add('open');}
 function closeFormMLA(){document.getElementById('form-mla').classList.remove('open');}
