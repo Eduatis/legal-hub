@@ -2841,7 +2841,14 @@ function showMLADetail(id,scroll){
   html+='<div style="width:40px;height:40px;border-radius:10px;background:'+col+';display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:12px;font-weight:700;color:#fff">'+ini+'</span></div>';
   html+='<div><div style="font-size:15px;font-weight:600">'+m.contraparte+'</div>';
   html+='<div style="font-size:11px;color:var(--tx3)">'+m.nombre+' · '+m.pais+(m.sitios?' · '+m.sitios+' sitios':'')+'</div></div></div>';
-  html+='<button onclick="closeMLADetail()" style="background:none;border:none;font-size:20px;color:var(--tx3);cursor:pointer;line-height:1">×</button></div>';
+  var isEGUser = currentUser && currentUser.ini === 'EG';
+  html+='<div style="display:flex;align-items:center;gap:8px">';
+  if(isEGUser){
+    html+='<button class="btnedit" data-id="'+m.id+'" onclick="closeMLADetail();editMLA(this.dataset.id)">Editar</button>';
+    html+='<button class="btnrd" data-id="'+m.id+'" onclick="closeMLADetail();askDelete(&quot;mla&quot;,this.dataset.id,&quot;este MLA&quot;)">Borrar</button>';
+  }
+  html+='<button onclick="closeMLADetail()" style="background:none;border:none;font-size:20px;color:var(--tx3);cursor:pointer;line-height:1;margin-left:4px">×</button>';
+  html+='</div></div>';
 
   // Tabs
   html+='<div style="display:flex;border-bottom:0.5px solid var(--brd);padding:0 18px" id="mla-tabs">';
@@ -2919,7 +2926,7 @@ function showMLADetail(id,scroll){
       // ── Otros campos económicos ────────────────────────────────────────────
       s+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
       s+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Facturacion</div><div style="font-size:12px;font-weight:500">Monthly in advance</div></div>';
-      s+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Plazo de pago (dias)</div><div style="font-size:12px;font-weight:500">20 dias desde factura (o 30 si no recibida en tiempo)</div></div>';
+      s+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Plazo de pago</div><div style="font-size:12px;font-weight:500">Si la factura llega con al menos 20 dias de anticipacion: pago en la fecha de vencimiento. Si llega con menos de 20 dias: pago a los 30 dias de recibida la factura.</div></div>';
       s+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);grid-column:span 2"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Descuentos</div><div style="font-size:12px;font-weight:500">5 meses iniciales solo para nuevas colocaciones</div></div>';
       s+='</div>';
       s+='</div>';
