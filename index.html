@@ -1290,12 +1290,13 @@ function renderDash(){
   }).join(''):'<div class="empty">Sin temas de alta prioridad</div>';
   // Fechas Clave
   var _scope=currentUser&&currentUser.scope?currentUser.scope:['AR','UY','PY'];
+  // Fechas Clave: siempre del scope completo del usuario, sin filtrar por tab de pais del dash
   var proxFechas=fechas.filter(function(f){
     return (_scope.indexOf(f.pais)>=0||f.pais==='Global'||!f.pais) && daysTo(f.fecha)!==null && daysTo(f.fecha)<=180;
   }).sort(function(a,b){return new Date(a.fecha)-new Date(b.fecha);}).slice(0,5);
   var fechasWrap=document.getElementById('dash-fechas-wrap');
   if(proxFechas.length>0){
-    fechasWrap.style.display='block';
+    fechasWrap.style.display='block'; // always show regardless of dashCountry
     document.getElementById('dash-fechas-list').innerHTML=proxFechas.map(function(f,i){
       var dt=daysTo(f.fecha);
       var vencida=dt<0;
@@ -1326,7 +1327,7 @@ function renderDash(){
       '</div>';
     }).join('');
   } else {
-    fechasWrap.style.display='none';
+    fechasWrap.style.display='none'; // hide only if no upcoming fechas within scope
   }
 
   // Últimos docs
@@ -1834,7 +1835,21 @@ function toggleTerceroNombre(){var t=document.getElementById('ft-bloq-quien').va
 function openFormTema(){
   editingTemaId=null;document.getElementById('form-tema-title').textContent='Nuevo tema';
   ['ft-tit','ft-desc','ft-dead','ft-bloq-que','ft-bloq-email','ft-bloq-nombre','ft-bloq-search'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});document.getElementById('ft-bloq-selected').style.display='none';
-  document.getElementById('ft-resp').value='EG';document.getElementById('ft-pais').value='Global';
+  // CS y ST solo pueden asignarse a sí mismas
+  var isLimited = currentUser && (currentUser.ini==='CS' || currentUser.ini==='ST');
+  var respEl = document.getElementById('ft-resp');
+  if(isLimited){
+    respEl.value = currentUser.ini;
+    respEl.disabled = true;
+    respEl.style.opacity = '0.6';
+    respEl.style.cursor = 'not-allowed';
+  } else {
+    respEl.value = 'EG';
+    respEl.disabled = false;
+    respEl.style.opacity = '';
+    respEl.style.cursor = '';
+  }
+  document.getElementById('ft-pais').value='Global';
   document.getElementById('ft-cli').value='';document.getElementById('ft-prio').value='Alta';document.getElementById('ft-estado').value='No iniciado';
   document.getElementById('ft-bloq').checked=false;document.getElementById('ft-bloq-quien').value='EG';
   toggleBloq();toggleTerceroNombre();document.getElementById('form-tema').classList.add('open');
@@ -1844,7 +1859,12 @@ function editTema(id){
   var t=temas.find(function(x){return x.id===id;});if(!t)return;
   editingTemaId=id;document.getElementById('form-tema-title').textContent='Editar tema';
   document.getElementById('ft-tit').value=t.tit||'';document.getElementById('ft-desc').value=t.desc||'';
-  document.getElementById('ft-resp').value=t.resp||'EG';document.getElementById('ft-pais').value=t.pais||'Global';
+  var isLimitedEdit = currentUser && (currentUser.ini==='CS' || currentUser.ini==='ST');
+  var respElEdit = document.getElementById('ft-resp');
+  respElEdit.value = isLimitedEdit ? currentUser.ini : (t.resp||'EG');
+  respElEdit.disabled = isLimitedEdit;
+  respElEdit.style.opacity = isLimitedEdit ? '0.6' : '';
+  respElEdit.style.cursor = isLimitedEdit ? 'not-allowed' : '';document.getElementById('ft-pais').value=t.pais||'Global';
   document.getElementById('ft-cli').value=t.cli||'';document.getElementById('ft-dead').value=t.dead||'';
   document.getElementById('ft-prio').value=t.prio||'Alta';
   document.getElementById('ft-estado').value=t.estado==='Cerrado'?'No iniciado':(t.estado||'No iniciado');
