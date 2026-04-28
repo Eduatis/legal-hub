@@ -2620,12 +2620,15 @@ function renderMLA(){
 
   // Discontinued MLAs for AR
   var DISCONTINUED=['Southern Towers 2016','SBA 2017','SBA 2023','Personal ATIS 2017'];
+  var PASSTHROUGH=['A través de TMU/Tigo F1/F2','A través de TIGO'];
 
-  var byCountry={AR:{active:[],archived:[]},UY:{active:[],archived:[]},PY:{active:[],archived:[]}};
+  var byCountry={AR:{active:[],archived:[],passthrough:[]},UY:{active:[],archived:[],passthrough:[]},PY:{active:[],archived:[],passthrough:[]}};
   list.forEach(function(m){
     if(!byCountry[m.pais])return;
     if(m.pais==='AR' && DISCONTINUED.indexOf(m.nombre)>=0){
       byCountry[m.pais].archived.push(m);
+    } else if(PASSTHROUGH.indexOf(m.nombre)>=0){
+      byCountry[m.pais].passthrough.push(m);
     } else {
       byCountry[m.pais].active.push(m);
     }
@@ -2644,7 +2647,7 @@ function renderMLA(){
     'TIGO':'#004B9B','NUCLEO':'#E30613'
   };
   var clientInitials={
-    'TELECOM':'TLC','CLARO':'CLR','TELEFONICA':'TEF',
+    'TELECOM':'TECO','CLARO':'AMX','TELEFONICA':'TMA',
     'ITURAN':'ITU','TMU/TIGO':'TMU','ANTEL':'ANT',
     'TIGO':'TGO','NUCLEO':'NUC'
   };
@@ -2654,8 +2657,14 @@ function renderMLA(){
     for(var k in clientColors){if(cu.indexOf(k)>=0)return clientColors[k];}
     return '#6B6A64';
   }
-  function clientIni(c){
+  function clientIni(c, pais){
     var cu=c.toUpperCase();
+    // Country-specific overrides for CLARO
+    if(cu.indexOf('CLARO')>=0){
+      if(pais==='UY')return 'AMXUY';
+      if(pais==='PY')return 'AMXPY';
+      return 'AMX'; // AR default
+    }
     for(var k in clientInitials){if(cu.indexOf(k)>=0)return clientInitials[k];}
     return c.substring(0,3).toUpperCase();
   }
@@ -2663,7 +2672,7 @@ function renderMLA(){
   function buildCard(m, isArchived){
     var isSLB=m.nombre&&(m.nombre.toLowerCase().indexOf('lease')>=0||m.nombre.toLowerCase().indexOf('sale')>=0);
     var col=clientColor(m.contraparte);
-    var ini=clientIni(m.contraparte);
+    var ini=clientIni(m.contraparte, m.pais);
     var cardStyle='display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--rs);border:0.5px solid var(--brd);background:var(--surf);margin-bottom:7px;cursor:pointer;transition:all .15s'+(isArchived?';opacity:0.7':'');
     var h='<div class="mla-client-card" data-mid="'+m.id+'" onclick="selectMLACard(this,this.dataset.mid)" style="'+cardStyle+'">';
     // Logo — colored initials badge (100% reliable, no external dependency)
@@ -2695,6 +2704,7 @@ function renderMLA(){
     var activos=byCountry[cc].active;
     var archivados=byCountry[cc].archived;
     var totalSitios=activos.reduce(function(s,m){return s+(parseInt(m.sitios)||0);},0);
+    var passthrough=byCountry[cc].passthrough;
 
     html+='<div style="border:0.5px solid var(--brd);border-radius:var(--r);overflow:hidden">';
     // Header with flag
@@ -2714,6 +2724,15 @@ function renderMLA(){
       html+='<span style="font-size:11px;color:var(--tx3)">Discontinuados ('+archivados.length+')</span></div>';
       html+='<div id="archive-'+cc+'" style="display:none">';
       archivados.forEach(function(m){html+=buildCard(m,true);});
+      html+='</div>';
+    }
+    // Passthrough section
+    if(passthrough.length){
+      html+='<div data-archid="passthru-'+cc+'" onclick="toggleMLAArchive(this.dataset.archid)" style="display:flex;align-items:center;gap:6px;padding:6px 4px;cursor:pointer;margin-top:4px">';
+      html+='<span id="passthru-icon-'+cc+'" style="font-size:10px;color:var(--bl)">▶</span>';
+      html+='<span style="font-size:11px;color:var(--bl)">A través de ('+passthrough.length+')</span></div>';
+      html+='<div id="passthru-'+cc+'" style="display:none">';
+      passthrough.forEach(function(m){html+=buildCard(m,true);});
       html+='</div>';
     }
     html+='</div></div>';
@@ -2788,7 +2807,13 @@ function showMLADetail(id,scroll){
   ];
 
   // Color initials badge
-  var ini=({'TELECOM':'TLC','CLARO':'CLR','TELEFONICA':'TEF','ITURAN':'ITU','TMU/TIGO':'TMU','ANTEL':'ANT','TIGO':'TGO','NUCLEO':'NUC'}[Object.keys({'TELECOM':'TLC','CLARO':'CLR','TELEFONICA':'TEF','ITURAN':'ITU','TMU/TIGO':'TMU','ANTEL':'ANT','TIGO':'TGO','NUCLEO':'NUC'}).find(function(k){return m.contraparte.toUpperCase().indexOf(k)>=0;})])||m.contraparte.substring(0,3).toUpperCase();
+  var _ini_base={'TELECOM':'TECO','CLARO':'AMX','TELEFONICA':'TMA','ITURAN':'ITU','TMU/TIGO':'TMU','ANTEL':'ANT','TIGO':'TGO','NUCLEO':'NUC'};
+  var ini;
+  if(m.contraparte.toUpperCase().indexOf('CLARO')>=0){
+    ini=m.pais==='UY'?'AMXUY':m.pais==='PY'?'AMXPY':'AMX';
+  } else {
+    ini=(_ini_base[Object.keys(_ini_base).find(function(k){return m.contraparte.toUpperCase().indexOf(k)>=0;})])||m.contraparte.substring(0,3).toUpperCase();
+  }
 
   var html='<div style="padding:14px 18px;border-bottom:0.5px solid var(--brd);display:flex;align-items:center;justify-content:space-between">';
   html+='<div style="display:flex;align-items:center;gap:12px">';
@@ -2848,9 +2873,9 @@ function showMLACompare(id1,id2){
   panel.style.display='block';
 
   var COLORS={'TELECOM':'#0065BD','CLARO':'#DA291C','TELEFONICA':'#0066CC','ITURAN':'#FF6600','TMU/TIGO':'#004B9B','ANTEL':'#00963F','TIGO':'#004B9B','NUCLEO':'#E30613'};
-  var INITIALS={'TELECOM':'TLC','CLARO':'CLR','TELEFONICA':'TEF','ITURAN':'ITU','TMU/TIGO':'TMU','ANTEL':'ANT','TIGO':'TGO','NUCLEO':'NUC'};
+  var INITIALS={'TELECOM':'TECO','CLARO':'AMX','TELEFONICA':'TMA','ITURAN':'ITU','TMU/TIGO':'TMU','ANTEL':'ANT','TIGO':'TGO','NUCLEO':'NUC'};
   function getCol(c){var cu=c.toUpperCase();return COLORS[Object.keys(COLORS).find(function(k){return cu.indexOf(k)>=0;})]||'#6B6A64';}
-  function getIni(c){var cu=c.toUpperCase();return INITIALS[Object.keys(INITIALS).find(function(k){return cu.indexOf(k)>=0;})]||c.substring(0,3).toUpperCase();}
+  function getIni(c,pais){var cu=c.toUpperCase();if(cu.indexOf('CLARO')>=0){return pais==='UY'?'AMXUY':pais==='PY'?'AMXPY':'AMX';}return INITIALS[Object.keys(INITIALS).find(function(k){return cu.indexOf(k)>=0;})]||c.substring(0,3).toUpperCase();}
 
   var fields=[
     ['Moneda','moneda'],['Precio base','precio'],['Actualización','actualizacion'],
@@ -2861,7 +2886,7 @@ function showMLACompare(id1,id2){
   ];
 
   function colHtml(m){
-    var col=getCol(m.contraparte),ini=getIni(m.contraparte);
+    var col=getCol(m.contraparte),ini=getIni(m.contraparte,m.pais);
     var h='<div style="padding:14px 16px;border-bottom:0.5px solid var(--brd);display:flex;align-items:center;gap:10px">';
     h+='<div style="width:32px;height:32px;border-radius:8px;background:'+col+';display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:10px;font-weight:700;color:#fff">'+ini+'</span></div>';
     h+='<div><div style="font-size:13px;font-weight:600">'+m.contraparte+'</div><div style="font-size:11px;color:var(--tx3)">'+m.nombre+' · '+m.pais+'</div></div></div>';
