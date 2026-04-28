@@ -2843,7 +2843,60 @@ function showMLADetail(id,scroll){
   });
 
   panel.innerHTML=html;
-  panel.style.display='block';
+
+  // Special rendering for CLARO UY - inject dual pricing section
+  if(m.contraparte.toUpperCase().indexOf('CLARO')>=0 && m.pais==='UY'){
+    var tab0=panel.querySelector('.mla-tab-body');
+    if(tab0){
+      var s='';
+      s+='<div style="grid-column:span 2">';
+      s+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);margin-bottom:12px">';
+      s+='<div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Moneda</div>';
+      s+='<div style="font-size:12px;font-weight:500">'+m.moneda+' &nbsp;·&nbsp; Base: 1/10/2023 &nbsp;·&nbsp; Actualiz. trimestral IPC &nbsp;·&nbsp; IVA no incluido</div></div>';
+      s+='<div style="background:var(--bl-bg);border:0.5px solid var(--bl);border-radius:var(--rs);padding:14px 16px;margin-bottom:10px">';
+      s+='<div style="font-size:11px;font-weight:700;color:var(--bl);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">📡 Nuevos BTS y Co-localizaciones — Anexo 5</div>';
+      s+='<div style="font-size:11px;color:var(--bl);margin-bottom:10px">Renta Torre mensual base (sin Renta de Terreno ni IVA)</div>';
+      s+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">';
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px;text-align:center"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">AZOTEA</div><div style="font-size:16px;font-weight:700;color:var(--bl)">UYU 29.978</div><div style="font-size:10px;color:var(--tx3)">por mes</div></div>';
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px;text-align:center"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">TORRE</div><div style="font-size:16px;font-weight:700;color:var(--bl)">UYU 47.964</div><div style="font-size:10px;color:var(--tx3)">por mes</div></div>';
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px;text-align:center"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">AEV ADICIONAL</div><div style="font-size:16px;font-weight:700;color:var(--bl)">UYU 5.596</div><div style="font-size:10px;color:var(--tx3)">por metro AEV</div></div>';
+      s+='</div>';
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px;margin-bottom:6px">';
+      s+='<div style="font-size:10px;font-weight:600;color:var(--tx2);margin-bottom:5px">🏗️ RENTA DE TERRENO (sitios arrendados)</div>';
+      s+='<div style="font-size:11px;color:var(--tx2);line-height:1.7">Passthrough al Titular Principal — Claro paga a ATIS lo mismo que ATIS le paga al dueño.<br>Se divide a prorrata entre operadores instalados. Si el contrato de suelo no se renueva en los mismos terminos, ATIS puede renegociar con cap de +30% sobre IPC — si excede, Claro puede rescindir sin penalidad.<br><strong>Actualizacion:</strong> segun el Contrato de Uso de Suelo de cada sitio.</div></div>';
+      s+='<div style="font-size:11px;color:var(--bl);line-height:1.6"><strong>Espacio:</strong> 4M lineales · 7,5m2 AEV · 12m2 suelo &nbsp;|&nbsp; <strong>Azotea:</strong> pedestales hasta 6m sin riendas o adosadas</div>';
+      s+='</div>';
+      s+='<div style="background:#FEF9C3;border:0.5px solid #D97706;border-radius:var(--rs);padding:14px 16px;margin-bottom:10px">';
+      s+='<div style="font-size:11px;font-weight:700;color:#B45309;text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">⚡ Sitios Entre Operadores — Clausula 15.3</div>';
+      s+='<div style="font-size:11px;color:#92400E;margin-bottom:10px">Sitios adquiridos de Telefonica donde Claro ya estaba instalado. Precio diferencial por altura de torre.</div>';
+      s+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px">';
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px;text-align:center"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">TORRE &le; 30m</div><div style="font-size:16px;font-weight:700;color:#B45309">UYU 37.612</div><div style="font-size:10px;color:var(--tx3)">por mes</div></div>';
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px;text-align:center"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">TORRE 30&ndash;40m</div><div style="font-size:16px;font-weight:700;color:#B45309">UYU 41.609</div><div style="font-size:10px;color:var(--tx3)">por mes</div></div>';
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px;text-align:center"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">TORRE &gt; 40m</div><div style="font-size:16px;font-weight:700;color:#B45309">UYU 45.607</div><div style="font-size:10px;color:var(--tx3)">por mes</div></div>';
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px;text-align:center"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">AEV ADICIONAL</div><div style="font-size:16px;font-weight:700;color:#B45309">UYU 5.596</div><div style="font-size:10px;color:var(--tx3)">por metro AEV</div></div>';
+      s+='</div>';
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px">';
+      s+='<div style="font-size:10px;font-weight:600;color:var(--tx2);margin-bottom:5px">🏠 RENTA DE TERRENO — INMUEBLES PROPIOS</div>';
+      s+='<div style="font-size:11px;color:var(--tx2);line-height:1.7">Valor = renta que ATIS tiene con Telefonica Moviles del Uruguay S.A., actualizado a Fecha de Inicio. ATIS informa el valor.<br><strong>Cap: UYU 20.125/mes por sitio</strong> (actualizable anualmente por Reajuste Inmuebles Propios).<br>Prorrata entre operadores. ATIS notifica en 10 dias habiles si entra nuevo operador.<br><strong>Pago:</strong> anual por adelantado, dentro de 20 dias de factura (o 30 si no).<br><strong>Actualizacion:</strong> anual, sistema de Reajuste Inmuebles Propios del Contrato Marco.</div></div>';
+      s+='</div>';
+      s+='<div style="background:var(--surf2);border-radius:var(--rs);padding:12px 14px;margin-bottom:10px">';
+      s+='<div style="font-size:10px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">🔄 Reajuste — Clausula e)</div>';
+      s+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">';
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA TORRE + AEV</div><div style="font-size:12px;font-weight:600">Trimestral</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">desde Fecha de Inicio o Instalacion</div></div>';
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA TERRENO BASICA</div><div style="font-size:12px;font-weight:600">Segun Contrato Suelo</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">varia por sitio</div></div>';
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA TERRENO INM. PROPIOS</div><div style="font-size:12px;font-weight:600">Anual</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">Reajuste Inmuebles Propios</div></div>';
+      s+='</div></div>';
+      s+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+      s+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Facturacion</div><div style="font-size:12px;font-weight:500">'+m.facturacion+'</div></div>';
+      s+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Plazo de pago</div><div style="font-size:12px;font-weight:500">'+m.pago+'</div></div>';
+      if(m.descuentos)s+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);grid-column:span 2"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Descuentos</div><div style="font-size:12px;font-weight:500">'+m.descuentos+'</div></div>';
+      s+='</div>';
+      s+='</div>';
+      tab0.innerHTML=s;
+      tab0.style.gridTemplateColumns='1fr';
+    }
+  }
+    panel.style.display='block';
 
   // Auto-scroll to detail panel
   if(scroll){
