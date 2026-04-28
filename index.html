@@ -2852,20 +2852,25 @@ function showMLADetail(id,scroll){
       s+='<div style="grid-column:span 2">';
       s+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);margin-bottom:12px">';
       s+='<div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Moneda</div>';
-      s+='<div style="font-size:12px;font-weight:500">'+m.moneda+' &nbsp;·&nbsp; Base: 1/10/2023 &nbsp;·&nbsp; Actualiz. trimestral IPC &nbsp;·&nbsp; IVA no incluido</div></div>';
+      s+='<div style="font-size:12px;font-weight:500">'+m.moneda+' &nbsp;·&nbsp; Base: 1/10/2023 &nbsp;·&nbsp; IVA no incluido</div></div>';
+
+      // ── BLOQUE 1: BTS / Colos — Anexo 5 ──────────────────────────────────
       s+='<div style="background:var(--bl-bg);border:0.5px solid var(--bl);border-radius:var(--rs);padding:14px 16px;margin-bottom:10px">';
       s+='<div style="font-size:11px;font-weight:700;color:var(--bl);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">📡 Nuevos BTS y Co-localizaciones — Anexo 5</div>';
       s+='<div style="font-size:11px;color:var(--bl);margin-bottom:10px">Renta Torre mensual base (sin Renta de Terreno ni IVA)</div>';
       s+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">';
       s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px;text-align:center"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">AZOTEA</div><div style="font-size:16px;font-weight:700;color:var(--bl)">UYU 29.978</div><div style="font-size:10px;color:var(--tx3)">por mes</div></div>';
       s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px;text-align:center"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">TORRE</div><div style="font-size:16px;font-weight:700;color:var(--bl)">UYU 47.964</div><div style="font-size:10px;color:var(--tx3)">por mes</div></div>';
-      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px;text-align:center"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">AEV ADICIONAL</div><div style="font-size:16px;font-weight:700;color:var(--bl)">UYU 5.596</div><div style="font-size:10px;color:var(--tx3)">por metro AEV</div></div>';
+      s+='<div style="background:var(--surf);border-radius:var(--surf);padding:10px;text-align:center"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">AEV ADICIONAL</div><div style="font-size:16px;font-weight:700;color:var(--bl)">UYU 5.596</div><div style="font-size:10px;color:var(--tx3)">por metro AEV</div></div>';
       s+='</div>';
-      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px;margin-bottom:6px">';
+      // Renta Terreno básica
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px;margin-bottom:8px">';
       s+='<div style="font-size:10px;font-weight:600;color:var(--tx2);margin-bottom:5px">🏗️ RENTA DE TERRENO (sitios arrendados)</div>';
       s+='<div style="font-size:11px;color:var(--tx2);line-height:1.7">Passthrough al Titular Principal — Claro paga a ATIS lo mismo que ATIS le paga al dueño.<br>Se divide a prorrata entre operadores instalados. Si el contrato de suelo no se renueva en los mismos terminos, ATIS puede renegociar con cap de +30% sobre IPC — si excede, Claro puede rescindir sin penalidad.<br><strong>Actualizacion:</strong> segun el Contrato de Uso de Suelo de cada sitio.</div></div>';
       s+='<div style="font-size:11px;color:var(--bl);line-height:1.6"><strong>Espacio:</strong> 4M lineales · 7,5m2 AEV · 12m2 suelo &nbsp;|&nbsp; <strong>Azotea:</strong> pedestales hasta 6m sin riendas o adosadas</div>';
       s+='</div>';
+
+      // ── BLOQUE 2: Sitios Entre Operadores — Cláusula 15.3 ─────────────────
       s+='<div style="background:#FEF9C3;border:0.5px solid #D97706;border-radius:var(--rs);padding:14px 16px;margin-bottom:10px">';
       s+='<div style="font-size:11px;font-weight:700;color:#B45309;text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">⚡ Sitios Entre Operadores — Clausula 15.3</div>';
       s+='<div style="font-size:11px;color:#92400E;margin-bottom:10px">Sitios adquiridos de Telefonica donde Claro ya estaba instalado. Precio diferencial por altura de torre.</div>';
@@ -2875,28 +2880,110 @@ function showMLADetail(id,scroll){
       s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px;text-align:center"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">TORRE &gt; 40m</div><div style="font-size:16px;font-weight:700;color:#B45309">UYU 45.607</div><div style="font-size:10px;color:var(--tx3)">por mes</div></div>';
       s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px;text-align:center"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">AEV ADICIONAL</div><div style="font-size:16px;font-weight:700;color:#B45309">UYU 5.596</div><div style="font-size:10px;color:var(--tx3)">por metro AEV</div></div>';
       s+='</div>';
+      // Renta Terreno Inmuebles Propios
       s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px">';
       s+='<div style="font-size:10px;font-weight:600;color:var(--tx2);margin-bottom:5px">🏠 RENTA DE TERRENO — INMUEBLES PROPIOS</div>';
-      s+='<div style="font-size:11px;color:var(--tx2);line-height:1.7">Valor = renta que ATIS tiene con Telefonica Moviles del Uruguay S.A., actualizado a Fecha de Inicio. ATIS informa el valor.<br><strong>Cap: UYU 20.125/mes por sitio</strong> (actualizable anualmente por Reajuste Inmuebles Propios).<br>Prorrata entre operadores. ATIS notifica en 10 dias habiles si entra nuevo operador.<br><strong>Pago:</strong> anual por adelantado, dentro de 20 dias de factura (o 30 si no).<br><strong>Actualizacion:</strong> anual, sistema de Reajuste Inmuebles Propios del Contrato Marco.</div></div>';
+      s+='<div style="font-size:11px;color:var(--tx2);line-height:1.7">Valor = renta que ATIS tiene con Telefonica Moviles del Uruguay S.A., actualizado a Fecha de Inicio. ATIS informa el valor.<br><strong>Cap: UYU 20.125/mes por sitio</strong> (actualizable anualmente por Reajuste Inmuebles Propios).<br>Prorrata entre operadores. ATIS notifica en 10 dias habiles si entra nuevo operador.<br><strong>Pago:</strong> anual por adelantado, dentro de 20 dias de recibir factura (o 30 si no llego en tiempo).<br><strong>Actualizacion:</strong> anual, sistema de Reajuste Inmuebles Propios del Contrato Marco.</div></div>';
       s+='</div>';
+
+      // ── BLOQUE 3: Reajuste — Clausula e) ──────────────────────────────────
       s+='<div style="background:var(--surf2);border-radius:var(--rs);padding:12px 14px;margin-bottom:10px">';
       s+='<div style="font-size:10px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">🔄 Reajuste — Clausula e)</div>';
       s+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">';
-      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA TORRE + AEV</div><div style="font-size:12px;font-weight:600">Trimestral</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">desde Fecha de Inicio o Instalacion</div></div>';
-      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA TERRENO BASICA</div><div style="font-size:12px;font-weight:600">Segun Contrato Suelo</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">varia por sitio</div></div>';
-      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA TERRENO INM. PROPIOS</div><div style="font-size:12px;font-weight:600">Anual</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">Reajuste Inmuebles Propios</div></div>';
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA TORRE + AEV</div><div style="font-size:12px;font-weight:600">Trimestral</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">desde Fecha de Inicio o Instalacion de Equipos Adicionales</div></div>';
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA TERRENO BASICA</div><div style="font-size:12px;font-weight:600">Segun Contrato de Uso de Suelo</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">varia por sitio</div></div>';
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA TERRENO INM. PROPIOS</div><div style="font-size:12px;font-weight:600">Anual</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">sistema Reajuste Inmuebles Propios</div></div>';
       s+='</div></div>';
+
+      // ── Otros campos económicos ────────────────────────────────────────────
       s+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
-      s+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Facturacion</div><div style="font-size:12px;font-weight:500">'+m.facturacion+'</div></div>';
-      s+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Plazo de pago</div><div style="font-size:12px;font-weight:500">'+m.pago+'</div></div>';
-      if(m.descuentos)s+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);grid-column:span 2"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Descuentos</div><div style="font-size:12px;font-weight:500">'+m.descuentos+'</div></div>';
+      s+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Facturacion</div><div style="font-size:12px;font-weight:500">Monthly in advance</div></div>';
+      s+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Plazo de pago (dias)</div><div style="font-size:12px;font-weight:500">20 dias desde factura (o 30 si no recibida en tiempo)</div></div>';
+      s+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);grid-column:span 2"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Descuentos</div><div style="font-size:12px;font-weight:500">5 meses iniciales solo para nuevas colocaciones</div></div>';
       s+='</div>';
       s+='</div>';
       tab0.innerHTML=s;
       tab0.style.gridTemplateColumns='1fr';
     }
+
+    // Fix Contractual tab for CLARO UY
+    var allTabs=panel.querySelectorAll('.mla-tab-body');
+    if(allTabs[2]){
+      var cs='<div style="grid-column:span 2;display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+      cs+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Tipo SLA</div><div style="font-size:12px;font-weight:500">'+m.tipoSLA+'</div></div>';
+      cs+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">SLA vs MLA</div><div style="font-size:12px;font-weight:500">'+m.precedencia+'</div></div>';
+      cs+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);grid-column:span 2"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Renovacion SLA</div><div style="font-size:12px;font-weight:500">10 años automatica (no forzoso tras 1er renovacion)</div></div>';
+      cs+='<div style="padding:10px 12px;background:var(--rd-bg);border-radius:var(--rs);border:0.5px solid var(--rd);grid-column:span 2"><div style="font-size:10px;color:var(--rd-tx);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Forzoso (Term. Anticipada)</div><div style="font-size:12px;font-weight:500;color:var(--rd-tx)">Primer plazo de 10 años: FORZOSO — no se puede terminar anticipadamente.<br>Luego del 1er plazo: SI se puede terminar con 6 meses de anticipación.</div></div>';
+      cs+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);grid-column:span 2"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Cesion / Asignacion</div><div style="font-size:12px;font-weight:500">Permitida a grupo de control o para financiamiento</div></div>';
+      cs+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Withdrawal Rights</div><div style="font-size:12px;font-weight:500">No</div></div>';
+      cs+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Swap Rights</div><div style="font-size:12px;font-weight:500">No</div></div>';
+      cs+='<div style="padding:10px 12px;background:var(--am-bg);border-radius:var(--rs);border:0.5px solid var(--am);grid-column:span 2"><div style="font-size:10px;color:var(--am-tx);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Vencimiento Contrato de Uso de Suelo</div><div style="font-size:12px;font-weight:500;color:var(--am-tx)">Si el Contrato de Suelo no se renueva, ATIS puede renegociar sin autorización previa del cliente con cap de +30% IPC. Si el nuevo valor excede ese cap, el cliente puede rescindir el Contrato de Sitio sin penalidad.</div></div>';
+      cs+='</div>';
+      allTabs[2].innerHTML=cs;
+      allTabs[2].style.gridTemplateColumns='1fr';
+    }
+
+    // Fix Operativo tab for CLARO UY
+    if(allTabs[3]){
+      var os='<div style="grid-column:span 2;display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+      os+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);grid-column:span 2"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Passthrough Suelo</div><div style="font-size:12px;font-weight:500">Si — segun el tipo de sitio (ver seccion Economico)</div></div>';
+      os+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);grid-column:span 2"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Energia Comercial</div><div style="font-size:12px;font-weight:500;line-height:1.6">El Cliente contrata y paga la energia directamente en su propio nombre.<br>Si por requerimientos del sitio ATIS debe realizar gestiones con la distribuidora (registro, transferencia, etc.), las realiza en nombre del Cliente quien reembolsa todos los costos.<br><strong>Fee administrativo: USD 15/mes por Sitio</strong> si la energia no puede ser contratada directamente por el Cliente y debe seguir a nombre de ATIS.</div></div>';
+      os+='</div>';
+      allTabs[3].innerHTML=os;
+      allTabs[3].style.gridTemplateColumns='1fr';
+    }
   }
-    panel.style.display='block';
+    // Special rendering for ANTEL UY
+  if(m.contraparte.toUpperCase().indexOf('ANTEL')>=0 && m.pais==='UY'){
+    var allTabs2=panel.querySelectorAll('.mla-tab-body');
+
+    // Fix Económico tab — plazo de pago y reajuste
+    if(allTabs2[0]){
+      var ec=allTabs2[0].innerHTML;
+      // Replace Plazo de pago
+      allTabs2[0].innerHTML=allTabs2[0].innerHTML
+        .replace(/<div style="font-size:10px;color:var\(--tx3\);text-transform:uppercase[^>]*>Plazo de pago<\/div><div[^>]*>20d<\/div>/,
+          '<div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Plazo de pago (dias)</div><div style="font-size:12px;font-weight:500">45 dias desde emision de factura</div>');
+      // Add Reajuste section
+      var reajHtml='<div style="padding:12px 14px;background:var(--surf2);border-radius:var(--rs);grid-column:span 2;margin-top:4px">';
+      reajHtml+='<div style="font-size:10px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">🔄 Reajuste</div>';
+      reajHtml+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">';
+      reajHtml+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA TORRE + AEV</div><div style="font-size:12px;font-weight:600">Trimestral</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">desde Fecha de Inicio</div></div>';
+      reajHtml+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA TERRENO BASICA</div><div style="font-size:12px;font-weight:600">Segun Contrato de Uso de Suelo</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">varia por sitio</div></div>';
+      reajHtml+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA TERRENO INM. PROPIOS</div><div style="font-size:12px;font-weight:600">Anual</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">Reajuste Inmuebles Propios</div></div>';
+      reajHtml+='</div></div>';
+      allTabs2[0].innerHTML += reajHtml;
+    }
+
+    // Fix Contractual tab
+    if(allTabs2[2]){
+      var cs2='<div style="grid-column:span 2;display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+      cs2+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Tipo SLA</div><div style="font-size:12px;font-weight:500">'+m.tipoSLA+'</div></div>';
+      cs2+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">SLA vs MLA</div><div style="font-size:12px;font-weight:500">'+m.precedencia+'</div></div>';
+      cs2+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);grid-column:span 2"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Renovacion SLA</div><div style="font-size:12px;font-weight:500">'+m.renovacion+'</div></div>';
+      cs2+='<div style="padding:10px 12px;background:var(--bl-bg);border-radius:var(--rs);border:0.5px solid var(--bl);grid-column:span 2"><div style="font-size:10px;color:var(--bl);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Acta de Instalacion vs Contrato de Sitio</div><div style="font-size:12px;font-weight:500;color:var(--bl)">La obligacion y forzosidad del plazo de 10 anos queda firme con la suscripcion del Acta de Instalacion. El Contrato de Sitio se suscribe dentro del plazo acordado posterior al Acta.</div></div>';
+      cs2+='<div style="padding:10px 12px;background:var(--rd-bg);border-radius:var(--rs);border:0.5px solid var(--rd);grid-column:span 2"><div style="font-size:10px;color:var(--rd-tx);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Forzoso (Term. Anticipada)</div><div style="font-size:12px;font-weight:500;color:var(--rd-tx)">NO hay terminacion anticipada libre. Si ANTEL quiere terminar antes del vencimiento del plazo, debe pagar el remanente del plazo. El contrato es FORZOSO.</div></div>';
+      cs2+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);grid-column:span 2"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Cesion / Asignacion</div><div style="font-size:12px;font-weight:500">No permitida — salvo cesion de creditos que esta expresamente autorizada.</div></div>';
+      cs2+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Withdrawal Rights</div><div style="font-size:12px;font-weight:500">'+m.derechoRetiro+'</div></div>';
+      cs2+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Swap Rights</div><div style="font-size:12px;font-weight:500">'+m.derechoSwap+'</div></div>';
+      cs2+='<div style="padding:10px 12px;background:var(--am-bg);border-radius:var(--rs);border:0.5px solid var(--am);grid-column:span 2"><div style="font-size:10px;color:var(--am-tx);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Vencimiento Contrato de Uso de Suelo — Clausula 8c</div><div style="font-size:12px;font-weight:500;color:var(--am-tx)">Si el Contrato de Uso de Suelo no puede renovarse, ATIS dara aviso con 90 dias de anticipacion. En ese plazo ANTEL debe devolver el Sitio. Se rescinde sin responsabilidad para ninguna de las partes. ATIS devuelve los pagos adelantados no devengados.</div></div>';
+      cs2+='</div>';
+      allTabs2[2].innerHTML=cs2;
+      allTabs2[2].style.gridTemplateColumns='1fr';
+    }
+
+    // Fix Operativo tab
+    if(allTabs2[3]){
+      var os2='<div style="grid-column:span 2;display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+      os2+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);grid-column:span 2"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Passthrough Suelo</div><div style="font-size:12px;font-weight:500">Si</div></div>';
+      os2+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);grid-column:span 2"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Energia Comercial</div><div style="font-size:12px;font-weight:500;line-height:1.6">Cliente contrata directamente en su propio nombre.<br>Si ATIS debe gestionar la conexion, el Cliente paga un <strong>10% de fee administrativo</strong>.<br>Si la energia no puede obtenerse directamente y debe seguir a nombre de ATIS, el Cliente paga <strong>USD 15/mes por Sitio</strong> de fee administrativo.</div></div>';
+      os2+='</div>';
+      allTabs2[3].innerHTML=os2;
+      allTabs2[3].style.gridTemplateColumns='1fr';
+    }
+  }
+
+  panel.style.display='block';
 
   // Auto-scroll to detail panel
   if(scroll){
