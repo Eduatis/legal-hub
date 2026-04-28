@@ -966,7 +966,9 @@ var USERS_MAP = {
   'camila.soto@atis-group.com':     {name:'Camila Soto',    ini:'CS',role:'Legal · AR + UY',       greeting:'Hola, Cami 🌸',bg:'#FDF2F8',tc:'#BE185D',accent:'#EC4899',scope:['AR','UY'],theme:'rose'},
   'samira.taboada@atis-group.com':   {name:'Samira Taboada', ini:'ST',role:'Legal · PY',            greeting:'Hola, Samira 😊',bg:'#FFFBEB',tc:'#B45309',accent:'#F59E0B',scope:['PY']},
   'juanpablo.blanco@atis-group.com':{name:'Juan Pablo Blanco',ini:'JP',role:'INTORU · Societario',greeting:'Hola, JP 👋',  bg:'#F0FDF4',tc:'#166534',scope:['UY']},
-  'julian.jackson@atis-group.com':   {name:'Julian Jackson',   ini:'JJ',role:'INTORU · Societario',  bg:'#FDF4FF',tc:'#7E22CE',scope:['UY']}
+  'julian.jackson@atis-group.com':   {name:'Julian Jackson',   ini:'JJ',role:'INTORU · Societario',  bg:'#FDF4FF',tc:'#7E22CE',scope:['UY']},
+  'michelle.saba@atis-group.com':    {name:'Michelle Saba',     ini:'MS',role:'Legal · Solo lectura', greeting:'Hola, Michelle 👋',bg:'#F0FDF4',tc:'#166534',accent:'#16A34A',scope:['AR','UY','PY'],mlaOnly:true},
+  'sabrina.borzino@atis-group.com':  {name:'Sabrina Borzino',   ini:'SB',role:'Legal · Solo lectura', greeting:'Hola, Sabrina 👋', bg:'#FDF4FF',tc:'#7E22CE',accent:'#9333EA',scope:['AR','UY','PY'],mlaOnly:true}
 };
 var AVC = {EG:{bg:'#EEF2FF',tc:'#1B4FD8'},CS:{bg:'#DCFCE7',tc:'#15803D'},ST:{bg:'#FEF3C7',tc:'#B45309'}};
 var SCLASS = {'Borrador':'s0','En revisión':'s1','Firmado':'s2','Vigente':'s3','En renovación':'s4','Vencido':'s5'};
@@ -1136,7 +1138,22 @@ async function initApp(account){
       document.getElementById(id).style.display='none';
     });
   }
+  // MLA-only users: hide everything except MLA module
+  var isMlaOnly = currentUser.mlaOnly === true;
+  if(isMlaOnly){
+    ['nav-dashboard','nav-temas','nav-documentos','nav-suelo','nav-intoru','nav-dd',
+     'nav-poderes','nav-fechas','nav-inm','nav-societario','nav-search','nav-analytics'].forEach(function(id){
+      var el=document.getElementById(id);if(el)el.style.display='none';
+    });
+    // Hide topbar sync button and actions
+    document.getElementById('sync-btn').style.display='none';
+  }
   await syncAll();hideLoading();document.getElementById('app').style.display='block';
+  if(currentUser.mlaOnly){
+    goTo('mla', document.getElementById('nav-mla'));
+    // Hide new MLA button for readonly
+    document.getElementById('tb-act').innerHTML='';
+  }
 }
 
 // ─── GRAPH ──────────────────────────────────────────────────────────────────
@@ -2921,7 +2938,7 @@ function showMLADetail(id,scroll){
       s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA TORRE + AEV</div><div style="font-size:12px;font-weight:600">Trimestral · IPC</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">desde Fecha de Inicio o Instalacion de Equipos Adicionales</div></div>';
       s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA ADICIONAL (AEV)</div><div style="font-size:12px;font-weight:600">Trimestral · IPC</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">desde Fecha de Instalacion de Equipos Adicionales</div></div>';
       s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA TERRENO BASICA</div><div style="font-size:12px;font-weight:600">Segun Contrato Suelo</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">no es por IPC — depende del Contrato de Uso de Suelo de cada sitio</div></div>';
-      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA TERRENO INM. PROPIOS</div><div style="font-size:12px;font-weight:600">Anual · Reajuste IP</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">no es por IPC — sistema Reajuste Inmuebles Propios del Contrato Marco</div></div>';
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA TERRENO INM. PROPIOS</div><div style="font-size:12px;font-weight:600">Anual · IPC (INE)</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">variacion IPC 12 meses previos al mes anterior a la fecha de pago, publicado por INE</div></div>';
       s+='</div></div>';
 
       // ── Otros campos económicos ────────────────────────────────────────────
