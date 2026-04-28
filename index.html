@@ -3051,7 +3051,105 @@ function showMLADetail(id,scroll){
     }
   }
 
-  panel.style.display='block';
+  // Special rendering for TMU/TIGO UY
+  if((m.contraparte.toUpperCase().indexOf('TMU')>=0||m.contraparte.toUpperCase().indexOf('TIGO')>=0) && m.pais==='UY'){
+    var allTabsTMU=panel.querySelectorAll('.mla-tab-body');
+    if(allTabsTMU[0]){
+      var s='';
+      s+='<div style="grid-column:span 2">';
+
+      // Header
+      s+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);margin-bottom:12px">';
+      s+='<div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Moneda</div>';
+      s+='<div style="font-size:12px;font-weight:500">UYU &nbsp;·&nbsp; Ajuste anual IPC+2%</div></div>';
+
+      // Nota estructuras C
+      s+='<div style="background:var(--am-bg);border:0.5px solid var(--am);border-radius:var(--rs);padding:12px 14px;margin-bottom:12px">';
+      s+='<div style="font-size:10px;font-weight:700;color:var(--am-tx);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">⚠️ Nota sobre Estructuras tipo C</div>';
+      s+='<div style="font-size:11px;color:var(--am-tx);line-height:1.7">';
+      s+='Las <strong>Estructuras C</strong> son sitios donde actualmente existe un contrato entre Claro (C) y Telefonica. Cuando ese contrato original venza, TMU pasará a contratar directamente con ATIS y la tipología cambiará:<br>';
+      s+='&nbsp;&nbsp;• <strong>Estructura C → Estructura M</strong> (No coubicada)<br>';
+      s+='&nbsp;&nbsp;• <strong>Estructura AC → Estructura A</strong><br>';
+      s+='El precio se recalculará según la nueva tipología correspondiente.';
+      s+='</div></div>';
+
+      // FASE 1 — Base Junio 2023
+      s+='<div style="background:var(--bl-bg);border:0.5px solid var(--bl);border-radius:var(--rs);padding:14px 16px;margin-bottom:10px">';
+      s+='<div style="font-size:11px;font-weight:700;color:var(--bl);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">📋 Fase 1 — Retribución por Espacio en Estructura</div>';
+      s+='<div style="font-size:11px;color:var(--bl);margin-bottom:10px">Base Junio 2023 · Ajuste anual IPC+2%</div>';
+      s+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+      // Tipología 1
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:12px">';
+      s+='<div style="font-size:10px;color:var(--tx3);margin-bottom:2px">TIPOLOGÍA 1</div>';
+      s+='<div style="font-size:11px;font-weight:600;margin-bottom:6px">Estructura M (No coubicada)</div>';
+      s+='<div style="font-size:18px;font-weight:700;color:var(--bl)">UYU 31.142</div>';
+      s+='<div style="font-size:10px;color:var(--tx3)">por mes</div></div>';
+      // Tipología 2
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:12px">';
+      s+='<div style="font-size:10px;color:var(--tx3);margin-bottom:2px">TIPOLOGÍA 2</div>';
+      s+='<div style="font-size:11px;font-weight:600;margin-bottom:6px">Estructura A</div>';
+      s+='<div style="font-size:18px;font-weight:700;color:var(--bl)">UYU 66.037</div>';
+      s+='<div style="font-size:10px;color:var(--tx3)">por mes</div></div>';
+      // Tipología 3
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:12px">';
+      s+='<div style="font-size:10px;color:var(--tx3);margin-bottom:2px">TIPOLOGÍA 3</div>';
+      s+='<div style="font-size:11px;font-weight:600;margin-bottom:6px">Estructura C</div>';
+      s+='<div style="font-size:18px;font-weight:700;color:var(--bl)">UYU 36.142</div>';
+      s+='<div style="font-size:10px;color:var(--tx3)">por mes &nbsp;→&nbsp; al vencer, pasa a Tipo 1</div></div>';
+      // Tipología 4
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:12px">';
+      s+='<div style="font-size:10px;color:var(--tx3);margin-bottom:2px">TIPOLOGÍA 4</div>';
+      s+='<div style="font-size:11px;font-weight:600;margin-bottom:6px">Estructura A y C</div>';
+      s+='<div style="font-size:18px;font-weight:700;color:var(--bl)">UYU 71.037</div>';
+      s+='<div style="font-size:10px;color:var(--tx3)">por mes &nbsp;→&nbsp; al vencer C, pasa a Tipo 2</div></div>';
+      s+='</div></div>';
+
+      // FASE 2 — Base Junio 2024
+      s+='<div style="background:#F0FDF4;border:0.5px solid #16A34A;border-radius:var(--rs);padding:14px 16px;margin-bottom:10px">';
+      s+='<div style="font-size:11px;font-weight:700;color:#15803D;text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">📋 Fase 2 — Retribución por Espacio en Estructura</div>';
+      s+='<div style="font-size:11px;color:#15803D;margin-bottom:10px">Base Junio 2024 · Ajuste anual IPC+2%</div>';
+      s+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+      // Tipología 1
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:12px">';
+      s+='<div style="font-size:10px;color:var(--tx3);margin-bottom:2px">TIPOLOGÍA 1</div>';
+      s+='<div style="font-size:11px;font-weight:600;margin-bottom:6px">Estructura M (No coubicada)</div>';
+      s+='<div style="font-size:18px;font-weight:700;color:#15803D">UYU 32.722</div>';
+      s+='<div style="font-size:10px;color:var(--tx3)">por mes</div></div>';
+      // Tipología 2
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:12px">';
+      s+='<div style="font-size:10px;color:var(--tx3);margin-bottom:2px">TIPOLOGÍA 2</div>';
+      s+='<div style="font-size:11px;font-weight:600;margin-bottom:6px">Estructura A</div>';
+      s+='<div style="font-size:18px;font-weight:700;color:#15803D">UYU 69.386</div>';
+      s+='<div style="font-size:10px;color:var(--tx3)">por mes</div></div>';
+      // Tipología 3
+      s+='<div style="background:var(--surf);border-radius:var(--surf);padding:12px">';
+      s+='<div style="font-size:10px;color:var(--tx3);margin-bottom:2px">TIPOLOGÍA 3</div>';
+      s+='<div style="font-size:11px;font-weight:600;margin-bottom:6px">Estructura C</div>';
+      s+='<div style="font-size:18px;font-weight:700;color:#15803D">UYU 37.532</div>';
+      s+='<div style="font-size:10px;color:var(--tx3)">por mes &nbsp;→&nbsp; al vencer, pasa a Tipo 1</div></div>';
+      // Tipología 4
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:12px">';
+      s+='<div style="font-size:10px;color:var(--tx3);margin-bottom:2px">TIPOLOGÍA 4</div>';
+      s+='<div style="font-size:11px;font-weight:600;margin-bottom:6px">Estructura A y C</div>';
+      s+='<div style="font-size:18px;font-weight:700;color:#15803D">UYU 74.196</div>';
+      s+='<div style="font-size:10px;color:var(--tx3)">por mes &nbsp;→&nbsp; al vencer C, pasa a Tipo 2</div></div>';
+      s+='</div></div>';
+
+      // Reajuste
+      s+='<div style="background:var(--surf2);border-radius:var(--rs);padding:12px 14px;margin-bottom:10px">';
+      s+='<div style="font-size:10px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">🔄 Reajuste</div>';
+      s+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RETRIBUCION POR ESPACIO</div><div style="font-size:12px;font-weight:600">Anual · IPC + 2%</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">todas las tipologias</div></div>';
+      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA DE TERRENO</div><div style="font-size:12px;font-weight:600">100% Passthrough CUS</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">segun Contrato de Uso de Suelo</div></div>';
+      s+='</div></div>';
+
+      s+='</div>';
+      allTabsTMU[0].innerHTML=s;
+      allTabsTMU[0].style.gridTemplateColumns='1fr';
+    }
+  }
+
+    panel.style.display='block';
 
   // Auto-scroll to detail panel
   if(scroll){
