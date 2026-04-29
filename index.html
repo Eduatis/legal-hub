@@ -3005,22 +3005,24 @@ function showMLADetail(id,scroll){
   if(m.contraparte.toUpperCase().indexOf('ANTEL')>=0 && m.pais==='UY'){
     var allTabs2=panel.querySelectorAll('.mla-tab-body');
 
-    // Fix Económico tab — plazo de pago y reajuste
+    // Fix Económico tab
     if(allTabs2[0]){
-      var ec=allTabs2[0].innerHTML;
-      // Replace Plazo de pago
-      allTabs2[0].innerHTML=allTabs2[0].innerHTML
-        .replace(/<div style="font-size:10px;color:var\(--tx3\);text-transform:uppercase[^>]*>Plazo de pago<\/div><div[^>]*>20d<\/div>/,
-          '<div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Plazo de pago (dias)</div><div style="font-size:12px;font-weight:500">45 dias desde emision de factura</div>');
-      // Add Reajuste section
-      var reajHtml='<div style="padding:12px 14px;background:var(--surf2);border-radius:var(--rs);grid-column:span 2;margin-top:4px">';
-      reajHtml+='<div style="font-size:10px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">🔄 Reajuste</div>';
-      reajHtml+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">';
-      reajHtml+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA TORRE + AEV</div><div style="font-size:12px;font-weight:600">Trimestral</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">desde Fecha de Inicio</div></div>';
-      reajHtml+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA TERRENO BASICA</div><div style="font-size:12px;font-weight:600">Segun Contrato de Uso de Suelo</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">varia por sitio</div></div>';
-      reajHtml+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA TERRENO INM. PROPIOS</div><div style="font-size:12px;font-weight:600">Anual</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">Reajuste Inmuebles Propios</div></div>';
-      reajHtml+='</div></div>';
-      allTabs2[0].innerHTML += reajHtml;
+      var ec2='<div style="grid-column:span 2;display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+      // Precio base
+      if(m.precio)ec2+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);grid-column:span 2"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Precio base</div><div style="font-size:12px;font-weight:500">'+m.precio+'</div></div>';
+      ec2+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Facturacion</div><div style="font-size:12px;font-weight:500">'+m.facturacion+'</div></div>';
+      ec2+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Plazo de pago (dias)</div><div style="font-size:12px;font-weight:500">45 dias desde emision de factura</div></div>';
+      if(m.descuentos)ec2+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);grid-column:span 2"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Descuentos</div><div style="font-size:12px;font-weight:500">'+m.descuentos+'</div></div>';
+      // Reajuste
+      ec2+='<div style="padding:12px 14px;background:var(--surf2);border-radius:var(--rs);grid-column:span 2;margin-top:4px">';
+      ec2+='<div style="font-size:10px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">🔄 Reajuste</div>';
+      ec2+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+      ec2+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA TORRE + ADICIONAL</div><div style="font-size:12px;font-weight:600">Anual · IPC</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">desde Fecha de Inicio</div></div>';
+      ec2+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA TERRENO BASICA</div><div style="font-size:12px;font-weight:600">100% Passthrough CUS</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">segun Contrato de Uso de Suelo de cada sitio</div></div>';
+      ec2+='</div></div>';
+      ec2+='</div>';
+      allTabs2[0].innerHTML=ec2;
+      allTabs2[0].style.gridTemplateColumns='1fr';
     }
 
     // Fix Contractual tab
@@ -3028,7 +3030,6 @@ function showMLADetail(id,scroll){
       var cs2='<div style="grid-column:span 2;display:grid;grid-template-columns:1fr 1fr;gap:8px">';
       cs2+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Tipo SLA</div><div style="font-size:12px;font-weight:500">'+m.tipoSLA+'</div></div>';
       cs2+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">SLA vs MLA</div><div style="font-size:12px;font-weight:500">'+m.precedencia+'</div></div>';
-      cs2+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);grid-column:span 2"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Renovacion SLA</div><div style="font-size:12px;font-weight:500">'+m.renovacion+'</div></div>';
       cs2+='<div style="padding:10px 12px;background:var(--bl-bg);border-radius:var(--rs);border:0.5px solid var(--bl);grid-column:span 2"><div style="font-size:10px;color:var(--bl);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Acta de Instalacion vs Contrato de Sitio</div><div style="font-size:12px;font-weight:500;color:var(--bl)">La obligacion y forzosidad del plazo de 10 anos queda firme con la suscripcion del Acta de Instalacion. El Contrato de Sitio se suscribe dentro del plazo acordado posterior al Acta.</div></div>';
       cs2+='<div style="padding:10px 12px;background:var(--rd-bg);border-radius:var(--rs);border:0.5px solid var(--rd);grid-column:span 2"><div style="font-size:10px;color:var(--rd-tx);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Forzoso (Term. Anticipada)</div><div style="font-size:12px;font-weight:500;color:var(--rd-tx)">NO hay terminacion anticipada libre. Si ANTEL quiere terminar antes del vencimiento del plazo, debe pagar el remanente del plazo. El contrato es FORZOSO.</div></div>';
       cs2+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);grid-column:span 2"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Cesion / Asignacion</div><div style="font-size:12px;font-weight:500">No permitida — salvo cesion de creditos que esta expresamente autorizada.</div></div>';
@@ -3043,126 +3044,12 @@ function showMLADetail(id,scroll){
     // Fix Operativo tab
     if(allTabs2[3]){
       var os2='<div style="grid-column:span 2;display:grid;grid-template-columns:1fr 1fr;gap:8px">';
-      os2+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);grid-column:span 2"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Passthrough Suelo</div><div style="font-size:12px;font-weight:500">Si</div></div>';
-      os2+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);grid-column:span 2"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Energia Comercial</div><div style="font-size:12px;font-weight:500;line-height:1.6">Cliente contrata directamente en su propio nombre.<br>Si ATIS debe gestionar la conexion, el Cliente paga un <strong>10% de fee administrativo</strong>.<br>Si la energia no puede obtenerse directamente y debe seguir a nombre de ATIS, el Cliente paga <strong>USD 15/mes por Sitio</strong> de fee administrativo.</div></div>';
+      os2+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs);grid-column:span 2"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Energia Comercial</div><div style="font-size:12px;font-weight:500;line-height:1.6">Cliente contrata directamente en su propio nombre.<br>Si ATIS debe gestionar la conexion, el Cliente paga un <strong>10% de fee administrativo</strong>.<br>Si la energia no puede obtenerse directamente y debe seguir a nombre de ATIS: <strong>USD 15/mes por Sitio</strong>.</div></div>';
       os2+='</div>';
       allTabs2[3].innerHTML=os2;
       allTabs2[3].style.gridTemplateColumns='1fr';
     }
   }
-
-  // Special rendering for TMU/TIGO UY
-  if((m.contraparte.toUpperCase().indexOf('TMU')>=0||m.contraparte.toUpperCase().indexOf('TIGO')>=0) && m.pais==='UY'){
-    var allTabsTMU=panel.querySelectorAll('.mla-tab-body');
-    if(allTabsTMU[0]){
-      var s='';
-      s+='<div style="grid-column:span 2">';
-
-
-
-      // Nota estructuras C
-      s+='<div style="background:var(--am-bg);border:0.5px solid var(--am);border-radius:var(--rs);padding:12px 14px;margin-bottom:12px">';
-      s+='<div style="font-size:10px;font-weight:700;color:var(--am-tx);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">⚠️ Nota sobre Estructuras tipo C</div>';
-      s+='<div style="font-size:11px;color:var(--am-tx);line-height:1.7">';
-      s+='Las <strong>Estructuras C</strong> son sitios donde actualmente existe un contrato entre Claro (C) y Telefonica. Cuando ese contrato original venza, TMU pasará a contratar directamente con ATIS y la tipología cambiará:<br>';
-      s+='&nbsp;&nbsp;• <strong>Estructura C → Estructura M</strong> (No coubicada)<br>';
-      s+='&nbsp;&nbsp;• <strong>Estructura AC → Estructura A</strong><br>';
-      s+='El precio se recalculará según la nueva tipología correspondiente.';
-      s+='</div></div>';
-
-      // FASE 1 — Base Junio 2023
-      s+='<div style="background:var(--bl-bg);border:0.5px solid var(--bl);border-radius:var(--rs);padding:14px 16px;margin-bottom:10px">';
-      s+='<div style="font-size:11px;font-weight:700;color:var(--bl);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">📋 Fase 1 — Retribución por Espacio en Estructura</div>';
-      s+='<div style="font-size:11px;color:var(--bl);margin-bottom:10px">Base Junio 2023 · Ajuste anual IPC+2%</div>';
-      s+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
-      // Tipología 1
-      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:12px">';
-      s+='<div style="font-size:10px;color:var(--tx3);margin-bottom:2px">TIPOLOGÍA 1</div>';
-      s+='<div style="font-size:11px;font-weight:600;margin-bottom:6px">Estructura M (No coubicada)</div>';
-      s+='<div style="font-size:18px;font-weight:700;color:var(--bl)">UYU 31.142</div>';
-      s+='<div style="font-size:10px;color:var(--tx3)">por mes</div></div>';
-      // Tipología 2
-      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:12px">';
-      s+='<div style="font-size:10px;color:var(--tx3);margin-bottom:2px">TIPOLOGÍA 2</div>';
-      s+='<div style="font-size:11px;font-weight:600;margin-bottom:6px">Estructura A</div>';
-      s+='<div style="font-size:18px;font-weight:700;color:var(--bl)">UYU 66.037</div>';
-      s+='<div style="font-size:10px;color:var(--tx3)">por mes</div></div>';
-      // Tipología 3
-      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:12px">';
-      s+='<div style="font-size:10px;color:var(--tx3);margin-bottom:2px">TIPOLOGÍA 3</div>';
-      s+='<div style="font-size:11px;font-weight:600;margin-bottom:6px">Estructura C</div>';
-      s+='<div style="font-size:18px;font-weight:700;color:var(--bl)">UYU 36.142</div>';
-      s+='<div style="font-size:10px;color:var(--tx3)">por mes &nbsp;→&nbsp; al vencer, pasa a Tipo 1</div></div>';
-      // Tipología 4
-      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:12px">';
-      s+='<div style="font-size:10px;color:var(--tx3);margin-bottom:2px">TIPOLOGÍA 4</div>';
-      s+='<div style="font-size:11px;font-weight:600;margin-bottom:6px">Estructura A y C</div>';
-      s+='<div style="font-size:18px;font-weight:700;color:var(--bl)">UYU 71.037</div>';
-      s+='<div style="font-size:10px;color:var(--tx3)">por mes &nbsp;→&nbsp; al vencer C, pasa a Tipo 2</div></div>';
-      s+='</div></div>';
-
-      // FASE 2 — Base Junio 2024
-      s+='<div style="background:#F0FDF4;border:0.5px solid #16A34A;border-radius:var(--rs);padding:14px 16px;margin-bottom:10px">';
-      s+='<div style="font-size:11px;font-weight:700;color:#15803D;text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">📋 Fase 2 — Retribución por Espacio en Estructura</div>';
-      s+='<div style="font-size:11px;color:#15803D;margin-bottom:10px">Base Junio 2024 · Ajuste anual IPC+2%</div>';
-      s+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
-      // Tipología 1
-      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:12px">';
-      s+='<div style="font-size:10px;color:var(--tx3);margin-bottom:2px">TIPOLOGÍA 1</div>';
-      s+='<div style="font-size:11px;font-weight:600;margin-bottom:6px">Estructura M (No coubicada)</div>';
-      s+='<div style="font-size:18px;font-weight:700;color:#15803D">UYU 32.721,92</div>';
-      s+='<div style="font-size:10px;color:var(--tx3)">por mes</div></div>';
-      // Tipología 2
-      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:12px">';
-      s+='<div style="font-size:10px;color:var(--tx3);margin-bottom:2px">TIPOLOGÍA 2</div>';
-      s+='<div style="font-size:11px;font-weight:600;margin-bottom:6px">Estructura A</div>';
-      s+='<div style="font-size:18px;font-weight:700;color:#15803D">UYU 69.386,24</div>';
-      s+='<div style="font-size:10px;color:var(--tx3)">por mes</div></div>';
-      // Tipología 3
-      s+='<div style="background:var(--surf);border-radius:var(--surf);padding:12px">';
-      s+='<div style="font-size:10px;color:var(--tx3);margin-bottom:2px">TIPOLOGÍA 3</div>';
-      s+='<div style="font-size:11px;font-weight:600;margin-bottom:6px">Estructura C</div>';
-      s+='<div style="font-size:18px;font-weight:700;color:#15803D">UYU 37.531,65</div>';
-      s+='<div style="font-size:10px;color:var(--tx3)">por mes &nbsp;→&nbsp; al vencer, pasa a Tipo 1</div></div>';
-      // Tipología 4
-      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:12px">';
-      s+='<div style="font-size:10px;color:var(--tx3);margin-bottom:2px">TIPOLOGÍA 4</div>';
-      s+='<div style="font-size:11px;font-weight:600;margin-bottom:6px">Estructura A y C</div>';
-      s+='<div style="font-size:18px;font-weight:700;color:#15803D">UYU 74.195,97</div>';
-      s+='<div style="font-size:10px;color:var(--tx3)">por mes &nbsp;→&nbsp; al vencer C, pasa a Tipo 2</div></div>';
-      s+='</div></div>';
-
-      // Reajuste
-      s+='<div style="background:var(--surf2);border-radius:var(--rs);padding:12px 14px;margin-bottom:10px">';
-      s+='<div style="font-size:10px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">🔄 Reajuste</div>';
-      s+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
-      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RETRIBUCION POR ESPACIO</div><div style="font-size:12px;font-weight:600">Anual · IPC + 2%</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">todas las tipologias</div></div>';
-      s+='<div style="background:var(--surf);border-radius:var(--rs);padding:10px"><div style="font-size:10px;color:var(--tx3);margin-bottom:4px">RENTA DE TERRENO</div><div style="font-size:12px;font-weight:600">100% Passthrough CUS</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">segun Contrato de Uso de Suelo</div></div>';
-      s+='</div></div>';
-
-      s+='</div>';
-      allTabsTMU[0].innerHTML=s;
-      allTabsTMU[0].style.gridTemplateColumns='1fr';
-    }
-    // Fix Espacios tab for TMU — remove Espacio lineal, not referenced in contract
-    if(allTabsTMU[1]){
-      var sp2='<div style="grid-column:span 2;display:grid;grid-template-columns:1fr 1fr;gap:8px">';
-      sp2+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">AEV (m²)</div><div style="font-size:12px;font-weight:500">'+m.aev+'</div></div>';
-      sp2+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Espacio suelo</div><div style="font-size:12px;font-weight:500">'+m.suelo+'</div></div>';
-      sp2+='</div>';
-      allTabsTMU[1].innerHTML=sp2;
-      allTabsTMU[1].style.gridTemplateColumns='1fr';
-    }
-    // Fix Económico — add facturacion at bottom
-    var facHtml='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">';
-    facHtml+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Facturacion</div><div style="font-size:12px;font-weight:500">Anual por adelantado</div></div>';
-    facHtml+='<div style="padding:10px 12px;background:var(--surf2);border-radius:var(--rs)"><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Plazo de pago</div><div style="font-size:12px;font-weight:500">30 dias desde recibida la factura</div></div>';
-    facHtml+='</div>';
-    if(allTabsTMU[0]){
-      allTabsTMU[0].innerHTML += facHtml;
-    }
-  }
-
     panel.style.display='block';
 
   // Auto-scroll to detail panel
