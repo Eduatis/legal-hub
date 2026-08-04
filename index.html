@@ -935,6 +935,34 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   </div>
 </div>
 
+<!-- FORM TICKET (para empleados de otros sectores) -->
+<div class="formov" id="form-ticket" onclick="if(event.target===this)closeFormTicket()">
+  <div class="formpanel" onclick="event.stopPropagation()">
+    <div class="formtit"><span>Nueva Solicitud Legal</span><button class="formclose" onclick="closeFormTicket()">×</button></div>
+    <div style="background:var(--bl-bg);border-radius:var(--rs);padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--bl)">
+      Completá el formulario y el equipo legal recibirá tu solicitud por mail y en el sistema.
+    </div>
+    <div class="field"><label>Tu sector / área</label><input type="text" id="tk-sector" placeholder="Ej: Finanzas, Operaciones, RR.HH..."></div>
+    <div class="field"><label>¿A quién va dirigido?</label>
+      <select id="tk-resp">
+        <option value="">— Seleccionar —</option>
+        <option value="EG">Eduardo Galindo — Legal Manager</option>
+        <option value="CS">Camila Soto — Legal AR / UY</option>
+        <option value="ST">Samira Taboada — Legal PY</option>
+      </select>
+    </div>
+    <div class="field"><label>Asunto</label><input type="text" id="tk-asunto" placeholder="Ej: Revisión contrato proveedor, consulta laboral..."></div>
+    <div class="field"><label>Descripción detallada</label><textarea id="tk-desc" placeholder="Describí tu consulta con el mayor detalle posible..."></textarea></div>
+    <div class="field"><label>Urgencia</label>
+      <select id="tk-urgencia"><option value="Alta">🔴 Alta</option><option value="Media" selected>🟡 Media</option><option value="Baja">🟢 Baja</option></select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btnp" style="flex:1" id="tk-submit-btn" onclick="submitTicket()">Enviar solicitud</button>
+      <button class="btns" onclick="closeFormTicket()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- CONFIRM -->
 <div class="confirm-overlay" id="confirm-overlay">
   <div class="confirm-box">
@@ -1664,7 +1692,7 @@ function goTo(page,el){
   var T={dashboard:'Dashboard',tickets:'Tickets',temas:'Temas',documentos:'Documentos',suelo:'Contratos de Suelo',intoru:'INTORU',dd:'DD Sitios Uruguay',poderes:'Poderes',societario:'Societario',fechas:'Fechas Clave',mla:'MLA',inm:'Inmuebles Propios UY',search:'Búsqueda',analytics:'Analytics'};
   var S={dashboard:'Resumen general',tickets:'Solicitudes del equipo ATIS',temas:'Follow-up y gestión',documentos:'Registro documental',suelo:'Matriz de contratos LOC',intoru:'Análisis de Sitios por Lotes — Uruguay',dd:'Due Diligence — Fases 1 y 2',poderes:'Registro de poderes vigentes',societario:'Estructura societaria',fechas:'Vencimientos y plazos institucionales',mla:'Master Lease Agreements',inm:'Inmuebles adquiridos en Uruguay',search:'Buscar en todos los módulos',analytics:'Indicadores y gráficos'};
   document.getElementById('tb-title').textContent=T[page]||page;document.getElementById('tb-sub').textContent=S[page]||'';
-  var A={tickets:'<a href="ticket.html" target="_blank" class="btnp" style="text-decoration:none;padding:8px 16px;border-radius:var(--rs);font-size:13px;font-weight:500">↗ Abrir formulario</a>',fechas:'<button class="btnp" onclick="openFormFecha()">+ Nueva fecha clave</button>',mla:'<button class="btnp" onclick="openFormMLA()">+ Nuevo MLA</button>',inm:'<button class="btnp" onclick="openFormInm()">+ Nuevo inmueble</button>',poderes:'<button class="btns" onclick="exportCSV(\'poderes\')" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormPoder()">+ Nuevo poder</button>',societario:socTab==="autoridades"?'<button class="btnp" onclick="openFormSocAut()">+ Nueva autoridad</button>':'<button class="btnp" onclick="openFormSocAcc()">+ Nuevo accionista</button>',temas:'<button class="btns" onclick="exportCSV(\"temas\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormTema()">+ Nuevo tema</button>',documentos:'<button class="btns" onclick="exportCSV(\"documentos\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDoc()">+ Nuevo documento</button>',suelo:'<button class="btns" onclick="exportCSV(\"suelo\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormSuelo()">+ Nuevo contrato</button>',intoru:'<button class="btns" onclick="exportCSV(\"intoru\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormINTORU()">+ Nuevo sitio</button>',dd:'<button class="btns" onclick="exportCSV(\"dd\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDD()">+ Nuevo sitio</button>'};
+  var A={tickets:'<button class="btnp" onclick="openFormTicket()">+ Nueva solicitud</button>',fechas:'<button class="btnp" onclick="openFormFecha()">+ Nueva fecha clave</button>',mla:'<button class="btnp" onclick="openFormMLA()">+ Nuevo MLA</button>',inm:'<button class="btnp" onclick="openFormInm()">+ Nuevo inmueble</button>',poderes:'<button class="btns" onclick="exportCSV(\'poderes\')" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormPoder()">+ Nuevo poder</button>',societario:socTab==="autoridades"?'<button class="btnp" onclick="openFormSocAut()">+ Nueva autoridad</button>':'<button class="btnp" onclick="openFormSocAcc()">+ Nuevo accionista</button>',temas:'<button class="btns" onclick="exportCSV(\"temas\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormTema()">+ Nuevo tema</button>',documentos:'<button class="btns" onclick="exportCSV(\"documentos\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDoc()">+ Nuevo documento</button>',suelo:'<button class="btns" onclick="exportCSV(\"suelo\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormSuelo()">+ Nuevo contrato</button>',intoru:'<button class="btns" onclick="exportCSV(\"intoru\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormINTORU()">+ Nuevo sitio</button>',dd:'<button class="btns" onclick="exportCSV(\"dd\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDD()">+ Nuevo sitio</button>'};
   document.getElementById('tb-act').innerHTML=A[page]||'';
   if(page==='analytics')setTimeout(renderAnalytics,100);
   if(page==='fechas')setTimeout(renderFechas,50);
@@ -3249,6 +3277,104 @@ async function cambiarEstadoTicket(id, estado){
     await syncAll();
     showToast('Ticket actualizado: '+estado);
   }catch(e){showToast('Error: '+e.message,true);}
+}
+
+// ─── TICKET FORM ─────────────────────────────────────────────────────────────
+function openFormTicket(){
+  ['tk-sector','tk-asunto','tk-desc'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('tk-resp').value='';
+  document.getElementById('tk-urgencia').value='Media';
+  document.getElementById('form-ticket').classList.add('open');
+}
+function closeFormTicket(){document.getElementById('form-ticket').classList.remove('open');}
+
+async function submitTicket(){
+  var sector=document.getElementById('tk-sector').value.trim();
+  var resp=document.getElementById('tk-resp').value;
+  var asunto=document.getElementById('tk-asunto').value.trim();
+  var desc=document.getElementById('tk-desc').value.trim();
+  var urgencia=document.getElementById('tk-urgencia').value;
+  if(!sector||!resp||!asunto||!desc){alert('Por favor completá todos los campos.');return;}
+
+  var btn=document.getElementById('tk-submit-btn');
+  btn.disabled=true;btn.textContent='Enviando...';
+
+  try{
+    // Generate ticket number
+    var ticketNum='TKT-'+String(tickets.length+1).padStart(4,'0')+'-'+new Date().getFullYear();
+
+    // Get user info from MSAL
+    var accounts=msalInstance.getAllAccounts();
+    var userName=accounts.length?accounts[0].name:'Desconocido';
+    var userEmail=accounts.length?accounts[0].username:'';
+
+    var LEGAL_EMAILS={'EG':'eduardo.galindo@atis-group.com','CS':'camila.soto@atis-group.com','ST':'samira.taboada@atis-group.com'};
+    var LEGAL_NAMES={'EG':'Eduardo Galindo','CS':'Camila Soto','ST':'Samira Taboada'};
+    var urgEmoji=urgencia==='Alta'?'🔴':urgencia==='Media'?'🟡':'🟢';
+
+    // Create ticket in SharePoint
+    var fields={
+      NumTicket:ticketNum,
+      Remitente:userName+' ('+sector+')',
+      EmailRemitente:userEmail,
+      Asunto:asunto,
+      Responsable:resp,
+      Cuerpo:desc,
+      FechaRecibido:new Date().toISOString(),
+      Estado:'Abierto',
+      LinkMail:''
+    };
+    await createListItem(LIST_TICKETS,fields);
+
+    // Send mail via Graph
+    var respEmail=LEGAL_EMAILS[resp];
+    var respName=LEGAL_NAMES[resp];
+    var mailBody='<div style="font-family:sans-serif;max-width:600px">'
+      +'<div style="background:#1B4FD8;padding:20px;border-radius:8px 8px 0 0"><div style="color:#fff;font-size:20px">Nueva Solicitud Legal</div></div>'
+      +'<div style="background:#fff;padding:20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px">'
+      +'<div style="background:#EEF2FF;border-radius:8px;padding:14px;text-align:center;margin-bottom:16px">'
+      +'<div style="font-size:24px;font-weight:700;color:#1B4FD8">'+ticketNum+'</div>'
+      +'<div style="font-size:12px;color:#6B7280">Número de ticket</div></div>'
+      +'<table style="width:100%;font-size:13px;border-collapse:collapse">'
+      +'<tr><td style="padding:6px 0;color:#6B6A64;width:130px">Solicitante</td><td style="padding:6px 0;font-weight:500">'+userName+'</td></tr>'
+      +'<tr><td style="padding:6px 0;color:#6B6A64">Sector</td><td style="padding:6px 0">'+sector+'</td></tr>'
+      +'<tr><td style="padding:6px 0;color:#6B6A64">Asignado a</td><td style="padding:6px 0;font-weight:500">'+respName+'</td></tr>'
+      +'<tr><td style="padding:6px 0;color:#6B6A64">Urgencia</td><td style="padding:6px 0">'+urgEmoji+' '+urgencia+'</td></tr>'
+      +'<tr><td style="padding:6px 0;color:#6B6A64">Asunto</td><td style="padding:6px 0;font-weight:500">'+asunto+'</td></tr>'
+      +'</table>'
+      +'<div style="margin-top:14px;padding:12px;background:#F5F4F0;border-radius:6px">'
+      +'<div style="font-size:11px;color:#6B6A64;text-transform:uppercase;margin-bottom:6px">Descripción</div>'
+      +'<div style="font-size:13px;line-height:1.6">'+desc.split(String.fromCharCode(10)).join(String.fromCharCode(60)+String.fromCharCode(98)+String.fromCharCode(114)+String.fromCharCode(62))+'</div></div>'
+
+      +'<div style="margin-top:16px;font-size:12px;color:#A09F98">Ticket creado el '+new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'})+'</div>'
+      +'</div></div>';
+
+    var mailPayload={message:{
+      subject:'['+ticketNum+'] '+asunto+' — Solicitud Legal ATIS',
+      body:{contentType:'HTML',content:mailBody},
+      toRecipients:[{emailAddress:{address:respEmail,name:respName}}],
+      ccRecipients:[
+        {emailAddress:{address:'eduardo.galindo@atis-group.com',name:'Eduardo Galindo'}},
+        {emailAddress:{address:userEmail,name:userName}}
+      ]
+    },saveToSentItems:true};
+
+    var token=await getToken();
+    await fetch('https://graph.microsoft.com/v1.0/me/sendMail',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+      body:JSON.stringify(mailPayload)
+    });
+
+    await syncAll();
+    closeFormTicket();
+    showToast('✅ Solicitud enviada — '+ticketNum);
+    // Go to tickets view
+    goTo('tickets',document.getElementById('nav-tickets'));
+  }catch(e){
+    showToast('Error: '+e.message,true);
+  }
+  btn.disabled=false;btn.textContent='Enviar solicitud';
 }
 
 async function setupTicketsList(){
