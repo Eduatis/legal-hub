@@ -3349,22 +3349,19 @@ async function submitTicket(){
       +'<div style="margin-top:16px;font-size:12px;color:#A09F98">Ticket creado el '+new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'})+'</div>'
       +'</div></div>';
 
-    var mailPayload={message:{
-      subject:'['+ticketNum+'] '+asunto+' — Solicitud Legal ATIS',
-      body:{contentType:'HTML',content:mailBody},
-      toRecipients:[{emailAddress:{address:respEmail,name:respName}}],
-      ccRecipients:[
-        {emailAddress:{address:'eduardo.galindo@atis-group.com',name:'Eduardo Galindo'}},
-        {emailAddress:{address:userEmail,name:userName}}
-      ]
-    },saveToSentItems:true};
-
-    var token=await getToken();
-    await fetch('https://graph.microsoft.com/v1.0/me/sendMail',{
-      method:'POST',
-      headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
-      body:JSON.stringify(mailPayload)
-    });
+    // Open Outlook with pre-filled mail (no Mail.Send permission needed)
+    var mailTo=respEmail;
+    var mailCc='eduardo.galindo@atis-group.com';
+    var mailSubject=encodeURIComponent('['+ticketNum+'] '+asunto+' — Solicitud Legal ATIS');
+    var mailBodyText='Ticket: '+ticketNum
+      +'\nSolicitante: '+userName+' ('+sector+')'
+      +'\nAsignado a: '+respName
+      +'\nUrgencia: '+urgEmoji+' '+urgencia
+      +'\nAsunto: '+asunto
+      +'\n\nDescripcion:\n'+desc
+      +'\n\n---\nEnviado desde ATIS Legal Hub';
+    var outlookUrl='mailto:'+mailTo+'?cc='+mailCc+'&subject='+mailSubject+'&body='+encodeURIComponent(mailBodyText);
+    window.open(outlookUrl);
 
     await syncAll();
     closeFormTicket();
