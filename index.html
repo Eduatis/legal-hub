@@ -325,6 +325,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div id="setup-btn-wrap" style="display:none;margin-bottom:10px;display:flex;flex-direction:column;gap:6px">
         <button onclick="setupTicketsList()" style="width:100%;font-size:11px;padding:7px;border-radius:var(--rs);border:1px solid var(--bl);background:var(--bl-bg);color:var(--bl);cursor:pointer;font-weight:500">⚙️ Crear lista Tickets</button>
         <button onclick="agregarUsuariosTickets()" style="width:100%;font-size:11px;padding:7px;border-radius:var(--rs);border:1px solid var(--am);background:var(--am-bg);color:var(--am-tx);cursor:pointer;font-weight:500">👥 Agregar usuarios</button>
+        <button onclick="abrirPanelRecordatorios()" style="width:100%;font-size:11px;padding:7px;border-radius:var(--rs);border:1px solid var(--gr-tx);background:var(--gr-bg);color:var(--gr-tx);cursor:pointer;font-weight:500">📬 Recordatorios</button>
       </div>
       <div class="sbuser">
         <div class="av" id="sb-av" style="width:28px;height:28px;font-size:10px"></div>
@@ -964,6 +965,34 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   </div>
 </div>
 
+<!-- POPUP PENDIENTES -->
+<div id="popup-pendientes" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center">
+  <div style="background:var(--surf);border-radius:16px;padding:28px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.2)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <div style="font-size:16px;font-weight:600" id="popup-greeting"></div>
+        <div style="font-size:12px;color:var(--tx3);margin-top:2px" id="popup-fecha"></div>
+      </div>
+      <button onclick="cerrarPopupPendientes()" style="background:none;border:none;font-size:22px;color:var(--tx3);cursor:pointer;line-height:1">×</button>
+    </div>
+    <div id="popup-body"></div>
+    <div style="display:flex;gap:8px;margin-top:18px">
+      <button class="btnp" style="flex:1" onclick="cerrarPopupPendientes()">Entendido, voy al Hub</button>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL RECORDATORIOS EG -->
+<div id="panel-recordatorios" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center">
+  <div style="background:var(--surf);border-radius:16px;padding:28px;max-width:620px;width:90%;max-height:85vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.2)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div style="font-size:16px;font-weight:600">📬 Enviar recordatorios</div>
+      <button onclick="document.getElementById('panel-recordatorios').style.display='none'" style="background:none;border:none;font-size:22px;color:var(--tx3);cursor:pointer">×</button>
+    </div>
+    <div id="panel-rec-body"></div>
+  </div>
+</div>
+
 <!-- CONFIRM -->
 <div class="confirm-overlay" id="confirm-overlay">
   <div class="confirm-box">
@@ -992,6 +1021,7 @@ const LIST_SOC_ACC = 'Societario_Accionistas';
 const LIST_MLA = 'MLA_Legal';
 const LIST_FECHAS = 'FechasClaves';
 const LIST_TICKETS = 'Tickets_Legal';
+const LIST_LOGINS = 'Legal_Logins';
 const LIST_INM = 'Inmuebles_Propios_UY';
 const msalConfig = { auth:{ clientId:CLIENT_ID, authority:'https://login.microsoftonline.com/'+TENANT_ID, redirectUri:window.location.origin+window.location.pathname }, cache:{cacheLocation:'localStorage', storeAuthStateInCookie:true} };
 const msalInstance = new msal.PublicClientApplication(msalConfig);
@@ -1194,7 +1224,11 @@ async function initApp(account){
     document.getElementById('sync-btn').style.display='none';
   }
   await syncAll();hideLoading();document.getElementById('app').style.display='block';
-  if(currentUser.ini==='EG'){document.getElementById('setup-btn-wrap').style.display='block';}
+  if(currentUser.ini==='EG'){document.getElementById('setup-btn-wrap').style.display='flex';}
+  // Register login
+  registrarLogin();
+  // Show pending popup after short delay
+  setTimeout(mostrarPopupPendientes, 1200);
   if(currentUser.mlaOnly){
     goTo('mla', document.getElementById('nav-mla'));
     // Hide new MLA button for readonly
@@ -3225,6 +3259,151 @@ async function saveInm(){
 }
 
 document.getElementById('fd-fi').value=todayStr();updateCode();
+
+// ─── LOGIN TRACKING ───────────────────────────────────────────────────────────
+async function registrarLogin(){
+  try{
+    var hoy=todayStr();
+    // Check if already logged today
+    var items=await getListItems(LIST_LOGINS).catch(function(){return [];});
+    var existing=items.find(function(i){return i.fields&&i.fields.UserIni===currentUser.ini&&i.fields.Fecha&&i.fields.Fecha.split('T')[0]===hoy;});
+    if(!existing){
+      await createListItem(LIST_LOGINS,{UserIni:currentUser.ini,UserName:currentUser.name,Fecha:hoy+'T00:00:00Z'});
+    }
+  }catch(e){console.log('Login tracking skip:',e.message);}
+}
+
+// ─── POPUP PENDIENTES ─────────────────────────────────────────────────────────
+function cerrarPopupPendientes(){
+  document.getElementById('popup-pendientes').style.display='none';
+}
+
+function mostrarPopupPendientes(){
+  var hoy=new Date();hoy.setHours(0,0,0,0);
+  var ini=currentUser.ini;
+
+  // Get pending temas
+  var misTemas=vTemas().filter(function(t){
+    return t.estado!=='Cerrado' && (t.resp===ini||(t.bloqueado&&t.bloqQuien===ini));
+  });
+  var temasVenc=misTemas.filter(function(t){
+    var dt=daysTo(t.dead);return dt!==null&&dt<=7&&dt>=0;
+  }).sort(function(a,b){return new Date(a.dead)-new Date(b.dead);});
+  var temasVencidos=misTemas.filter(function(t){
+    var dt=daysTo(t.dead);return dt!==null&&dt<0;
+  });
+
+  // Get pending tickets
+  var misTickets=tickets.filter(function(t){
+    return t.resp===ini&&t.estado!=='Resuelto';
+  });
+  var ticketsVenc=misTickets.filter(function(t){
+    var dt=t.deadline?daysTo(t.deadline):null;return dt!==null&&dt<=7&&dt>=0;
+  });
+
+  // Only show popup if there's something pending
+  var total=temasVencidos.length+temasVenc.length+misTickets.length;
+  if(total===0)return;
+
+  var hora=new Date().getHours();
+  var saludo=hora<12?'Buenos días':hora<19?'Buenas tardes':'Buenas noches';;
+  document.getElementById('popup-greeting').textContent=saludo+', '+currentUser.name.split(' ')[0]+' 👋';
+  document.getElementById('popup-fecha').textContent=new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+
+  var html='';
+
+  if(temasVencidos.length){
+    html+='<div style="background:var(--rd-bg);border-radius:var(--rs);padding:12px 14px;margin-bottom:12px">';
+    html+='<div style="font-size:11px;font-weight:700;color:var(--rd-tx);text-transform:uppercase;margin-bottom:8px">⚠️ Vencidos ('+temasVencidos.length+')</div>';
+    temasVencidos.forEach(function(t){
+      html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--brd)">';
+      html+='<div style="font-size:12px;font-weight:500">'+t.tit+'</div>';
+      html+='<span style="font-size:11px;color:var(--rd-tx);white-space:nowrap">'+fmtDate(t.dead)+'</span></div>';
+    });
+    html+='</div>';
+  }
+
+  if(temasVenc.length){
+    html+='<div style="background:var(--am-bg);border-radius:var(--rs);padding:12px 14px;margin-bottom:12px">';
+    html+='<div style="font-size:11px;font-weight:700;color:var(--am-tx);text-transform:uppercase;margin-bottom:8px">📅 Vencen pronto ('+temasVenc.length+')</div>';
+    temasVenc.forEach(function(t){
+      var dt=daysTo(t.dead);
+      html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--brd)">';
+      html+='<div style="font-size:12px;font-weight:500">'+t.tit+'</div>';
+      html+='<span style="font-size:11px;color:var(--am-tx);white-space:nowrap">'+(dt===0?'Hoy':dt===1?'Mañana':dt+' días')+'</span></div>';
+    });
+    html+='</div>';
+  }
+
+  if(misTickets.length){
+    html+='<div style="background:var(--bl-bg);border-radius:var(--rs);padding:12px 14px;margin-bottom:12px">';
+    html+='<div style="font-size:11px;font-weight:700;color:var(--bl);text-transform:uppercase;margin-bottom:8px">🎫 Tickets pendientes ('+misTickets.length+')</div>';
+    misTickets.forEach(function(t){
+      var dias=Math.floor((new Date()-new Date(t.fecha))/86400000);
+      html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--brd)">';
+      html+='<div style="font-size:12px;font-weight:500">'+t.asunto+'</div>';
+      html+='<span style="font-size:11px;color:var(--bl);white-space:nowrap">'+dias+' días abierto</span></div>';
+    });
+    html+='</div>';
+  }
+
+  document.getElementById('popup-body').innerHTML=html;
+  document.getElementById('popup-pendientes').style.display='flex';
+}
+
+// ─── PANEL RECORDATORIOS (solo EG) ───────────────────────────────────────────
+function abrirPanelRecordatorios(){
+  var usuarios=['CS','ST','EG'];
+  var nombres={'EG':'Eduardo Galindo','CS':'Camila Soto','ST':'Samira Taboada'};
+  var emails={'EG':'eduardo.galindo@atis-group.com','CS':'camila.soto@atis-group.com','ST':'samira.taboada@atis-group.com'};
+  var html='';
+
+  usuarios.forEach(function(ini){
+    var misTemas=temas.filter(function(t){return t.resp===ini&&t.estado!=='Cerrado';});
+    var misTickets=tickets.filter(function(t){return t.resp===ini&&t.estado!=='Resuelto';});
+    if(!misTemas.length&&!misTickets.length)return;
+
+    html+='<div style="border:1px solid var(--brd);border-radius:var(--rs);padding:14px;margin-bottom:12px">';
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">';
+    html+='<div style="font-weight:600">'+nombres[ini]+'</div>';
+    html+='<button data-ini="'+ini+'" onclick="enviarRecordatorio(this.dataset.ini)" class="btnp" style="font-size:11px;padding:5px 12px">📬 Enviar mail</button>';
+    html+='</div>';
+    if(misTemas.length){
+      html+='<div style="font-size:11px;color:var(--tx3);margin-bottom:4px">TEMAS ('+misTemas.length+')</div>';
+      misTemas.slice(0,4).forEach(function(t){
+        var dt=daysTo(t.dead);
+        var col=dt!==null&&dt<0?'var(--rd-tx)':dt!==null&&dt<=7?'var(--am-tx)':'var(--tx2)';
+        html+='<div style="font-size:12px;padding:3px 0;color:'+col+'">• '+t.tit+(t.dead?' — '+fmtDate(t.dead):'')+'</div>';
+      });
+    }
+    if(misTickets.length){
+      html+='<div style="font-size:11px;color:var(--tx3);margin-top:8px;margin-bottom:4px">TICKETS ('+misTickets.length+')</div>';
+      misTickets.slice(0,4).forEach(function(t){
+        html+='<div style="font-size:12px;padding:3px 0;color:var(--tx2)">• '+t.asunto+' ('+t.estado+')</div>';
+      });
+    }
+    html+='</div>';
+  });
+
+  if(!html)html='<div class="empty">Todos al día 🎉</div>';
+  document.getElementById('panel-rec-body').innerHTML=html;
+  document.getElementById('panel-recordatorios').style.display='flex';
+}
+
+function enviarRecordatorio(ini){
+  var nombres={'EG':'Eduardo Galindo','CS':'Camila Soto','ST':'Samira Taboada'};
+  var emailMap={'EG':'eduardo.galindo@atis-group.com','CS':'camila.soto@atis-group.com','ST':'samira.taboada@atis-group.com'};
+  var misTemas=temas.filter(function(t){return t.resp===ini&&t.estado!=='Cerrado';});
+  var misTickets=tickets.filter(function(t){return t.resp===ini&&t.estado!=='Resuelto';});
+  var nl='%0D%0A';
+  var c='Hola '+nombres[ini].split(' ')[0]+','+nl+nl+'Tus pendientes en ATIS Legal Hub:'+nl+nl;
+  if(misTemas.length){c+='TEMAS ACTIVOS:'+nl;misTemas.forEach(function(t){c+='- '+t.tit+(t.dead?' - vence '+fmtDate(t.dead):'')+nl;});c+=nl;}
+  if(misTickets.length){c+='TICKETS PENDIENTES:'+nl;misTickets.forEach(function(t){c+='- ['+t.num+'] '+t.asunto+' ('+t.estado+')'+nl;});c+=nl;}
+  c+='Por favor revisa el Hub.'+nl+nl+'Saludos,'+nl+'Eduardo Galindo - Legal Manager ATIS Group';
+  var subj='Recordatorio%20Pendientes%20ATIS%20Legal%20Hub';
+  var cc='eduardo.galindo%40atis-group.com';
+  window.open('mailto:'+emailMap[ini]+'?subject='+subj+'&cc='+cc+'&body='+c);
+}
 
 // ─── TICKETS ──────────────────────────────────────────────────────────────────
 function renderTickets(){
