@@ -298,6 +298,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div class="navi" id="nav-poderes" onclick="goTo('poderes',this)">
           <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="2" y="1" width="10" height="12" rx="1.5" stroke="currentColor"/><path d="M5 4h4M5 6.5h4M5 9h2" stroke="currentColor" stroke-linecap="round"/><circle cx="3.5" cy="4" r=".5" fill="currentColor"/></svg>Poderes
         </div>
+        <div class="navi" id="nav-tickets" onclick="goTo('tickets',this)">
+          <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1" y="2" width="12" height="10" rx="1.5" stroke="currentColor"/><path d="M4 5h6M4 7.5h4" stroke="currentColor" stroke-linecap="round"/><circle cx="10.5" cy="7.5" r="1" fill="currentColor"/></svg>Tickets
+        </div>
         <div class="navi" id="nav-fechas" onclick="goTo('fechas',this)">
           <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1" y="2" width="12" height="11" rx="1.5" stroke="currentColor"/><path d="M4 1v2M10 1v2M1 5h12" stroke="currentColor" stroke-linecap="round"/><circle cx="4.5" cy="8.5" r="1" fill="currentColor"/><circle cx="7" cy="8.5" r="1" fill="var(--rd)"/><circle cx="9.5" cy="8.5" r="1" fill="currentColor"/></svg>Fechas Clave
         </div>
@@ -319,12 +322,12 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       </div>
     </div>
     <div class="sbfoot">
+      <div id="setup-btn-wrap" style="display:none;margin-bottom:10px">
+        <button onclick="setupTicketsList()" style="width:100%;font-size:11px;padding:7px;border-radius:var(--rs);border:1px solid var(--bl);background:var(--bl-bg);color:var(--bl);cursor:pointer;font-weight:500">⚙️ Crear lista Tickets</button>
+      </div>
       <div class="sbuser">
         <div class="av" id="sb-av" style="width:28px;height:28px;font-size:10px"></div>
         <div><div class="sbun" id="sb-name"></div><div class="sbur" id="sb-role"></div></div>
-      </div>
-      <div id="setup-btn-wrap" style="display:none;margin-top:10px">
-        <button onclick="setupTicketsList()" style="width:100%;font-size:10px;padding:5px;border-radius:var(--rs);border:1px solid var(--brd2);background:var(--surf2);color:var(--tx3);cursor:pointer">⚙️ Crear lista Tickets</button>
       </div>
     </div>
   </div>
@@ -468,6 +471,15 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <input type="text" id="global-q" placeholder="Buscar en temas, documentos, contratos, INTORU, DD..." style="padding-left:40px;font-size:14px;height:44px;border-radius:var(--r)" oninput="renderGlobalSearch()">
         </div>
         <div id="global-results"></div>
+      </div>
+
+      <!-- TICKETS -->
+      <div class="pageview" id="page-tickets">
+        <div class="filters">
+          <select class="fsel" id="tickets-estado" onchange="renderTickets()"><option value="">Todos</option><option value="Abierto">Abierto</option><option value="En curso">En curso</option><option value="Resuelto">Resuelto</option></select>
+          <select class="fsel" id="tickets-resp" onchange="renderTickets()"><option value="">Todos los responsables</option><option value="EG">Eduardo Galindo</option><option value="CS">Camila Soto</option><option value="ST">Samira Taboada</option></select>
+        </div>
+        <div id="tickets-list"></div>
       </div>
 
       <!-- FECHAS CLAVE -->
@@ -950,6 +962,7 @@ const LIST_SOC_AUT = 'Societario_Autoridades';
 const LIST_SOC_ACC = 'Societario_Accionistas';
 const LIST_MLA = 'MLA_Legal';
 const LIST_FECHAS = 'FechasClaves';
+const LIST_TICKETS = 'Tickets_Legal';
 const LIST_INM = 'Inmuebles_Propios_UY';
 const msalConfig = { auth:{ clientId:CLIENT_ID, authority:'https://login.microsoftonline.com/'+TENANT_ID, redirectUri:window.location.origin+window.location.pathname }, cache:{cacheLocation:'localStorage', storeAuthStateInCookie:true} };
 const msalInstance = new msal.PublicClientApplication(msalConfig);
@@ -960,7 +973,7 @@ var TODAY = new Date(); TODAY.setHours(0,0,0,0);
 var currentUser = null, dashCountry = 'Global', anCountry = 'Global';
 var refMode = 's', lcState = 'Borrador', temaTab = 'activos';
 var editingDocId = null, editingTemaId = null, editingSueloId = null, editingDDId = null, editingIntoruId = null, editingPoderId = null, editingSocAutId = null, editingSocAccId = null, pendingDelete = null;
-var docs = [], temas = [], suelos = [], dd = [], intoru = [], poderes = [], socAut = [], socAcc = [], mla = [], inm = [], fechas = [], docSeq = 0, siteId = null;
+var docs = [], temas = [], suelos = [], dd = [], intoru = [], poderes = [], socAut = [], socAcc = [], mla = [], inm = [], fechas = [], tickets = [], docSeq = 0, siteId = null;
 var editingMlaId = null, editingInmId = null, editingFechaId = null;
 var charts = {};
 
@@ -1200,7 +1213,7 @@ function mapSuelo(item){var f=item.fields;return{id:item.id,sitio:f.Sitio||'',pa
 async function syncAll(){
   var btn=document.getElementById('sync-btn');if(btn){btn.textContent='↻ Actualizando...';btn.disabled=true;}
   try{
-    const results=await Promise.allSettled([getListItems(LIST_DOCS),getListItems(LIST_TEMAS),getListItems(LIST_SUELO),getListItems(LIST_DD),getListItems(LIST_INTORU),getListItems(LIST_PODERES),getListItems(LIST_SOC_AUT),getListItems(LIST_SOC_ACC),getListItems(LIST_MLA),getListItems(LIST_INM),getListItems(LIST_FECHAS)]);
+    const results=await Promise.allSettled([getListItems(LIST_DOCS),getListItems(LIST_TEMAS),getListItems(LIST_SUELO),getListItems(LIST_DD),getListItems(LIST_INTORU),getListItems(LIST_PODERES),getListItems(LIST_SOC_AUT),getListItems(LIST_SOC_ACC),getListItems(LIST_MLA),getListItems(LIST_INM),getListItems(LIST_FECHAS),getListItems(LIST_TICKETS)]);
     if(results[0].status==='fulfilled')docs=results[0].value.map(mapDoc);
     if(results[1].status==='fulfilled')temas=results[1].value.map(mapTema);
     if(results[2].status==='fulfilled')suelos=results[2].value.map(mapSuelo);
@@ -1212,6 +1225,7 @@ async function syncAll(){
     if(results[8].status==='fulfilled')mla=results[8].value.map(mapMLA);
     if(results[9].status==='fulfilled')inm=results[9].value.map(mapInm);
     if(results[10].status==='fulfilled')fechas=results[10].value.map(mapFecha);
+    if(results[11].status==='fulfilled')tickets=results[11].value.map(mapTicket);
     docs.forEach(function(d){var m=d.code.match(/-(\d{4})$/);if(m){var n=parseInt(m[1]);if(n>docSeq)docSeq=n;}});
     renderAll();showToast('Datos actualizados');
   }catch(e){showToast('Error al conectar: '+e.message,true);console.error(e);}
@@ -1231,7 +1245,7 @@ function vTemas(){
   });
 }
 function vSuelos(){return suelos.filter(function(s){return currentUser.scope.indexOf(s.pais)>=0;});}
-function renderAll(){renderDash();renderDocs();renderTemas();renderSuelo();renderINTORU();renderDD();renderPoderes();renderSocAutoridades();renderSocAccionistas();renderMLA();renderInm();renderFechas();renderAnalytics();}
+function renderAll(){renderDash();renderDocs();renderTemas();renderSuelo();renderINTORU();renderDD();renderPoderes();renderSocAutoridades();renderSocAccionistas();renderMLA();renderInm();renderFechas();renderTickets();renderAnalytics();}
 
 // ─── DASHBOARD ──────────────────────────────────────────────────────────────
 function renderDash(){
@@ -1647,10 +1661,10 @@ function renderGlobalSearch(){
 function goTo(page,el){
   document.querySelectorAll('.navi').forEach(function(n){n.classList.remove('active');});el.classList.add('active');
   document.querySelectorAll('.pageview').forEach(function(p){p.classList.remove('active');});document.getElementById('page-'+page).classList.add('active');
-  var T={dashboard:'Dashboard',temas:'Temas',documentos:'Documentos',suelo:'Contratos de Suelo',intoru:'INTORU',dd:'DD Sitios Uruguay',poderes:'Poderes',societario:'Societario',fechas:'Fechas Clave',mla:'MLA',inm:'Inmuebles Propios UY',search:'Búsqueda',analytics:'Analytics'};
-  var S={dashboard:'Resumen general',temas:'Follow-up y gestión',documentos:'Registro documental',suelo:'Matriz de contratos LOC',intoru:'Análisis de Sitios por Lotes — Uruguay',dd:'Due Diligence — Fases 1 y 2',poderes:'Registro de poderes vigentes',societario:'Estructura societaria',fechas:'Vencimientos y plazos institucionales',mla:'Master Lease Agreements',inm:'Inmuebles adquiridos en Uruguay',search:'Buscar en todos los módulos',analytics:'Indicadores y gráficos'};
+  var T={dashboard:'Dashboard',tickets:'Tickets',temas:'Temas',documentos:'Documentos',suelo:'Contratos de Suelo',intoru:'INTORU',dd:'DD Sitios Uruguay',poderes:'Poderes',societario:'Societario',fechas:'Fechas Clave',mla:'MLA',inm:'Inmuebles Propios UY',search:'Búsqueda',analytics:'Analytics'};
+  var S={dashboard:'Resumen general',tickets:'Solicitudes del equipo ATIS',temas:'Follow-up y gestión',documentos:'Registro documental',suelo:'Matriz de contratos LOC',intoru:'Análisis de Sitios por Lotes — Uruguay',dd:'Due Diligence — Fases 1 y 2',poderes:'Registro de poderes vigentes',societario:'Estructura societaria',fechas:'Vencimientos y plazos institucionales',mla:'Master Lease Agreements',inm:'Inmuebles adquiridos en Uruguay',search:'Buscar en todos los módulos',analytics:'Indicadores y gráficos'};
   document.getElementById('tb-title').textContent=T[page]||page;document.getElementById('tb-sub').textContent=S[page]||'';
-  var A={fechas:'<button class="btnp" onclick="openFormFecha()">+ Nueva fecha clave</button>',mla:'<button class="btnp" onclick="openFormMLA()">+ Nuevo MLA</button>',inm:'<button class="btnp" onclick="openFormInm()">+ Nuevo inmueble</button>',poderes:'<button class="btns" onclick="exportCSV(\'poderes\')" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormPoder()">+ Nuevo poder</button>',societario:socTab==="autoridades"?'<button class="btnp" onclick="openFormSocAut()">+ Nueva autoridad</button>':'<button class="btnp" onclick="openFormSocAcc()">+ Nuevo accionista</button>',temas:'<button class="btns" onclick="exportCSV(\"temas\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormTema()">+ Nuevo tema</button>',documentos:'<button class="btns" onclick="exportCSV(\"documentos\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDoc()">+ Nuevo documento</button>',suelo:'<button class="btns" onclick="exportCSV(\"suelo\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormSuelo()">+ Nuevo contrato</button>',intoru:'<button class="btns" onclick="exportCSV(\"intoru\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormINTORU()">+ Nuevo sitio</button>',dd:'<button class="btns" onclick="exportCSV(\"dd\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDD()">+ Nuevo sitio</button>'};
+  var A={tickets:'<a href="ticket.html" target="_blank" class="btnp" style="text-decoration:none;padding:8px 16px;border-radius:var(--rs);font-size:13px;font-weight:500">↗ Abrir formulario</a>',fechas:'<button class="btnp" onclick="openFormFecha()">+ Nueva fecha clave</button>',mla:'<button class="btnp" onclick="openFormMLA()">+ Nuevo MLA</button>',inm:'<button class="btnp" onclick="openFormInm()">+ Nuevo inmueble</button>',poderes:'<button class="btns" onclick="exportCSV(\'poderes\')" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormPoder()">+ Nuevo poder</button>',societario:socTab==="autoridades"?'<button class="btnp" onclick="openFormSocAut()">+ Nueva autoridad</button>':'<button class="btnp" onclick="openFormSocAcc()">+ Nuevo accionista</button>',temas:'<button class="btns" onclick="exportCSV(\"temas\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormTema()">+ Nuevo tema</button>',documentos:'<button class="btns" onclick="exportCSV(\"documentos\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDoc()">+ Nuevo documento</button>',suelo:'<button class="btns" onclick="exportCSV(\"suelo\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormSuelo()">+ Nuevo contrato</button>',intoru:'<button class="btns" onclick="exportCSV(\"intoru\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormINTORU()">+ Nuevo sitio</button>',dd:'<button class="btns" onclick="exportCSV(\"dd\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDD()">+ Nuevo sitio</button>'};
   document.getElementById('tb-act').innerHTML=A[page]||'';
   if(page==='analytics')setTimeout(renderAnalytics,100);
   if(page==='fechas')setTimeout(renderFechas,50);
@@ -2371,6 +2385,7 @@ function setSocTab(tab){
 }
 
 function mapSocAut(item){var f=item.fields;return{id:item.id,sociedad:f.Sociedad||'',pais:f.Pais||'',cargo:f.Cargo||'',nombre:f.Nombre||'',acta:f.ActaDesignacion||'',fecha:f.FechaDesignacion?f.FechaDesignacion.split('T')[0]:'',vigencia:f.Vigencia||'',obs:f.Observaciones||''};}
+function mapTicket(item){var f=item.fields;return{id:item.id,num:f.NumTicket||'',remitente:f.Remitente||'',email:f.EmailRemitente||'',asunto:f.Asunto||'',resp:f.Responsable||'',cuerpo:f.Cuerpo||'',fecha:f.FechaRecibido?f.FechaRecibido.split('T')[0]:'',estado:f.Estado||'Abierto',link:f.LinkMail||''};}
 function mapFecha(item){var f=item.fields;var rawF=f.Fecha||f.EventDate||'';return{id:item.id,desc:f.Descripcion||f.Title||'',fecha:rawF?rawF.split('T')[0]:'',cat:f.Categoria||'',pais:f.Pais||'',modulo:f.Modulo||'',ref:f.RefSitio||'',obs:f.Observaciones||''};}
 function mapMLA(item){var f=item.fields;return{id:item.id,nombre:f.Nombre||f.Title||'',contraparte:f.Contraparte||'',pais:f.Pais||'',sitios:f.CantidadContratos||f.Sitios||'',firmaFecha:f.FechaFirma?f.FechaFirma.split('T')[0]:'',vencFecha:f.FechaVencimiento?f.FechaVencimiento.split('T')[0]:'',plazo:f.Plazo||'',precio:f.PrecioBase||'',actualizacion:f.Actualizacion||'',term:f.TerminacionAnticipada||'',cesion:f.Cesion||f.CesionContrato||'',subarr:f.Subarrendamiento||'',estado:f.Estado||'Vigente',link:f.LinkDocumento||'',obs:f.Observaciones||'',moneda:f.Moneda||'',vida:f.VidaRemanente||'',renovacion:f.RenovacionSLA||'',tipoSLA:f.TipoSLA||'',precedencia:f.PrecedenciaSLAMLA||'',aev:f.AEV||'',lineal:f.EspacioLineal||'',suelo:f.EspacioSuelo||'',ran:f.RAN||'',passthrough:f.PassthroughSuelo||'',facturacion:f.PeriodoFacturacion||'',pago:f.PlazoPago||'',descuentos:f.Descuentos||'',derechoRetiro:f.DerechoRetiro||'',derechoSwap:f.DerechoSwap||'',energia:f.EnergiaComercial||''};}
 function mapInm(item){var f=item.fields;return{id:item.id,sitio:f.Sitio||'',nombre:f.Nombre||'',tipo:f.Tipo||'',direccion:f.Direccion||'',departamento:f.Departamento||'',fechaAdq:f.FechaAdquisicion?f.FechaAdquisicion.split('T')[0]:'',titular:f.TitularRegistral||'',contraparte:f.Contraparte||'',precio:f.Precio||'',inscripto:f.Inscripto||'',vencUsuf:f.VencimientoUsufructo?f.VencimientoUsufructo.split('T')[0]:'',link:f.LinkDocumento||'',obs:f.Observaciones||''};}
@@ -3181,6 +3196,60 @@ async function saveInm(){
 }
 
 document.getElementById('fd-fi').value=todayStr();updateCode();
+
+// ─── TICKETS ──────────────────────────────────────────────────────────────────
+function renderTickets(){
+  var fe=document.getElementById('tickets-estado')?.value||'';
+  var fr=document.getElementById('tickets-resp')?.value||'';
+  var list=tickets.slice();
+  if(fe)list=list.filter(function(t){return t.estado===fe;});
+  if(fr)list=list.filter(function(t){return t.resp===fr;});
+  // Non-EG users only see their own tickets
+  if(currentUser.ini!=='EG')list=list.filter(function(t){return t.resp===currentUser.ini;});
+  list.sort(function(a,b){return new Date(b.fecha)-new Date(a.fecha);});
+  var el=document.getElementById('tickets-list');
+  if(!el)return;
+  if(!list.length){el.innerHTML='<div class="card"><div class="empty">Sin tickets</div></div>';return;}
+
+  var estadoColor={'Abierto':'bdr','En curso':'bda','Resuelto':'bdgr'};
+  var respNames={'EG':'Eduardo Galindo','CS':'Camila Soto','ST':'Samira Taboada'};
+
+  el.innerHTML=list.map(function(t){
+    var dias=Math.floor((new Date()-new Date(t.fecha))/86400000);
+    var diasTxt=dias===0?'Hoy':dias===1?'Hace 1 día':'Hace '+dias+' días';
+    var sc=estadoColor[t.estado]||'bdg';
+    return '<div class="card" style="margin-bottom:10px;padding:14px 18px">'+
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">'+
+      '<div style="flex:1">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
+      '<span class="mono">'+t.num+'</span>'+
+      '<span class="badge '+sc+'">'+t.estado+'</span>'+
+      '</div>'+
+      '<div style="font-size:14px;font-weight:500;margin-bottom:4px">'+t.asunto+'</div>'+
+      '<div style="font-size:12px;color:var(--tx2)">'+t.remitente+'</div>'+
+      (t.cuerpo?'<div style="font-size:12px;color:var(--tx3);margin-top:6px;line-height:1.5;max-width:600px">'+t.cuerpo.substring(0,120)+(t.cuerpo.length>120?'...':'')+'</div>':'')+
+      '</div>'+
+      '<div style="text-align:right;flex-shrink:0">'+
+      '<div style="font-size:11px;color:var(--tx3);margin-bottom:6px">'+diasTxt+'</div>'+
+      '<div style="font-size:11px;color:var(--tx2);margin-bottom:8px">→ '+(respNames[t.resp]||t.resp)+'</div>'+
+      (currentUser.ini==='EG'?
+      // estado selector rendered above
+        '<option'+(t.estado==='Abierto'?' selected':'')+'>Abierto</option>'+
+        '<option'+(t.estado==='En curso'?' selected':'')+'>En curso</option>'+
+        '<option'+(t.estado==='Resuelto'?' selected':'')+'>Resuelto</option>'+
+        '</select>':'')+
+      '</div>'+
+      '</div></div>';
+  }).join('');
+}
+
+async function cambiarEstadoTicket(id, estado){
+  try{
+    await updateListItem(LIST_TICKETS,id,{Estado:estado});
+    await syncAll();
+    showToast('Ticket actualizado: '+estado);
+  }catch(e){showToast('Error: '+e.message,true);}
+}
 
 async function setupTicketsList(){
   var btn=document.querySelector('#setup-btn-wrap button');
