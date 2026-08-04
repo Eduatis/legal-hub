@@ -937,31 +937,92 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   </div>
 </div>
 
-<!-- FORM TICKET (para empleados de otros sectores) -->
+<!-- FORM TICKET -->
 <div class="formov" id="form-ticket" onclick="if(event.target===this)closeFormTicket()">
   <div class="formpanel" onclick="event.stopPropagation()">
-    <div class="formtit"><span>Nueva Solicitud Legal</span><button class="formclose" onclick="closeFormTicket()">×</button></div>
-    <div style="background:var(--bl-bg);border-radius:var(--rs);padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--bl)">
-      Completá el formulario y el equipo legal recibirá tu solicitud por mail y en el sistema.
+    <div class="formtit"><span id="form-ticket-title">Nueva Solicitud Legal</span><button class="formclose" onclick="closeFormTicket()">×</button></div>
+
+    <!-- Vista: CREAR TICKET -->
+    <div id="tk-vista-crear">
+      <div style="background:var(--bl-bg);border-radius:var(--rs);padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--bl)">
+        Completá el formulario y el equipo legal recibirá tu solicitud por mail.
+      </div>
+      <div class="field"><label>Tu sector / área</label><input type="text" id="tk-sector" placeholder="Ej: Finanzas, Operaciones, RR.HH..."></div>
+      <div class="field"><label>¿A quién va dirigido?</label>
+        <select id="tk-resp">
+          <option value="">— Seleccionar —</option>
+          <option value="EG">Eduardo Galindo — Legal Manager</option>
+          <option value="CS">Camila Soto — Legal AR / UY</option>
+          <option value="ST">Samira Taboada — Legal PY</option>
+        </select>
+      </div>
+      <div class="fieldrow">
+        <div class="field" style="margin:0"><label>Categoría</label>
+          <select id="tk-cat">
+            <option value="">— Tipo de solicitud —</option>
+            <option value="LOC">LOC — Contrato de terreno</option>
+            <option value="SIT">SIT — Contrato de sitio</option>
+            <option value="MLA">MLA — Master Lease Agreement</option>
+            <option value="NDA">NDA — Acuerdo de confidencialidad</option>
+            <option value="ADD">ADD — Adenda</option>
+            <option value="ACT">ACT — Acta</option>
+            <option value="CVN">CVN — Convenio municipal</option>
+            <option value="CTR">CTR — Contrato general</option>
+            <option value="RESC">RESC — Rescisión</option>
+            <option value="CONS">CONS — Consulta legal</option>
+            <option value="OTRO">OTRO — Otro</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0"><label>Código de sitio <span style="color:var(--tx3);font-weight:400">(opcional)</span></label>
+          <input type="text" id="tk-sitio" placeholder="Ej: ATIS-MON-2028" oninput="this.value=this.value.toUpperCase()">
+        </div>
+      </div>
+      <div class="field"><label>Asunto</label><input type="text" id="tk-asunto" placeholder="Describí brevemente tu solicitud..."></div>
+      <div class="field"><label>Descripción detallada</label><textarea id="tk-desc" placeholder="Incluí todos los detalles relevantes..."></textarea></div>
+      <div class="fieldrow">
+        <div class="field" style="margin:0"><label>Urgencia</label>
+          <select id="tk-urgencia"><option value="Alta">🔴 Alta</option><option value="Media" selected>🟡 Media</option><option value="Baja">🟢 Baja</option></select>
+        </div>
+        <div class="field" style="margin:0"><label>Deadline <span style="color:var(--tx3);font-weight:400">(opcional)</span></label>
+          <input type="date" id="tk-deadline">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btnp" style="flex:1" id="tk-submit-btn" onclick="submitTicket()">Enviar solicitud</button>
+        <button class="btns" onclick="closeFormTicket()">Cancelar</button>
+      </div>
     </div>
-    <div class="field"><label>Tu sector / área</label><input type="text" id="tk-sector" placeholder="Ej: Finanzas, Operaciones, RR.HH..."></div>
-    <div class="field"><label>¿A quién va dirigido?</label>
-      <select id="tk-resp">
-        <option value="">— Seleccionar —</option>
-        <option value="EG">Eduardo Galindo — Legal Manager</option>
-        <option value="CS">Camila Soto — Legal AR / UY</option>
-        <option value="ST">Samira Taboada — Legal PY</option>
-      </select>
+
+    <!-- Vista: GESTIONAR TICKET (solo EG/legal) -->
+    <div id="tk-vista-gestionar" style="display:none">
+      <div id="tk-detalle-header" style="background:var(--surf2);border-radius:var(--rs);padding:12px 14px;margin-bottom:16px"></div>
+      <div class="field"><label>Estado</label>
+        <select id="tk-estado-edit">
+          <option value="Abierto">🔴 Abierto</option>
+          <option value="En curso">🟡 En curso</option>
+          <option value="Resuelto">✅ Resuelto</option>
+        </select>
+      </div>
+      <div class="field"><label>¿Requiere intervención de otro sector?</label>
+        <select id="tk-bloq-quien">
+          <option value="">No — puedo resolver yo</option>
+          <option value="IT">IT</option>
+          <option value="Finanzas">Finanzas</option>
+          <option value="Operaciones">Operaciones</option>
+          <option value="RRHH">Recursos Humanos</option>
+          <option value="Gerencia">Gerencia</option>
+          <option value="Otro">Otro sector</option>
+        </select>
+      </div>
+      <div class="field"><label>Respuesta / comentario</label>
+        <textarea id="tk-respuesta" placeholder="Escribí tu respuesta o comentario..."></textarea>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btnp" style="flex:1" id="tk-gestionar-btn" onclick="guardarGestionTicket()">Guardar y enviar mail</button>
+        <button class="btns" onclick="closeFormTicket()">Cancelar</button>
+      </div>
     </div>
-    <div class="field"><label>Asunto</label><input type="text" id="tk-asunto" placeholder="Ej: Revisión contrato proveedor, consulta laboral..."></div>
-    <div class="field"><label>Descripción detallada</label><textarea id="tk-desc" placeholder="Describí tu consulta con el mayor detalle posible..."></textarea></div>
-    <div class="field"><label>Urgencia</label>
-      <select id="tk-urgencia"><option value="Alta">🔴 Alta</option><option value="Media" selected>🟡 Media</option><option value="Baja">🟢 Baja</option></select>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="btnp" style="flex:1" id="tk-submit-btn" onclick="submitTicket()">Enviar solicitud</button>
-      <button class="btns" onclick="closeFormTicket()">Cancelar</button>
-    </div>
+
   </div>
 </div>
 
@@ -3461,10 +3522,63 @@ async function cambiarEstadoTicket(id, estado){
 
 // ─── TICKET FORM ─────────────────────────────────────────────────────────────
 function openFormTicket(){
+  document.getElementById('form-ticket-title').textContent='Nueva Solicitud Legal';
+  document.getElementById('tk-vista-crear').style.display='block';
+  document.getElementById('tk-vista-gestionar').style.display='none';
   ['tk-sector','tk-asunto','tk-desc'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('tk-resp').value='';
+  document.getElementById('tk-cat').value='';
+  document.getElementById('tk-sitio').value='';
   document.getElementById('tk-urgencia').value='Media';
+  document.getElementById('tk-deadline').value='';
   document.getElementById('form-ticket').classList.add('open');
+}
+
+var editingTicketId=null;
+function gestionarTicket(id){
+  var t=tickets.find(function(x){return x.id===id;});if(!t)return;
+  editingTicketId=id;
+  document.getElementById('form-ticket-title').textContent='Gestionar Ticket — '+t.num;
+  document.getElementById('tk-vista-crear').style.display='none';
+  document.getElementById('tk-vista-gestionar').style.display='block';
+  document.getElementById('tk-estado-edit').value=t.estado||'Abierto';
+  document.getElementById('tk-bloq-quien').value=t.bloq||'';
+  document.getElementById('tk-respuesta').value='';
+  var header=document.getElementById('tk-detalle-header');
+  header.innerHTML='<div style="font-size:12px;font-weight:600;margin-bottom:4px">'+t.num+' — '+t.asunto+'</div>'
+    +'<div style="font-size:11px;color:var(--tx2)">De: '+t.remitente+'</div>'
+    +(t.cuerpo?'<div style="font-size:11px;color:var(--tx3);margin-top:4px">'+t.cuerpo.substring(0,100)+'...</div>':'');
+  document.getElementById('form-ticket').classList.add('open');
+}
+
+async function guardarGestionTicket(){
+  var btn=document.getElementById('tk-gestionar-btn');
+  btn.disabled=true;btn.textContent='Guardando...';
+  var estado=document.getElementById('tk-estado-edit').value;
+  var bloq=document.getElementById('tk-bloq-quien').value;
+  var respuesta=document.getElementById('tk-respuesta').value.trim();
+  var t=tickets.find(function(x){return x.id===editingTicketId;});
+  try{
+    var fields={Estado:estado,BloqQuien:bloq,Respuesta:respuesta};
+    if(estado==='Resuelto')fields.FechaCierre=new Date().toISOString();
+    await updateListItem(LIST_TICKETS,editingTicketId,fields);
+    // Send mail to requester
+    if(t&&t.email&&respuesta){
+      var nl='%0D%0A';
+      var estadoTxt=estado==='Resuelto'?'RESUELTO':estado==='En curso'?'EN CURSO':'ABIERTO';
+      var c='Hola,'+nl+nl+'Tu solicitud '+t.num+' ha sido actualizada.'+nl+nl;
+      c+='Estado: '+estadoTxt+nl;
+      if(bloq)c+='Requiere intervencion de: '+bloq+nl;
+      c+=nl+'Respuesta del equipo legal:'+nl+respuesta+nl+nl;
+      c+='Saludos,'+nl+'ATIS Legal Team';
+      var subj=encodeURIComponent('['+t.num+'] Actualización — '+t.asunto);
+      window.open('mailto:'+t.email+'?cc=eduardo.galindo%40atis-group.com&subject='+subj+'&body='+c);
+    }
+    await syncAll();
+    closeFormTicket();
+    showToast('Ticket actualizado: '+estado);
+  }catch(e){showToast('Error: '+e.message,true);}
+  btn.disabled=false;btn.textContent='Guardar y enviar mail';
 }
 function closeFormTicket(){document.getElementById('form-ticket').classList.remove('open');}
 
@@ -3493,16 +3607,23 @@ async function submitTicket(){
     var urgEmoji=urgencia==='Alta'?'🔴':urgencia==='Media'?'🟡':'🟢';
 
     // Create ticket in SharePoint
+    var cat=document.getElementById('tk-cat').value;
+    var sitio=document.getElementById('tk-sitio').value.trim();
+    var deadline=document.getElementById('tk-deadline').value;
+    var asuntoFull=(cat?cat+' — ':'')+(sitio?sitio+' — ':'')+asunto;
     var fields={
       NumTicket:ticketNum,
       Remitente:userName+' ('+sector+')',
       EmailRemitente:userEmail,
-      Asunto:asunto,
+      Asunto:asuntoFull,
       Responsable:resp,
       Cuerpo:desc,
       FechaRecibido:new Date().toISOString(),
       Estado:'Abierto',
-      LinkMail:''
+      LinkMail:'',
+      Categoria:cat,
+      CodigoSitio:sitio,
+      Deadline:deadline?deadline+'T00:00:00Z':null
     };
     await createListItem(LIST_TICKETS,fields);
 
