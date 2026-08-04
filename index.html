@@ -3501,12 +3501,8 @@ function renderTickets(){
       '<div style="text-align:right;flex-shrink:0">'+
       '<div style="font-size:11px;color:var(--tx3);margin-bottom:6px">'+diasTxt+'</div>'+
       '<div style="font-size:11px;color:var(--tx2);margin-bottom:8px">→ '+(respNames[t.resp]||t.resp)+'</div>'+
-      (currentUser.ini==='EG'?
-      // estado selector rendered above
-        '<option'+(t.estado==='Abierto'?' selected':'')+'>Abierto</option>'+
-        '<option'+(t.estado==='En curso'?' selected':'')+'>En curso</option>'+
-        '<option'+(t.estado==='Resuelto'?' selected':'')+'>Resuelto</option>'+
-        '</select>':'')+
+      selectHtml+
+
       '</div>'+
       '</div></div>';
   }).join('');
