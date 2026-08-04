@@ -322,8 +322,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       </div>
     </div>
     <div class="sbfoot">
-      <div id="setup-btn-wrap" style="display:none;margin-bottom:10px">
+      <div id="setup-btn-wrap" style="display:none;margin-bottom:10px;display:flex;flex-direction:column;gap:6px">
         <button onclick="setupTicketsList()" style="width:100%;font-size:11px;padding:7px;border-radius:var(--rs);border:1px solid var(--bl);background:var(--bl-bg);color:var(--bl);cursor:pointer;font-weight:500">⚙️ Crear lista Tickets</button>
+        <button onclick="agregarUsuariosTickets()" style="width:100%;font-size:11px;padding:7px;border-radius:var(--rs);border:1px solid var(--am);background:var(--am-bg);color:var(--am-tx);cursor:pointer;font-weight:500">👥 Agregar usuarios</button>
       </div>
       <div class="sbuser">
         <div class="av" id="sb-av" style="width:28px;height:28px;font-size:10px"></div>
@@ -3372,6 +3373,65 @@ async function submitTicket(){
     showToast('Error: '+e.message,true);
   }
   btn.disabled=false;btn.textContent='Enviar solicitud';
+}
+
+async function agregarUsuariosTickets(){
+  var btn=document.querySelectorAll('#setup-btn-wrap button')[1];
+  btn.textContent='⏳ Agregando...';btn.disabled=true;
+  var emails=[
+    'adrian.invernizzi@atis-group.com',
+    'sabrina.borzino@atis-group.com',
+    'ines.irazu@atis-group.com',
+    'elias.mora@atis-group.com',
+    'santiago.suarez@atis-group.com',
+    'horacio.tomassone@atis-group.com',
+    'rodrigo.negri@atis-group.com',
+    'flor.oviedo@atis-group.com'
+  ];
+  var ok=0,fail=0;
+  try{
+    var token=await getToken();
+    var site=await getSiteId();
+    for(var i=0;i<emails.length;i++){
+      var email=emails[i];
+      try{
+        // Get user ID from Graph
+        var rU=await fetch('https://graph.microsoft.com/v1.0/users/'+email,{headers:{'Authorization':'Bearer '+token}});
+        var dU=await rU.json();
+        if(dU.error){fail++;console.warn('No encontrado:',email);continue;}
+        // Add to SharePoint site members via Graph
+        var rA=await fetch('https://graph.microsoft.com/v1.0/sites/'+site+'/permissions',{
+          method:'POST',
+          headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+          body:JSON.stringify({
+            roles:['read'],
+            grantedToIdentities:[{user:{email:email}}]
+          })
+        });
+        if(rA.status===200||rA.status===201){ok++;}
+        else{
+          // Fallback: SharePoint REST
+          var BASE='https://atisargentina.sharepoint.com/sites/LegalOps/_api';
+          var H={'Accept':'application/json;odata=verbose','Content-Type':'application/json;odata=verbose'};
+          var d0=await fetch(BASE+'/contextinfo',{method:'POST',credentials:'include',headers:H}).then(r=>r.json());
+          var digest=d0.d.GetContextWebInformation.FormDigestValue;
+          var Hd={...H,'X-RequestDigest':digest};
+          var rEU=await fetch(BASE+'/web/ensureuser',{method:'POST',credentials:'include',headers:Hd,body:JSON.stringify({logonName:'i:0#.f|membership|'+email})});
+          var dEU=await rEU.json();
+          if(dEU.d?.Id){
+            var rGrp=await fetch(BASE+'/web/sitegroups(5)/users',{method:'POST',credentials:'include',headers:Hd,body:JSON.stringify({__metadata:{type:'SP.User'},LoginName:'i:0#.f|membership|'+email})});
+            if(rGrp.status===200||rGrp.status===201)ok++;else fail++;
+          } else fail++;
+        }
+      }catch(e){fail++;console.error(email,e.message);}
+    }
+    btn.textContent='✅ '+ok+' agregados'+(fail?' ('+fail+' error)':'');
+    btn.style.background='var(--gr-bg)';btn.style.color='var(--gr-tx)';btn.style.borderColor='var(--gr-tx)';
+    showToast('✅ '+ok+' usuarios agregados al Hub');
+  }catch(e){
+    showToast('Error: '+e.message,true);
+    btn.textContent='👥 Agregar usuarios';btn.disabled=false;
+  }
 }
 
 async function setupTicketsList(){
