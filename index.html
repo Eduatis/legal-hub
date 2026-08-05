@@ -3665,12 +3665,15 @@ async function submitTicket(){
     window.open(outlookUrl);
 
     await syncAll();
-    closeFormTicket();
     showToast('✅ Solicitud enviada — '+ticketNum);
+    closeFormTicket();
     // Go to tickets view
     goTo('tickets',document.getElementById('nav-tickets'));
   }catch(e){
-    showToast('Error: '+e.message,true);
+    console.error('submitTicket error:',e);
+    showToast('Error al guardar: '+e.message,true);
+    btn.disabled=false;btn.textContent='Enviar solicitud';
+    return;
   }
   btn.disabled=false;btn.textContent='Enviar solicitud';
 }
