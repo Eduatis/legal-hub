@@ -986,7 +986,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div class="field"><label>Asunto</label><input type="text" id="tk-asunto" placeholder="Describí brevemente tu solicitud..."></div>
       <div class="field"><label>Descripción detallada</label><textarea id="tk-desc" placeholder="Incluí todos los detalles relevantes..."></textarea></div>
       <div class="fieldrow">
-        <div class="field" style="margin:0"><label>Urgencia</label>
+        <div class="field" style="margin:0"><label>Prioridad</label>
           <select id="tk-urgencia"><option value="Alta">🔴 Alta</option><option value="Media" selected>🟡 Media</option><option value="Baja">🟢 Baja</option></select>
         </div>
         <div class="field" style="margin:0"><label>Deadline <span style="color:var(--tx3);font-weight:400">(opcional)</span></label>
@@ -1132,6 +1132,8 @@ function usersInGroup(g){return USERS_LIST.filter(function(u){return u.grupos.in
 function legalUser(ini){return usersInGroup('Legal').find(function(u){return u.ini===ini;})||null;}
 function legalEmail(ini){var u=legalUser(ini);return u?u.email:'';}
 function adminEmail(){var u=USERS_LIST.find(function(u){return u.perfil==='Admin';});return u?u.email:'';}
+// Copia al Admin en los mails: no si el que escribe es el Admin ni si el mail ya va dirigido a él
+function ccAdminParam(to){var a=adminEmail();if(!a||currentUser.perfil==='Admin'||(currentUser.email||'')===a||(to||'').toLowerCase()===a)return '';return '&cc='+encodeURIComponent(a);}
 var AVC = {EG:{bg:'#EEF2FF',tc:'#1B4FD8'},CS:{bg:'#DCFCE7',tc:'#15803D'},ST:{bg:'#FEF3C7',tc:'#B45309'}};
 var SCLASS = {'Borrador':'s0','En revisión':'s1','Firmado':'s2','Vigente':'s3','En renovación':'s4','Vencido':'s5'};
 var CLIENTS = ['TMA','TECO','AMX','ANTEL','TIGOUY','AMXUY','TIGOPY','NUBI','NUCL','AMXPY'];
@@ -3508,8 +3510,7 @@ function enviarRecordatorio(ini){
   if(misTickets.length){c+='TICKETS PENDIENTES:'+nl;misTickets.forEach(function(t){c+='- ['+t.num+'] '+t.asuntoRaw+' ('+t.estado+')'+nl;});c+=nl;}
   c+='Por favor revisa el Hub.'+nl+nl+'Saludos,'+nl+'Eduardo Galindo - Legal Manager ATIS Group';
   var subj='Recordatorio%20Pendientes%20ATIS%20Legal%20Hub';
-  var cc=encodeURIComponent(adminEmail());
-  window.open('mailto:'+u.email+'?subject='+subj+'&cc='+cc+'&body='+c);
+  window.open('mailto:'+u.email+'?subject='+subj+ccAdminParam(u.email)+'&body='+c);
 }
 
 // ─── TICKETS ──────────────────────────────────────────────────────────────────
@@ -3622,7 +3623,7 @@ async function guardarGestionTicket(){
       c+=nl+'Respuesta del equipo legal:'+nl+respuesta+nl+nl;
       c+='Saludos,'+nl+'ATIS Legal Team';
       var subj=encodeURIComponent('['+t.num+'] Actualización — '+t.asuntoRaw);
-      window.open('mailto:'+t.email+'?cc='+encodeURIComponent(adminEmail())+'&subject='+subj+'&body='+c);
+      window.open('mailto:'+t.email+'?subject='+subj+ccAdminParam(t.email)+'&body='+c);
     }
     await syncAll();
     closeFormTicket();
@@ -3670,7 +3671,7 @@ async function submitTicket(){
       Categoria:cat,
       CodigoSitio:sitio,
       Deadline:deadline?deadline+'T00:00:00Z':null,
-      Urgencia:urgencia
+      Urgencia:urgencia // columna de SharePoint "Urgencia"; en pantalla se muestra como "Prioridad"
     };
     // El número sale del ID de SharePoint: es único aunque se borren tickets o el usuario no vea los de otros
     var created=await createListItem(LIST_TICKETS,fields);
@@ -3690,7 +3691,7 @@ async function submitTicket(){
       +'<tr><td style="padding:6px 0;color:#6B6A64;width:130px">Solicitante</td><td style="padding:6px 0;font-weight:500">'+userName+'</td></tr>'
       +'<tr><td style="padding:6px 0;color:#6B6A64">Sector</td><td style="padding:6px 0">'+sector+'</td></tr>'
       +'<tr><td style="padding:6px 0;color:#6B6A64">Asignado a</td><td style="padding:6px 0;font-weight:500">'+respName+'</td></tr>'
-      +'<tr><td style="padding:6px 0;color:#6B6A64">Urgencia</td><td style="padding:6px 0">'+urgEmoji+' '+urgencia+'</td></tr>'
+      +'<tr><td style="padding:6px 0;color:#6B6A64">Prioridad</td><td style="padding:6px 0">'+urgEmoji+' '+urgencia+'</td></tr>'
       +'<tr><td style="padding:6px 0;color:#6B6A64">Asunto</td><td style="padding:6px 0;font-weight:500">'+asunto+'</td></tr>'
       +'</table>'
       +'<div style="margin-top:14px;padding:12px;background:#F5F4F0;border-radius:6px">'
@@ -3702,16 +3703,15 @@ async function submitTicket(){
 
     // Open Outlook with pre-filled mail (no Mail.Send permission needed)
     var mailTo=respEmail;
-    var mailCc=adminEmail();
     var mailSubject=encodeURIComponent('['+ticketNum+'] '+asunto+' — Solicitud Legal ATIS');
     var mailBodyText='Ticket: '+ticketNum
       +'\nSolicitante: '+userName+' ('+sector+')'
       +'\nAsignado a: '+respName
-      +'\nUrgencia: '+urgEmoji+' '+urgencia
+      +'\nPrioridad: '+urgEmoji+' '+urgencia
       +'\nAsunto: '+asunto
       +'\n\nDescripcion:\n'+desc
       +'\n\n---\nEnviado desde ATIS Legal Hub';
-    var outlookUrl='mailto:'+mailTo+'?cc='+mailCc+'&subject='+mailSubject+'&body='+encodeURIComponent(mailBodyText);
+    var outlookUrl='mailto:'+mailTo+'?subject='+mailSubject+ccAdminParam(mailTo)+'&body='+encodeURIComponent(mailBodyText);
     window.open(outlookUrl);
 
     await syncAll();
