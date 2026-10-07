@@ -1280,7 +1280,9 @@ async function initApp(account){
   const email=account.username.toLowerCase();
   var usuariosOk=await loadUsuarios().catch(function(e){console.error('Usuarios_Hub:',e);return false;});
   if(!usuariosOk)showToast('No se pudo leer la lista Usuarios_Hub de SharePoint',true);
-  currentUser=USERS_MAP[email]||{name:account.name||email,ini:email.substring(0,2).toUpperCase(),role:'Legal',bg:'#F0EFE9',tc:'#6B6A64',scope:['AR','UY','PY']};
+  // Quien no tiene perfil en Usuarios_Hub entra como "Solicitante": solo ve y crea sus propios tickets
+  currentUser=USERS_MAP[email]||{name:account.name||email,ini:email.substring(0,2).toUpperCase(),role:'Solicitante',bg:'#F0EFE9',tc:'#6B6A64',scope:['AR','UY','PY'],perfil:'Solicitante'};
+  currentUser.email=email;
   applyUserTheme(currentUser);
   var av=document.getElementById('sb-av');
   av.textContent=currentUser.ini;av.style.cssText='width:28px;height:28px;font-size:10px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:'+currentUser.bg+';color:'+currentUser.tc;
@@ -1308,6 +1310,11 @@ async function initApp(account){
     // Hide topbar sync button and actions
     document.getElementById('sync-btn').style.display='none';
   }
+  var isSolicitante = currentUser.perfil === 'Solicitante';
+  if(isSolicitante){
+    document.querySelectorAll('[id^="nav-"]').forEach(function(el){if(el.id!=='nav-tickets')el.style.display='none';});
+  }
+  fillLegalSelects();
   await syncAll();hideLoading();document.getElementById('app').style.display='block';
   if(currentUser.perfil==='Admin'){document.getElementById('setup-btn-wrap').style.display='flex';}
   // Register login
@@ -1319,6 +1326,17 @@ async function initApp(account){
     // Hide new MLA button for readonly
     document.getElementById('tb-act').innerHTML='';
   }
+  if(isSolicitante)goTo('tickets', document.getElementById('nav-tickets'));
+}
+
+// Los selectores de "Responsable" de Tickets se arman con el grupo Legal de Usuarios_Hub
+function fillLegalSelects(){
+  var legal=usersInGroup('Legal');
+  if(!legal.length)return; // si no se pudo leer la lista, quedan las opciones del HTML
+  var tk=document.getElementById('tk-resp');
+  if(tk)tk.innerHTML='<option value="">— Seleccionar —</option>'+legal.map(function(u){return '<option value="'+u.ini+'">'+u.name+(u.role?' — '+u.role:'')+'</option>';}).join('');
+  var fl=document.getElementById('tickets-resp');
+  if(fl)fl.innerHTML='<option value="">Todos los responsables</option>'+legal.map(function(u){return '<option value="'+u.ini+'">'+u.name+'</option>';}).join('');
 }
 
 // ─── GRAPH ──────────────────────────────────────────────────────────────────
@@ -1334,22 +1352,39 @@ async function getSiteId(){
 }
 async function getListItems(listName){
   const site=await getSiteId();
-  const r=await graphFetch('https://graph.microsoft.com/v1.0/sites/'+site+'/lists/'+listName+'/items?$expand=fields&$top=5000');
-  const d=await r.json();return d.value||[];
+  var url='https://graph.microsoft.com/v1.0/sites/'+site+'/lists/'+listName+'/items?$expand=fields&$top=5000';
+  var all=[];
+  // Sigue las páginas de Graph para no perder registros si una lista crece
+  while(url){
+    const r=await graphFetch(url);
+    if(!r.ok)throw new Error(await graphError(r,listName));
+    const d=await r.json();all=all.concat(d.value||[]);url=d['@odata.nextLink']||null;
+  }
+  return all;
+}
+// Arma un mensaje legible cuando SharePoint rechaza una operación
+async function graphError(r,listName){
+  var msg='status '+r.status;
+  try{var d=await r.json();if(d.error&&d.error.message)msg=d.error.message;}catch(e){}
+  return listName+': '+msg;
 }
 async function createListItem(listName,fields){
   const site=await getSiteId();
   const r=await graphFetch('https://graph.microsoft.com/v1.0/sites/'+site+'/lists/'+listName+'/items',{method:'POST',body:JSON.stringify({fields})});
+  if(!r.ok)throw new Error(await graphError(r,listName));
   return r.json();
 }
 async function updateListItem(listName,id,fields){
   const site=await getSiteId();
   const r=await graphFetch('https://graph.microsoft.com/v1.0/sites/'+site+'/lists/'+listName+'/items/'+id+'/fields',{method:'PATCH',body:JSON.stringify(fields)});
+  if(!r.ok)throw new Error(await graphError(r,listName));
   return r.json();
 }
 async function deleteListItem(listName,id){
   const site=await getSiteId();
-  return graphFetch('https://graph.microsoft.com/v1.0/sites/'+site+'/lists/'+listName+'/items/'+id,{method:'DELETE'});
+  const r=await graphFetch('https://graph.microsoft.com/v1.0/sites/'+site+'/lists/'+listName+'/items/'+id,{method:'DELETE'});
+  if(!r.ok)throw new Error(await graphError(r,listName));
+  return r;
 }
 
 // ─── MAP ────────────────────────────────────────────────────────────────────
@@ -1360,6 +1395,13 @@ function mapSuelo(item){var f=item.fields;return{id:item.id,sitio:f.Sitio||'',pa
 // ─── SYNC ───────────────────────────────────────────────────────────────────
 async function syncAll(){
   var btn=document.getElementById('sync-btn');if(btn){btn.textContent='↻ Actualizando...';btn.disabled=true;}
+  if(currentUser&&currentUser.perfil==='Solicitante'){
+    // Los solicitantes solo leen la lista de Tickets
+    try{tickets=(await getListItems(LIST_TICKETS)).map(mapTicket);renderTickets();}
+    catch(e){showToast('Error al leer tickets: '+e.message,true);console.error(e);}
+    if(btn){btn.textContent='↻ Actualizar';btn.disabled=false;}
+    return;
+  }
   try{
     const results=await Promise.allSettled([getListItems(LIST_DOCS),getListItems(LIST_TEMAS),getListItems(LIST_SUELO),getListItems(LIST_DD),getListItems(LIST_INTORU),getListItems(LIST_PODERES),getListItems(LIST_SOC_AUT),getListItems(LIST_SOC_ACC),getListItems(LIST_MLA),getListItems(LIST_INM),getListItems(LIST_FECHAS),getListItems(LIST_TICKETS)]);
     if(results[0].status==='fulfilled')docs=results[0].value.map(mapDoc);
@@ -1375,7 +1417,10 @@ async function syncAll(){
     if(results[10].status==='fulfilled')fechas=results[10].value.map(mapFecha);
     if(results[11].status==='fulfilled')tickets=results[11].value.map(mapTicket);
     docs.forEach(function(d){var m=d.code.match(/-(\d{4})$/);if(m){var n=parseInt(m[1]);if(n>docSeq)docSeq=n;}});
-    renderAll();showToast('Datos actualizados');
+    renderAll();
+    var fallas=results.filter(function(r){return r.status==='rejected';});
+    if(fallas.length){fallas.forEach(function(r){console.error('syncAll:',r.reason);});showToast('No se pudieron leer '+fallas.length+' lista(s): '+fallas.map(function(r){return String(r.reason&&r.reason.message||r.reason).split(':')[0];}).join(', '),true);}
+    else showToast('Datos actualizados');
   }catch(e){showToast('Error al conectar: '+e.message,true);console.error(e);}
   if(btn){btn.textContent='↻ Actualizar';btn.disabled=false;}
 }
@@ -2528,7 +2573,7 @@ function setSocTab(tab){
 }
 
 function mapSocAut(item){var f=item.fields;return{id:item.id,sociedad:f.Sociedad||'',pais:f.Pais||'',cargo:f.Cargo||'',nombre:f.Nombre||'',acta:f.ActaDesignacion||'',fecha:f.FechaDesignacion?f.FechaDesignacion.split('T')[0]:'',vigencia:f.Vigencia||'',obs:f.Observaciones||''};}
-function mapTicket(item){var f=item.fields;return{id:item.id,num:f.NumTicket||'',remitente:f.Remitente||'',email:f.EmailRemitente||'',asunto:f.Asunto||'',resp:f.Responsable||'',cuerpo:f.Cuerpo||'',fecha:f.FechaRecibido?f.FechaRecibido.split('T')[0]:'',estado:f.Estado||'Abierto',link:f.LinkMail||''};}
+function mapTicket(item){var f=item.fields;return{id:item.id,num:f.NumTicket||'',remitente:f.Remitente||'',email:(f.EmailRemitente||'').toLowerCase(),asunto:f.Asunto||'',resp:f.Responsable||'',cuerpo:f.Cuerpo||'',fecha:f.FechaRecibido?f.FechaRecibido.split('T')[0]:'',estado:f.Estado||'Abierto',link:f.LinkMail||'',cat:f.Categoria||'',sitio:f.CodigoSitio||'',deadline:f.Deadline?f.Deadline.split('T')[0]:'',bloq:f.BloqQuien||'',respuesta:f.Respuesta||'',urgencia:f.Urgencia||'',cierre:f.FechaCierre?f.FechaCierre.split('T')[0]:''};}
 function mapFecha(item){var f=item.fields;var rawF=f.Fecha||f.EventDate||'';return{id:item.id,desc:f.Descripcion||f.Title||'',fecha:rawF?rawF.split('T')[0]:'',cat:f.Categoria||'',pais:f.Pais||'',modulo:f.Modulo||'',ref:f.RefSitio||'',obs:f.Observaciones||''};}
 function mapMLA(item){var f=item.fields;return{id:item.id,nombre:f.Nombre||f.Title||'',contraparte:f.Contraparte||'',pais:f.Pais||'',sitios:f.CantidadContratos||f.Sitios||'',firmaFecha:f.FechaFirma?f.FechaFirma.split('T')[0]:'',vencFecha:f.FechaVencimiento?f.FechaVencimiento.split('T')[0]:'',plazo:f.Plazo||'',precio:f.PrecioBase||'',actualizacion:f.Actualizacion||'',term:f.TerminacionAnticipada||'',cesion:f.Cesion||f.CesionContrato||'',subarr:f.Subarrendamiento||'',estado:f.Estado||'Vigente',link:f.LinkDocumento||'',obs:f.Observaciones||'',moneda:f.Moneda||'',vida:f.VidaRemanente||'',renovacion:f.RenovacionSLA||'',tipoSLA:f.TipoSLA||'',precedencia:f.PrecedenciaSLAMLA||'',aev:f.AEV||'',lineal:f.EspacioLineal||'',suelo:f.EspacioSuelo||'',ran:f.RAN||'',passthrough:f.PassthroughSuelo||'',facturacion:f.PeriodoFacturacion||'',pago:f.PlazoPago||'',descuentos:f.Descuentos||'',derechoRetiro:f.DerechoRetiro||'',derechoSwap:f.DerechoSwap||'',energia:f.EnergiaComercial||'',detalle:f.DetalleCustom||''};}
 function mapInm(item){var f=item.fields;return{id:item.id,sitio:f.Sitio||'',nombre:f.Nombre||'',tipo:f.Tipo||'',direccion:f.Direccion||'',departamento:f.Departamento||'',fechaAdq:f.FechaAdquisicion?f.FechaAdquisicion.split('T')[0]:'',titular:f.TitularRegistral||'',contraparte:f.Contraparte||'',precio:f.Precio||'',inscripto:f.Inscripto||'',vencUsuf:f.VencimientoUsufructo?f.VencimientoUsufructo.split('T')[0]:'',link:f.LinkDocumento||'',obs:f.Observaciones||''};}
@@ -2659,6 +2704,38 @@ async function saveSocAcc(){
   var fields={Sociedad:document.getElementById('facc-sociedad').value,Pais:document.getElementById('facc-pais').value,Accionista:ac,TipoAccion:document.getElementById('facc-tipo').value,Cantidad:document.getElementById('facc-cantidad').value,Porcentaje:document.getElementById('facc-porcentaje').value,Observaciones:document.getElementById('facc-obs').value};
   try{if(editingSocAccId)await updateListItem(LIST_SOC_ACC,editingSocAccId,fields);else await createListItem(LIST_SOC_ACC,fields);await syncAll();closeFormSocAcc();showToast('Guardado');}
   catch(e){showToast('Error: '+e.message,true);}
+  btn.disabled=false;btn.textContent='Guardar';
+}
+
+// ─── AUTORIDADES (mismo patrón que Accionistas) ─────────────────────────────
+// Sugiere en el campo Sociedad las sociedades ya cargadas (autoridades + accionistas) del país elegido
+function updateSociedadOptions(paisId,socId){
+  var pais=document.getElementById(paisId).value;
+  var input=document.getElementById(socId);
+  var dlId=socId+'-list';
+  var dl=document.getElementById(dlId);
+  if(!dl){dl=document.createElement('datalist');dl.id=dlId;document.body.appendChild(dl);input.setAttribute('list',dlId);}
+  var socs=[...new Set(socAut.concat(socAcc).filter(function(x){return x.pais===pais;}).map(function(x){return x.sociedad;}))].filter(Boolean).sort();
+  dl.innerHTML=socs.map(function(s){return '<option value="'+s.replace(/"/g,'&quot;')+'">';}).join('');
+}
+function setSocAutCargo(cargo){
+  var sel=document.getElementById('fsa-cargo');
+  // Si el cargo guardado no está en la lista, se agrega para no perderlo al editar
+  if(cargo&&![].some.call(sel.options,function(o){return o.value===cargo;})){var o=document.createElement('option');o.textContent=cargo;sel.appendChild(o);}
+  sel.value=cargo||sel.options[0].value;
+}
+function openFormSocAut(){editingSocAutId=null;document.getElementById('form-soc-aut-title').textContent='Nueva autoridad';['fsa-sociedad','fsa-nombre','fsa-acta','fsa-fecha','fsa-vigencia','fsa-obs'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fsa-pais').value=document.getElementById('soc-aut-pais').value||'AR';document.getElementById('fsa-sociedad').value=document.getElementById('soc-aut-sociedad').value||'';setSocAutCargo('');updateSociedadOptions('fsa-pais','fsa-sociedad');document.getElementById('form-soc-aut').classList.add('open');}
+function closeFormSocAut(){document.getElementById('form-soc-aut').classList.remove('open');}
+function editSocAut(id){var x=socAut.find(function(s){return s.id===id;});if(!x)return;editingSocAutId=id;document.getElementById('form-soc-aut-title').textContent='Editar autoridad';document.getElementById('fsa-pais').value=x.pais||'AR';document.getElementById('fsa-sociedad').value=x.sociedad;setSocAutCargo(x.cargo);document.getElementById('fsa-nombre').value=x.nombre;document.getElementById('fsa-acta').value=x.acta;document.getElementById('fsa-fecha').value=x.fecha;document.getElementById('fsa-vigencia').value=x.vigencia;document.getElementById('fsa-obs').value=x.obs;updateSociedadOptions('fsa-pais','fsa-sociedad');document.getElementById('form-soc-aut').classList.add('open');}
+async function saveSocAut(){
+  var nm=document.getElementById('fsa-nombre').value.trim();if(!nm){alert('Ingresá el nombre.');return;}
+  var btn=document.getElementById('save-soc-aut-btn');btn.disabled=true;btn.textContent='Guardando...';
+  var fecha=document.getElementById('fsa-fecha').value;
+  var fields={Title:nm,Sociedad:document.getElementById('fsa-sociedad').value.trim(),Pais:document.getElementById('fsa-pais').value,Cargo:document.getElementById('fsa-cargo').value,Nombre:nm,ActaDesignacion:document.getElementById('fsa-acta').value,FechaDesignacion:fecha?fecha+'T00:00:00Z':null,Vigencia:document.getElementById('fsa-vigencia').value,Observaciones:document.getElementById('fsa-obs').value};
+  try{
+    if(editingSocAutId)await updateListItem(LIST_SOC_AUT,editingSocAutId,fields);else await createListItem(LIST_SOC_AUT,fields);
+    await syncAll();closeFormSocAut();showToast('Guardado');
+  }catch(e){showToast('Error: '+e.message,true);}
   btn.disabled=false;btn.textContent='Guardar';
 }
 
@@ -3357,13 +3434,16 @@ function renderTickets(){
   var list=tickets.slice();
   if(fe)list=list.filter(function(t){return t.estado===fe;});
   if(fr)list=list.filter(function(t){return t.resp===fr;});
-  if(currentUser.ini!=='EG')list=list.filter(function(t){return t.resp===currentUser.ini;});
+  // Admin ve todos; Legal ve los asignados y los propios; el resto solo los que envió
+  var miEmail=(currentUser.email||'').toLowerCase();
+  var esLegal=!!legalUser(currentUser.ini);
+  if(currentUser.perfil!=='Admin')list=list.filter(function(t){return (esLegal&&t.resp===currentUser.ini)||(miEmail&&t.email===miEmail);});
   list.sort(function(a,b){return new Date(b.fecha)-new Date(a.fecha);});
   var el=document.getElementById('tickets-list');
   if(!el)return;
   if(!list.length){el.innerHTML='<div class="card"><div class="empty">Sin tickets</div></div>';return;}
   var estadoColor={'Abierto':'bdr','En curso':'bda','Resuelto':'bdgr'};
-  var respNames={'EG':'Eduardo Galindo','CS':'Camila Soto','ST':'Samira Taboada'};
+  var respNames={};usersInGroup('Legal').forEach(function(u){respNames[u.ini]=u.name;});
   var html='';
   list.forEach(function(t){
     var dias=Math.floor((new Date()-new Date(t.fecha))/86400000);
@@ -3382,11 +3462,12 @@ function renderTickets(){
     if(t.deadline){var dtk=daysTo(t.deadline);html+='<div style="font-size:11px;margin-top:4px;color:'+(dtk<0?'var(--rd-tx)':dtk<=7?'var(--am-tx)':'var(--tx3)')+'">⏱ Deadline: '+fmtDate(t.deadline)+(dtk<0?' — VENCIDO':dtk===0?' — HOY':dtk<=7?' — '+dtk+' dias':'')+'</div>';}
     if(t.bloq)html+='<div style="font-size:11px;margin-top:3px;color:var(--am-tx)">⚠️ Requiere: '+t.bloq+'</div>';
     if(t.cuerpo)html+='<div style="font-size:12px;color:var(--tx3);margin-top:6px;line-height:1.5">'+t.cuerpo.substring(0,120)+(t.cuerpo.length>120?'...':'')+'</div>';
+    if(t.respuesta)html+='<div style="font-size:12px;margin-top:6px;padding:6px 10px;background:var(--gr-bg);color:var(--gr-tx);border-radius:var(--rs);line-height:1.5">💬 '+t.respuesta+'</div>';
     html+='</div>';
     html+='<div style="text-align:right;flex-shrink:0">';
     html+='<div style="font-size:11px;color:var(--tx3);margin-bottom:6px">'+diasTxt+'</div>';
     html+='<div style="font-size:11px;color:var(--tx2);margin-bottom:8px">→ '+(respNames[t.resp]||t.resp)+'</div>';
-    html+='<button class="btnedit" data-tid="'+t.id+'" onclick="gestionarTicket(this.dataset.tid)" style="font-size:11px;padding:4px 12px;border-radius:20px">✏️ Gestionar</button>';
+    if(currentUser.perfil==='Admin'||esLegal)html+='<button class="btnedit" data-tid="'+t.id+'" onclick="gestionarTicket(this.dataset.tid)" style="font-size:11px;padding:4px 12px;border-radius:20px">✏️ Gestionar</button>';
     html+='</div>';
     html+='</div></div>';
   });
@@ -3476,15 +3557,12 @@ async function submitTicket(){
   btn.disabled=true;btn.textContent='Enviando...';
 
   try{
-    // Generate ticket number
-    var ticketNum='TKT-'+String(tickets.length+1).padStart(4,'0')+'-'+new Date().getFullYear();
 
     // Get user info from MSAL
     var accounts=msalInstance.getAllAccounts();
     var userName=accounts.length?accounts[0].name:'Desconocido';
     var userEmail=accounts.length?accounts[0].username:'';
 
-    var LEGAL_NAMES={'EG':'Eduardo Galindo','CS':'Camila Soto','ST':'Samira Taboada'};
     var urgEmoji=urgencia==='Alta'?'🔴':urgencia==='Media'?'🟡':'🟢';
 
     // Create ticket in SharePoint
@@ -3493,7 +3571,7 @@ async function submitTicket(){
     var deadline=document.getElementById('tk-deadline').value;
     var asuntoFull=(cat?cat+' — ':'')+(sitio?sitio+' — ':'')+asunto;
     var fields={
-      NumTicket:ticketNum,
+      Title:asuntoFull.substring(0,255),
       Remitente:userName+' ('+sector+')',
       EmailRemitente:userEmail,
       Asunto:asuntoFull,
@@ -3504,13 +3582,16 @@ async function submitTicket(){
       LinkMail:'',
       Categoria:cat,
       CodigoSitio:sitio,
-      Deadline:deadline?deadline+'T00:00:00Z':null
+      Deadline:deadline?deadline+'T00:00:00Z':null,
+      Urgencia:urgencia
     };
-    await createListItem(LIST_TICKETS,fields);
+    // El número sale del ID de SharePoint: es único aunque se borren tickets o el usuario no vea los de otros
+    var created=await createListItem(LIST_TICKETS,fields);
+    var ticketNum='TKT-'+String(created.id).padStart(4,'0')+'-'+new Date().getFullYear();
+    await updateListItem(LIST_TICKETS,created.id,{NumTicket:ticketNum});
 
-    // Send mail via Graph
     var respEmail=legalEmail(resp);
-    var respName=LEGAL_NAMES[resp];
+    var respName=(legalUser(resp)||{}).name||resp;
     var mailBody='<div style="font-family:sans-serif;max-width:600px">'
       +'<div style="background:#1B4FD8;padding:20px;border-radius:8px 8px 0 0"><div style="color:#fff;font-size:20px">Nueva Solicitud Legal</div></div>'
       +'<div style="background:#fff;padding:20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px">'
