@@ -479,7 +479,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <!-- TICKETS -->
       <div class="pageview" id="page-tickets">
         <div class="filters">
-          <select class="fsel" id="tickets-estado" onchange="renderTickets()"><option value="">Todos</option><option value="Abierto">Abierto</option><option value="En curso">En curso</option><option value="Resuelto">Resuelto</option></select>
+          <select class="fsel" id="tickets-estado" onchange="renderTickets()"><option value="En curso" selected>🟡 En curso (pendientes)</option><option value="Resuelto">✅ Resueltos</option><option value="">Todos</option></select>
           <select class="fsel" id="tickets-resp" onchange="renderTickets()"><option value="">Todos los responsables</option><option value="EG">Eduardo Galindo</option><option value="CS">Camila Soto</option><option value="ST">Samira Taboada</option></select>
         </div>
         <div id="tickets-list"></div>
@@ -1001,9 +1001,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div id="tk-detalle-header" style="background:var(--surf2);border-radius:var(--rs);padding:12px 14px;margin-bottom:16px"></div>
       <div class="field"><label>Estado</label>
         <select id="tk-estado-edit">
-          <option value="Abierto">🔴 Abierto</option>
-          <option value="En curso">🟡 En curso</option>
-          <option value="Resuelto">✅ Resuelto</option>
+          <option value="En curso">🟡 En curso (pendiente)</option>
+          <option value="Resuelto">✅ Resuelto (cerrado)</option>
         </select>
       </div>
       <div class="field"><label>¿Requiere intervención de otro sector?</label>
@@ -1630,8 +1629,8 @@ function renderDashTickets(){
   document.getElementById('dash-tickets-title').textContent='🎫 Tickets pendientes'+(esAdmin?'':' asignados a vos')+' ('+pend.length+')';
   var names={};usersInGroup('Legal').forEach(function(u){names[u.ini]=u.name.split(' ')[0];});
   document.getElementById('dash-tickets').innerHTML=pend.length?pend.slice(0,6).map(function(t){
-    var col=t.estado==='Abierto'?'dotr':'dota';
-    return '<div class="aitem dash-item" data-tid="'+t.id+'" onclick="goTo(\'tickets\',document.getElementById(\'nav-tickets\'));gestionarTicket(this.dataset.tid)"><div class="dot '+col+'"></div><div style="flex:1"><div class="adesc"><span class="mono" style="font-size:10px">'+t.num+'</span> '+t.asunto+'</div><div class="ameta">'+t.remitente+(esAdmin?' → '+(names[t.resp]||t.resp):'')+' · '+fmtDate(t.fecha)+'</div></div><span class="badge '+(t.estado==='Abierto'?'bdr':'bda')+'" style="margin-left:8px">'+t.estado+'</span></div>';
+    var col='dota';
+    return '<div class="aitem dash-item" data-tid="'+t.id+'" onclick="goTo(\'tickets\',document.getElementById(\'nav-tickets\'));gestionarTicket(this.dataset.tid)"><div class="dot '+col+'"></div><div style="flex:1"><div class="adesc"><span class="mono" style="font-size:10px">'+t.num+'</span> '+t.asunto+'</div><div class="ameta">'+t.remitente+(esAdmin?' → '+(names[t.resp]||t.resp):'')+' · '+fmtDate(t.fecha)+'</div></div><span class="badge '+'bda'+'" style="margin-left:8px">'+t.estado+'</span></div>';
   }).join(''):'<div class="empty">Sin tickets pendientes 🎉</div>';
 }
 
@@ -2618,7 +2617,7 @@ function setSocTab(tab){
 
 function mapSocAut(item){var f=item.fields;return{id:item.id,sociedad:f.Sociedad||'',pais:f.Pais||'',cargo:f.Cargo||'',nombre:f.Nombre||'',acta:f.ActaDesignacion||'',fecha:f.FechaDesignacion?f.FechaDesignacion.split('T')[0]:'',vigencia:f.Vigencia||'',obs:f.Observaciones||''};}
 function ticketNumFromId(id,fecha){return 'TKT-'+String(id).padStart(4,'0')+'-'+String(fecha||new Date().toISOString()).substring(0,4);}
-function mapTicket(item){var f=item.fields;return{id:item.id,num:f.NumTicket||ticketNumFromId(item.id,f.FechaRecibido),remitente:f.Remitente||'',email:(f.EmailRemitente||'').toLowerCase(),asunto:f.Asunto||'',resp:f.Responsable||'',cuerpo:f.Cuerpo||'',fecha:f.FechaRecibido?f.FechaRecibido.split('T')[0]:'',estado:f.Estado||'Abierto',link:f.LinkMail||'',cat:f.Categoria||'',sitio:f.CodigoSitio||'',deadline:f.Deadline?f.Deadline.split('T')[0]:'',bloq:f.BloqQuien||'',respuesta:f.Respuesta||'',urgencia:f.Urgencia||'',cierre:f.FechaCierre?f.FechaCierre.split('T')[0]:''};}
+function mapTicket(item){var f=item.fields;return{id:item.id,num:f.NumTicket||ticketNumFromId(item.id,f.FechaRecibido),remitente:f.Remitente||'',email:(f.EmailRemitente||'').toLowerCase(),asunto:f.Asunto||'',resp:f.Responsable||'',cuerpo:f.Cuerpo||'',fecha:f.FechaRecibido?f.FechaRecibido.split('T')[0]:'',estado:(f.Estado==='Resuelto'?'Resuelto':'En curso'),link:f.LinkMail||'',cat:f.Categoria||'',sitio:f.CodigoSitio||'',deadline:f.Deadline?f.Deadline.split('T')[0]:'',bloq:f.BloqQuien||'',respuesta:f.Respuesta||'',urgencia:f.Urgencia||'',cierre:f.FechaCierre?f.FechaCierre.split('T')[0]:''};}
 function mapFecha(item){var f=item.fields;var rawF=f.Fecha||f.EventDate||'';return{id:item.id,desc:f.Descripcion||f.Title||'',fecha:rawF?rawF.split('T')[0]:'',cat:f.Categoria||'',pais:f.Pais||'',modulo:f.Modulo||'',ref:f.RefSitio||'',obs:f.Observaciones||''};}
 function mapMLA(item){var f=item.fields;return{id:item.id,nombre:f.Nombre||f.Title||'',contraparte:f.Contraparte||'',pais:f.Pais||'',sitios:f.CantidadContratos||f.Sitios||'',firmaFecha:f.FechaFirma?f.FechaFirma.split('T')[0]:'',vencFecha:f.FechaVencimiento?f.FechaVencimiento.split('T')[0]:'',plazo:f.Plazo||'',precio:f.PrecioBase||'',actualizacion:f.Actualizacion||'',term:f.TerminacionAnticipada||'',cesion:f.Cesion||f.CesionContrato||'',subarr:f.Subarrendamiento||'',estado:f.Estado||'Vigente',link:f.LinkDocumento||'',obs:f.Observaciones||'',moneda:f.Moneda||'',vida:f.VidaRemanente||'',renovacion:f.RenovacionSLA||'',tipoSLA:f.TipoSLA||'',precedencia:f.PrecedenciaSLAMLA||'',aev:f.AEV||'',lineal:f.EspacioLineal||'',suelo:f.EspacioSuelo||'',ran:f.RAN||'',passthrough:f.PassthroughSuelo||'',facturacion:f.PeriodoFacturacion||'',pago:f.PlazoPago||'',descuentos:f.Descuentos||'',derechoRetiro:f.DerechoRetiro||'',derechoSwap:f.DerechoSwap||'',energia:f.EnergiaComercial||'',detalle:f.DetalleCustom||''};}
 function mapInm(item){var f=item.fields;return{id:item.id,sitio:f.Sitio||'',nombre:f.Nombre||'',tipo:f.Tipo||'',direccion:f.Direccion||'',departamento:f.Departamento||'',fechaAdq:f.FechaAdquisicion?f.FechaAdquisicion.split('T')[0]:'',titular:f.TitularRegistral||'',contraparte:f.Contraparte||'',precio:f.Precio||'',inscripto:f.Inscripto||'',vencUsuf:f.VencimientoUsufructo?f.VencimientoUsufructo.split('T')[0]:'',link:f.LinkDocumento||'',obs:f.Observaciones||''};}
@@ -3487,7 +3486,7 @@ function renderTickets(){
   var el=document.getElementById('tickets-list');
   if(!el)return;
   if(!list.length){el.innerHTML='<div class="card"><div class="empty">Sin tickets</div></div>';return;}
-  var estadoColor={'Abierto':'bdr','En curso':'bda','Resuelto':'bdgr'};
+  var estadoColor={'En curso':'bda','Resuelto':'bdgr'};
   var respNames={};usersInGroup('Legal').forEach(function(u){respNames[u.ini]=u.name;});
   var html='';
   list.forEach(function(t){
@@ -3549,7 +3548,7 @@ function gestionarTicket(id){
   document.getElementById('form-ticket-title').textContent='Gestionar Ticket — '+t.num;
   document.getElementById('tk-vista-crear').style.display='none';
   document.getElementById('tk-vista-gestionar').style.display='block';
-  document.getElementById('tk-estado-edit').value=t.estado||'Abierto';
+  document.getElementById('tk-estado-edit').value=t.estado;
   document.getElementById('tk-bloq-quien').value=t.bloq||'';
   document.getElementById('tk-respuesta').value='';
   var header=document.getElementById('tk-detalle-header');
@@ -3573,7 +3572,7 @@ async function guardarGestionTicket(){
     // Send mail to requester
     if(t&&t.email&&respuesta){
       var nl='%0D%0A';
-      var estadoTxt=estado==='Resuelto'?'RESUELTO':estado==='En curso'?'EN CURSO':'ABIERTO';
+      var estadoTxt=estado==='Resuelto'?'RESUELTO':'EN CURSO';
       var c='Hola,'+nl+nl+'Tu solicitud '+t.num+' ha sido actualizada.'+nl+nl;
       c+='Estado: '+estadoTxt+nl;
       if(bloq)c+='Requiere intervencion de: '+bloq+nl;
@@ -3623,7 +3622,7 @@ async function submitTicket(){
       Responsable:resp,
       Cuerpo:desc,
       FechaRecibido:new Date().toISOString(),
-      Estado:'Abierto',
+      Estado:'En curso',
       LinkMail:'',
       Categoria:cat,
       CodigoSitio:sitio,
