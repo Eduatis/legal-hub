@@ -350,6 +350,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div class="ctabs" id="dash-ctabs"></div>
         <div class="metrics" id="dash-metrics"></div>
         <div id="dash-greeting" style="font-size:22px;font-weight:700;color:var(--bl);margin-bottom:4px;padding:0 2px"></div>
+        <div class="g1" id="dash-tickets-wrap" style="display:none">
+          <div class="card" style="border-left:3px solid var(--bl)"><div class="cardh"><div class="cardht" id="dash-tickets-title">🎫 Tickets pendientes</div><div class="cardhl" onclick="navTo('tickets')">Ver todos</div></div><div id="dash-tickets"></div></div>
+        </div>
         <div class="g2">
           <div class="card"><div class="cardh"><div class="cardht">Alertas — vence en 48hs</div><div class="cardhl" onclick="navTo('temas')">Ver todos</div></div><div id="dash-alerts"></div></div>
           <div class="card"><div class="cardh"><div class="cardht">Temas · Prioridad Alta</div><div class="cardhl" onclick="navTo('temas')">Ver todos</div></div><div id="dash-tasks"></div></div>
@@ -1508,6 +1511,7 @@ function renderDash(){
       '<div class="metric" style="border-color:var(--rd-tx);background:var(--rd-bg);grid-column:span 1"><div class="metlbl" style="color:var(--rd-tx)">Requieren tu intervención</div><div class="metval d">'+bloqParaMi+'</div><div class="metsub" style="color:var(--rd-tx)">EG necesita tu ayuda</div></div>';
     m2.style.gridTemplateColumns='repeat(4,minmax(0,1fr))';
   };
+  renderDashTickets();
   // Alertas 48hs — Temas + DD + INTORU
   var alertTemas=activos.filter(function(t){var dt=daysTo(t.dead);return dt!==null&&dt<=2;}).map(function(t){var dt=daysTo(t.dead);return {tipo:'TEMAS',label:t.tit,sub:fmtDate(t.dead)+(t.cli?' · '+t.cli:''),dt:dt,id:t.id,sitio:null};});
   var alertDD=dd.filter(function(s){var dt=daysTo(s.plazoFecha);return dt!==null&&dt<=2;}).map(function(s){var dt=daysTo(s.plazoFecha);return {tipo:'DD',label:s.sitio,sub:'Plazo DD · '+fmtDate(s.plazoFecha),dt:dt,sitio:s.sitio};});
@@ -1614,6 +1618,22 @@ function renderDash(){
 
 
 function setDashCountry(c){dashCountry=c;renderDash();}
+
+// Dashboard: tickets sin resolver (Admin ve todos; Legal ve los asignados a sí)
+function renderDashTickets(){
+  var wrap=document.getElementById('dash-tickets-wrap');if(!wrap)return;
+  var esAdmin=currentUser.perfil==='Admin', esLegal=!!legalUser(currentUser.ini);
+  if(!esAdmin&&!esLegal){wrap.style.display='none';return;}
+  var pend=tickets.filter(function(t){return t.estado!=='Resuelto'&&(esAdmin||t.resp===currentUser.ini);});
+  pend.sort(function(a,b){return new Date(b.fecha)-new Date(a.fecha);});
+  wrap.style.display='block';
+  document.getElementById('dash-tickets-title').textContent='🎫 Tickets pendientes'+(esAdmin?'':' asignados a vos')+' ('+pend.length+')';
+  var names={};usersInGroup('Legal').forEach(function(u){names[u.ini]=u.name.split(' ')[0];});
+  document.getElementById('dash-tickets').innerHTML=pend.length?pend.slice(0,6).map(function(t){
+    var col=t.estado==='Abierto'?'dotr':'dota';
+    return '<div class="aitem dash-item" data-tid="'+t.id+'" onclick="goTo(\'tickets\',document.getElementById(\'nav-tickets\'));gestionarTicket(this.dataset.tid)"><div class="dot '+col+'"></div><div style="flex:1"><div class="adesc"><span class="mono" style="font-size:10px">'+t.num+'</span> '+t.asunto+'</div><div class="ameta">'+t.remitente+(esAdmin?' → '+(names[t.resp]||t.resp):'')+' · '+fmtDate(t.fecha)+'</div></div><span class="badge '+(t.estado==='Abierto'?'bdr':'bda')+'" style="margin-left:8px">'+t.estado+'</span></div>';
+  }).join(''):'<div class="empty">Sin tickets pendientes 🎉</div>';
+}
 
 // ─── DOC TABLE ───────────────────────────────────────────────────────────────
 function docTableHTML(list,actions){
