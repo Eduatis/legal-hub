@@ -1310,6 +1310,7 @@ async function initApp(account){
     // Hide topbar sync button and actions
     document.getElementById('sync-btn').style.display='none';
   }
+  if(currentUser.perfil === 'Lectura')applyReadOnly();
   var isSolicitante = currentUser.perfil === 'Solicitante';
   if(isSolicitante){
     document.querySelectorAll('[id^="nav-"]').forEach(function(el){if(el.id!=='nav-tickets')el.style.display='none';});
@@ -1327,6 +1328,17 @@ async function initApp(account){
     document.getElementById('tb-act').innerHTML='';
   }
   if(isSolicitante)goTo('tickets', document.getElementById('nav-tickets'));
+}
+
+// Perfil "Lectura": ve todo, sin crear/editar/borrar (SharePoint además lo impide por permisos)
+function applyReadOnly(){
+  var st=document.createElement('style');
+  st.textContent='.btnedit,.btnrd,.acbtn,#tb-act>*{display:none!important}';
+  document.head.appendChild(st);
+  var re=/^(openForm|edit|save|askDelete|socAutDelete|socAccDelete|cerrarTema|reabrirTema|cambiarEstado|gestionarTicket|guardarGestion|submitTicket|removeFechaDetail|confirmDelete)/;
+  Object.keys(window).forEach(function(k){
+    if(re.test(k)&&typeof window[k]==='function')window[k]=function(){showToast('Tu perfil es de solo lectura');};
+  });
 }
 
 // Los selectores de "Responsable" de Tickets se arman con el grupo Legal de Usuarios_Hub
