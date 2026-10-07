@@ -326,7 +326,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <button onclick="setupTicketsList()" style="width:100%;font-size:11px;padding:7px;border-radius:var(--rs);border:1px solid var(--bl);background:var(--bl-bg);color:var(--bl);cursor:pointer;font-weight:500">⚙️ Crear lista Tickets</button>
         <button onclick="agregarUsuariosTickets()" style="width:100%;font-size:11px;padding:7px;border-radius:var(--rs);border:1px solid var(--am);background:var(--am-bg);color:var(--am-tx);cursor:pointer;font-weight:500">👥 Agregar usuarios</button>
         <button onclick="abrirPanelRecordatorios()" style="width:100%;font-size:11px;padding:7px;border-radius:var(--rs);border:1px solid var(--gr-tx);background:var(--gr-bg);color:var(--gr-tx);cursor:pointer;font-weight:500">📬 Recordatorios</button>
-        <button onclick="setupUsuariosList(this)" style="width:100%;font-size:11px;padding:7px;border-radius:var(--rs);border:1px solid var(--bl);background:var(--bl-bg);color:var(--bl);cursor:pointer;font-weight:500">👤 Crear lista Usuarios</button>
       </div>
       <div class="sbuser">
         <div class="av" id="sb-av" style="width:28px;height:28px;font-size:10px"></div>
@@ -1310,8 +1309,7 @@ async function initApp(account){
     document.getElementById('sync-btn').style.display='none';
   }
   await syncAll();hideLoading();document.getElementById('app').style.display='block';
-  // Si la lista Usuarios_Hub todavía no existe, se muestran los botones de configuración para poder crearla
-  if(currentUser.perfil==='Admin'||!usuariosOk){document.getElementById('setup-btn-wrap').style.display='flex';}
+  if(currentUser.perfil==='Admin'){document.getElementById('setup-btn-wrap').style.display='flex';}
   // Register login
   registrarLogin();
   // Show pending popup after short delay
@@ -3654,34 +3652,6 @@ async function setupTicketsList(){
   }catch(e){showToast('Error: '+e.message,true);btn.textContent='⚙️ Crear lista Tickets';btn.disabled=false;}
 }
 
-// Crea la lista Usuarios_Hub vacía (los datos se cargan a mano en SharePoint, nunca en el código)
-async function setupUsuariosList(btn){
-  btn.textContent='⏳ Creando...';btn.disabled=true;
-  var reset=function(){btn.textContent='👤 Crear lista Usuarios';btn.disabled=false;};
-  try{
-    var site=await getSiteId();
-    var cols=['Email','Iniciales','Rol','Saludo','Alcance','Perfil','Grupos','ColorFondo','ColorTexto','ColorAcento','Tema'];
-    var r1=await graphFetch('https://graph.microsoft.com/v1.0/sites/'+site+'/lists',{
-      method:'POST',
-      body:JSON.stringify({
-        displayName:LIST_USERS,
-        list:{template:'genericList'},
-        columns:cols.map(function(c){return {name:c,text:{}};})
-      })
-    });
-    var d1=await r1.json();
-    if(r1.status===201){
-      showToast('✅ Lista '+LIST_USERS+' creada');
-      btn.textContent='✅ Lista creada!';
-    } else if(d1.error&&d1.error.message&&d1.error.message.toLowerCase().indexOf('exist')>=0){
-      showToast('La lista ya existe — todo OK');
-      btn.textContent='✅ Ya existe';
-    } else {
-      showToast('Error: '+(d1.error?d1.error.message:'status '+r1.status),true);
-      reset();
-    }
-  }catch(e){showToast('Error: '+e.message,true);reset();}
-}
 (async function(){
   try{
     await msalInstance.initialize();
