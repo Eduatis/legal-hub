@@ -2597,7 +2597,8 @@ function setSocTab(tab){
 }
 
 function mapSocAut(item){var f=item.fields;return{id:item.id,sociedad:f.Sociedad||'',pais:f.Pais||'',cargo:f.Cargo||'',nombre:f.Nombre||'',acta:f.ActaDesignacion||'',fecha:f.FechaDesignacion?f.FechaDesignacion.split('T')[0]:'',vigencia:f.Vigencia||'',obs:f.Observaciones||''};}
-function mapTicket(item){var f=item.fields;return{id:item.id,num:f.NumTicket||'',remitente:f.Remitente||'',email:(f.EmailRemitente||'').toLowerCase(),asunto:f.Asunto||'',resp:f.Responsable||'',cuerpo:f.Cuerpo||'',fecha:f.FechaRecibido?f.FechaRecibido.split('T')[0]:'',estado:f.Estado||'Abierto',link:f.LinkMail||'',cat:f.Categoria||'',sitio:f.CodigoSitio||'',deadline:f.Deadline?f.Deadline.split('T')[0]:'',bloq:f.BloqQuien||'',respuesta:f.Respuesta||'',urgencia:f.Urgencia||'',cierre:f.FechaCierre?f.FechaCierre.split('T')[0]:''};}
+function ticketNumFromId(id,fecha){return 'TKT-'+String(id).padStart(4,'0')+'-'+String(fecha||new Date().toISOString()).substring(0,4);}
+function mapTicket(item){var f=item.fields;return{id:item.id,num:f.NumTicket||ticketNumFromId(item.id,f.FechaRecibido),remitente:f.Remitente||'',email:(f.EmailRemitente||'').toLowerCase(),asunto:f.Asunto||'',resp:f.Responsable||'',cuerpo:f.Cuerpo||'',fecha:f.FechaRecibido?f.FechaRecibido.split('T')[0]:'',estado:f.Estado||'Abierto',link:f.LinkMail||'',cat:f.Categoria||'',sitio:f.CodigoSitio||'',deadline:f.Deadline?f.Deadline.split('T')[0]:'',bloq:f.BloqQuien||'',respuesta:f.Respuesta||'',urgencia:f.Urgencia||'',cierre:f.FechaCierre?f.FechaCierre.split('T')[0]:''};}
 function mapFecha(item){var f=item.fields;var rawF=f.Fecha||f.EventDate||'';return{id:item.id,desc:f.Descripcion||f.Title||'',fecha:rawF?rawF.split('T')[0]:'',cat:f.Categoria||'',pais:f.Pais||'',modulo:f.Modulo||'',ref:f.RefSitio||'',obs:f.Observaciones||''};}
 function mapMLA(item){var f=item.fields;return{id:item.id,nombre:f.Nombre||f.Title||'',contraparte:f.Contraparte||'',pais:f.Pais||'',sitios:f.CantidadContratos||f.Sitios||'',firmaFecha:f.FechaFirma?f.FechaFirma.split('T')[0]:'',vencFecha:f.FechaVencimiento?f.FechaVencimiento.split('T')[0]:'',plazo:f.Plazo||'',precio:f.PrecioBase||'',actualizacion:f.Actualizacion||'',term:f.TerminacionAnticipada||'',cesion:f.Cesion||f.CesionContrato||'',subarr:f.Subarrendamiento||'',estado:f.Estado||'Vigente',link:f.LinkDocumento||'',obs:f.Observaciones||'',moneda:f.Moneda||'',vida:f.VidaRemanente||'',renovacion:f.RenovacionSLA||'',tipoSLA:f.TipoSLA||'',precedencia:f.PrecedenciaSLAMLA||'',aev:f.AEV||'',lineal:f.EspacioLineal||'',suelo:f.EspacioSuelo||'',ran:f.RAN||'',passthrough:f.PassthroughSuelo||'',facturacion:f.PeriodoFacturacion||'',pago:f.PlazoPago||'',descuentos:f.Descuentos||'',derechoRetiro:f.DerechoRetiro||'',derechoSwap:f.DerechoSwap||'',energia:f.EnergiaComercial||'',detalle:f.DetalleCustom||''};}
 function mapInm(item){var f=item.fields;return{id:item.id,sitio:f.Sitio||'',nombre:f.Nombre||'',tipo:f.Tipo||'',direccion:f.Direccion||'',departamento:f.Departamento||'',fechaAdq:f.FechaAdquisicion?f.FechaAdquisicion.split('T')[0]:'',titular:f.TitularRegistral||'',contraparte:f.Contraparte||'',precio:f.Precio||'',inscripto:f.Inscripto||'',vencUsuf:f.VencimientoUsufructo?f.VencimientoUsufructo.split('T')[0]:'',link:f.LinkDocumento||'',obs:f.Observaciones||''};}
@@ -3611,8 +3612,9 @@ async function submitTicket(){
     };
     // El número sale del ID de SharePoint: es único aunque se borren tickets o el usuario no vea los de otros
     var created=await createListItem(LIST_TICKETS,fields);
-    var ticketNum='TKT-'+String(created.id).padStart(4,'0')+'-'+new Date().getFullYear();
-    await updateListItem(LIST_TICKETS,created.id,{NumTicket:ticketNum});
+    var ticketNum=ticketNumFromId(created.id,new Date().toISOString());
+    // Los solicitantes no tienen permiso de edición: si no se puede guardar el número, se deriva del ID al leer
+    try{await updateListItem(LIST_TICKETS,created.id,{NumTicket:ticketNum});}catch(e){}
 
     var respEmail=legalEmail(resp);
     var respName=(legalUser(resp)||{}).name||resp;
