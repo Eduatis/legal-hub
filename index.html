@@ -999,6 +999,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       </div>
     </div>
 
+    <!-- Vista: AVISAR POR MAIL (se completa por JS) -->
+    <div id="tk-vista-mail" style="display:none"></div>
+
     <!-- Vista: GESTIONAR TICKET (solo EG/legal) -->
     <div id="tk-vista-gestionar" style="display:none">
       <div id="tk-detalle-header" style="background:var(--surf2);border-radius:var(--rs);padding:12px 14px;margin-bottom:16px"></div>
@@ -1133,7 +1136,8 @@ function legalUser(ini){return usersInGroup('Legal').find(function(u){return u.i
 function legalEmail(ini){var u=legalUser(ini);return u?u.email:'';}
 function adminEmail(){var u=USERS_LIST.find(function(u){return u.perfil==='Admin';});return u?u.email:'';}
 // Copia al Admin en los mails: no si el que escribe es el Admin ni si el mail ya va dirigido a él
-function ccAdminParam(to){var a=adminEmail();if(!a||currentUser.perfil==='Admin'||(currentUser.email||'')===a||(to||'').toLowerCase()===a)return '';return '&cc='+encodeURIComponent(a);}
+function ccAdminEmail(to){var a=adminEmail();if(!a||currentUser.perfil==='Admin'||(currentUser.email||'')===a||(to||'').toLowerCase()===a)return '';return a;}
+function ccAdminParam(to){var a=ccAdminEmail(to);return a?'&cc='+encodeURIComponent(a):'';}
 var AVC = {EG:{bg:'#EEF2FF',tc:'#1B4FD8'},CS:{bg:'#DCFCE7',tc:'#15803D'},ST:{bg:'#FEF3C7',tc:'#B45309'}};
 var SCLASS = {'Borrador':'s0','En revisión':'s1','Firmado':'s2','Vigente':'s3','En renovación':'s4','Vencido':'s5'};
 var CLIENTS = ['TMA','TECO','AMX','ANTEL','TIGOUY','AMXUY','TIGOPY','NUBI','NUCL','AMXPY'];
@@ -3576,6 +3580,7 @@ function openFormTicket(){
   document.getElementById('form-ticket-title').textContent='Nueva Solicitud Legal';
   document.getElementById('tk-vista-crear').style.display='block';
   document.getElementById('tk-vista-gestionar').style.display='none';
+  document.getElementById('tk-vista-mail').style.display='none';
   ['tk-sector','tk-asunto','tk-desc'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('tk-resp').value='';
   document.getElementById('tk-cat').value='';
@@ -3592,6 +3597,7 @@ function gestionarTicket(id){
   document.getElementById('form-ticket-title').textContent='Gestionar Ticket — '+t.num;
   document.getElementById('tk-vista-crear').style.display='none';
   document.getElementById('tk-vista-gestionar').style.display='block';
+  document.getElementById('tk-vista-mail').style.display='none';
   document.getElementById('tk-estado-edit').value=t.estado;
   document.getElementById('tk-bloq-quien').value=t.bloq||'';
   document.getElementById('tk-respuesta').value='';
@@ -3613,25 +3619,45 @@ async function guardarGestionTicket(){
     var fields={Estado:estado,BloqQuien:bloq,Respuesta:respuesta};
     if(estado==='Resuelto')fields.FechaCierre=new Date().toISOString();
     await updateListItem(LIST_TICKETS,editingTicketId,fields);
-    // Send mail to requester
-    if(t&&t.email&&respuesta){
-      var nl='%0D%0A';
-      var estadoTxt=estado==='Resuelto'?'RESUELTO':'EN CURSO';
-      var c='Hola,'+nl+nl+'Tu solicitud '+t.num+' ha sido actualizada.'+nl+nl;
-      c+='Estado: '+estadoTxt+nl;
-      if(bloq)c+='Requiere intervencion de: '+bloq+nl;
-      c+=nl+'Respuesta del equipo legal:'+nl+respuesta+nl+nl;
-      c+='Saludos,'+nl+'ATIS Legal Team';
-      var subj=encodeURIComponent('['+t.num+'] Actualización — '+t.asuntoRaw);
-      window.open('mailto:'+t.email+'?subject='+subj+ccAdminParam(t.email)+'&body='+c);
-    }
     await syncAll();
-    closeFormTicket();
-    showToast('Ticket actualizado: '+estado);
+    if(t&&t.email&&respuesta){
+      var estadoTxt=estado==='Resuelto'?'RESUELTO':'EN CURSO';
+      var c='Hola,\n\nTu solicitud '+t.num+' ha sido actualizada.\n\nEstado: '+estadoTxt+'\n';
+      if(bloq)c+='Requiere intervencion de: '+bloq+'\n';
+      c+='\nRespuesta del equipo legal:\n'+recortarParaMail(respuesta)+'\n\nSaludos,\nATIS Legal Team';
+      // Mail al solicitante con botones (abrirlo solo lo bloquea el navegador)
+      showMailStep('✅ Ticket actualizado: '+estado,'Avisale al solicitante por mail. Podés adjuntar documentos antes de enviarlo.',
+        t.email,'['+t.num+'] Actualización — '+t.asuntoRaw,c);
+    } else {
+      closeFormTicket();
+      showToast('Ticket actualizado: '+estado);
+    }
   }catch(e){showToast('Error: '+e.message,true);}
   btn.disabled=false;btn.textContent='Guardar y enviar mail';
 }
 function closeFormTicket(){document.getElementById('form-ticket').classList.remove('open');}
+
+// Los mailto muy largos fallan en algunos clientes: se recorta y se remite al Hub
+function recortarParaMail(s){s=s||'';return s.length>1200?s.substring(0,1200)+'… (ver el detalle completo en el Legal Hub)':s;}
+// Paso final de Tickets: botones para abrir el mail (Outlook instalado o Outlook web) con un clic del usuario
+function showMailStep(titulo,texto,to,subject,body){
+  var cc=ccAdminEmail(to);
+  var mailto='mailto:'+encodeURIComponent(to)+'?subject='+encodeURIComponent(subject)+(cc?'&cc='+encodeURIComponent(cc):'')+'&body='+encodeURIComponent(body);
+  var web='https://outlook.office.com/mail/deeplink/compose?to='+encodeURIComponent(to)+(cc?'&cc='+encodeURIComponent(cc):'')+'&subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+  document.getElementById('tk-vista-crear').style.display='none';
+  document.getElementById('tk-vista-gestionar').style.display='none';
+  document.getElementById('tk-vista-mail').style.display='none';
+  var v=document.getElementById('tk-vista-mail');
+  v.innerHTML='<div style="font-size:16px;font-weight:600;margin-bottom:8px">'+escHtml(titulo)+'</div>'
+    +'<div style="font-size:13px;color:var(--tx2);margin-bottom:16px;line-height:1.5">'+texto+'</div>'
+    +'<a class="btnp" href="'+mailto+'" style="display:block;text-align:center;text-decoration:none;padding:10px;margin-bottom:8px">📧 Abrir mail en Outlook</a>'
+    +'<a class="btns" href="'+web+'" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;padding:10px;margin-bottom:14px">🌐 Abrir en Outlook web</a>'
+    +'<div style="font-size:11px;color:var(--tx3);margin-bottom:14px">Si el primer botón no abre nada, usá “Outlook web”. El ticket ya quedó registrado igual.</div>'
+    +'<button class="btns" style="width:100%" onclick="closeFormTicket()">Listo, cerrar</button>';
+  v.style.display='block';
+  document.getElementById('form-ticket-title').textContent='Avisar por mail';
+  document.getElementById('form-ticket').classList.add('open');
+}
 
 async function submitTicket(){
   var sector=document.getElementById('tk-sector').value.trim();
@@ -3681,44 +3707,20 @@ async function submitTicket(){
 
     var respEmail=legalEmail(resp);
     var respName=(legalUser(resp)||{}).name||resp;
-    var mailBody='<div style="font-family:sans-serif;max-width:600px">'
-      +'<div style="background:#1B4FD8;padding:20px;border-radius:8px 8px 0 0"><div style="color:#fff;font-size:20px">Nueva Solicitud Legal</div></div>'
-      +'<div style="background:#fff;padding:20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px">'
-      +'<div style="background:#EEF2FF;border-radius:8px;padding:14px;text-align:center;margin-bottom:16px">'
-      +'<div style="font-size:24px;font-weight:700;color:#1B4FD8">'+ticketNum+'</div>'
-      +'<div style="font-size:12px;color:#6B7280">Número de ticket</div></div>'
-      +'<table style="width:100%;font-size:13px;border-collapse:collapse">'
-      +'<tr><td style="padding:6px 0;color:#6B6A64;width:130px">Solicitante</td><td style="padding:6px 0;font-weight:500">'+userName+'</td></tr>'
-      +'<tr><td style="padding:6px 0;color:#6B6A64">Sector</td><td style="padding:6px 0">'+sector+'</td></tr>'
-      +'<tr><td style="padding:6px 0;color:#6B6A64">Asignado a</td><td style="padding:6px 0;font-weight:500">'+respName+'</td></tr>'
-      +'<tr><td style="padding:6px 0;color:#6B6A64">Prioridad</td><td style="padding:6px 0">'+urgEmoji+' '+urgencia+'</td></tr>'
-      +'<tr><td style="padding:6px 0;color:#6B6A64">Asunto</td><td style="padding:6px 0;font-weight:500">'+asunto+'</td></tr>'
-      +'</table>'
-      +'<div style="margin-top:14px;padding:12px;background:#F5F4F0;border-radius:6px">'
-      +'<div style="font-size:11px;color:#6B6A64;text-transform:uppercase;margin-bottom:6px">Descripción</div>'
-      +'<div style="font-size:13px;line-height:1.6">'+desc.split(String.fromCharCode(10)).join(String.fromCharCode(60)+String.fromCharCode(98)+String.fromCharCode(114)+String.fromCharCode(62))+'</div></div>'
-
-      +'<div style="margin-top:16px;font-size:12px;color:#A09F98">Ticket creado el '+new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'})+'</div>'
-      +'</div></div>';
-
-    // Open Outlook with pre-filled mail (no Mail.Send permission needed)
-    var mailTo=respEmail;
-    var mailSubject=encodeURIComponent('['+ticketNum+'] '+asunto+' — Solicitud Legal ATIS');
     var mailBodyText='Ticket: '+ticketNum
       +'\nSolicitante: '+userName+' ('+sector+')'
       +'\nAsignado a: '+respName
       +'\nPrioridad: '+urgEmoji+' '+urgencia
-      +'\nAsunto: '+asunto
-      +'\n\nDescripcion:\n'+desc
+      +'\nAsunto: '+asuntoFull
+      +'\n\nDescripcion:\n'+recortarParaMail(desc)
       +'\n\n---\nEnviado desde ATIS Legal Hub';
-    var outlookUrl='mailto:'+mailTo+'?subject='+mailSubject+ccAdminParam(mailTo)+'&body='+encodeURIComponent(mailBodyText);
-    window.open(outlookUrl);
 
-    await syncAll();
-    showToast('✅ Ticket '+ticketNum+' creado. Adjuntá tus documentos en el mail de Outlook y tocá Enviar.',false,9000);
-    closeFormTicket();
-    // Go to tickets view
     goTo('tickets',document.getElementById('nav-tickets'));
+    await syncAll();
+    // El mail no se abre solo (el navegador lo bloquea después de esperar a SharePoint): se ofrece con botones
+    showMailStep('✅ Ticket '+ticketNum+' creado',
+      'Ahora avisale a '+respName+' por mail. Si tenés documentos, <b>adjuntalos en ese mail</b> y tocá Enviar.',
+      respEmail,'['+ticketNum+'] '+asuntoFull+' — Solicitud Legal ATIS',mailBodyText);
   }catch(e){
     console.error('submitTicket error:',e);
     showToast('Error al guardar: '+e.message,true);
