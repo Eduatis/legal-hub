@@ -481,6 +481,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div class="filters">
           <select class="fsel" id="tickets-estado" onchange="renderTickets()"><option value="En curso" selected>🟡 En curso (pendientes)</option><option value="Resuelto">✅ Resueltos</option><option value="">Todos</option></select>
           <select class="fsel" id="tickets-resp" onchange="renderTickets()"><option value="">Todos los responsables</option><option value="EG">Eduardo Galindo</option><option value="CS">Camila Soto</option><option value="ST">Samira Taboada</option></select>
+          <select class="fsel" id="tickets-prio" onchange="renderTickets()"><option value="">Todas las prioridades</option><option value="Crítica">🚨 Crítica — hoy</option><option value="Alta">🔴 Alta</option><option value="Media">🟡 Media</option><option value="Baja">🟢 Baja</option></select>
+          <select class="fsel" id="tickets-orden" onchange="renderTickets()"><option value="deadline" selected>Ordenar por deadline</option><option value="prioridad">Ordenar por prioridad</option><option value="recientes">Más recientes primero</option></select>
         </div>
         <div id="tickets-list"></div>
       </div>
@@ -987,12 +989,13 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div class="field"><label>Descripción detallada</label><textarea id="tk-desc" placeholder="Incluí todos los detalles relevantes..."></textarea></div>
       <div class="fieldrow">
         <div class="field" style="margin:0"><label>Prioridad</label>
-          <select id="tk-urgencia"><option value="Alta">🔴 Alta</option><option value="Media" selected>🟡 Media</option><option value="Baja">🟢 Baja</option></select>
+          <select id="tk-urgencia" onchange="onPrioridadChange()"><option value="Crítica">🚨 Crítica — hoy</option><option value="Alta">🔴 Alta</option><option value="Media" selected>🟡 Media</option><option value="Baja">🟢 Baja</option></select>
         </div>
         <div class="field" style="margin:0"><label>Deadline <span style="color:var(--tx3);font-weight:400">(opcional)</span></label>
           <input type="date" id="tk-deadline">
         </div>
       </div>
+      <div id="tk-critica-aviso" style="display:none;margin-top:8px;padding:8px 12px;border-radius:var(--rs);background:var(--rd-bg);color:var(--rd-tx);font-size:12px;line-height:1.5">🚨 <b>Crítica — hoy</b> significa que <b>tiene que resolverse en el día</b>. Usala solo en casos excepcionales: si no es realmente impostergable, elegí Alta. El deadline queda fijado en hoy.</div>
       <div style="display:flex;gap:8px;margin-top:8px">
         <button class="btnp" style="flex:1" id="tk-submit-btn" onclick="submitTicket()">Enviar solicitud</button>
         <button class="btns" onclick="closeFormTicket()">Cancelar</button>
@@ -1004,7 +1007,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
     <!-- Vista: GESTIONAR TICKET (solo EG/legal) -->
     <div id="tk-vista-gestionar" style="display:none">
-      <div id="tk-detalle-header" style="background:var(--surf2);border-radius:var(--rs);padding:12px 14px;margin-bottom:16px"></div>
+      <div id="tk-detalle-header" style="background:var(--surf2);border-radius:var(--rs);padding:12px 14px;margin-bottom:12px"></div>
+      <div id="tk-timeline" style="margin-bottom:14px"></div>
+      <div class="field" id="tk-deadline-edit-wrap" style="display:none"><label>Deadline <span style="color:var(--tx3);font-weight:400">(solo Admin)</span></label><input type="date" id="tk-deadline-edit"></div>
       <div class="field"><label>Estado</label>
         <select id="tk-estado-edit">
           <option value="En curso">🟡 En curso (pendiente)</option>
@@ -1022,8 +1027,15 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <option value="Otro">Otro sector</option>
         </select>
       </div>
-      <div class="field"><label>Respuesta / comentario</label>
-        <textarea id="tk-respuesta" placeholder="Escribí tu respuesta o comentario..."></textarea>
+      <div class="field" id="tk-hist-wrap" style="display:none"><label>Respuestas anteriores</label>
+        <div id="tk-hist-ro" style="font-size:12px;line-height:1.5;white-space:pre-wrap;background:var(--gr-bg);color:var(--gr-tx);border-radius:var(--rs);padding:8px 10px"></div>
+        <div id="tk-hist-admin" style="display:none">
+          <textarea id="tk-hist-edit" style="min-height:90px"></textarea>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px"><span style="font-size:11px;color:var(--tx3)">Como Admin podés corregir o borrar texto acá.</span><button type="button" class="btns" style="font-size:11px;padding:3px 10px" onclick="document.getElementById('tk-hist-edit').value=''">🗑 Borrar todas</button></div>
+        </div>
+      </div>
+      <div class="field"><label>Nueva respuesta / comentario</label>
+        <textarea id="tk-respuesta" placeholder="Escribí tu respuesta o comentario... (se agrega al historial con fecha y tus iniciales)"></textarea>
       </div>
       <div style="display:flex;gap:8px;margin-top:8px">
         <button class="btnp" style="flex:1" id="tk-gestionar-btn" onclick="guardarGestionTicket()">Guardar y enviar mail</button>
@@ -1639,12 +1651,13 @@ function renderDashTickets(){
   var esAdmin=currentUser.perfil==='Admin', esLegal=!!legalUser(currentUser.ini);
   if(!esAdmin&&!esLegal){wrap.style.display='none';return;}
   var pend=tickets.filter(function(t){return t.estado!=='Resuelto'&&(esAdmin||t.resp===currentUser.ini);});
-  pend.sort(function(a,b){return new Date(b.fecha)-new Date(a.fecha);});
+  // Primero las Críticas, después por deadline
+  pend.sort(function(a,b){return ((b.urgencia==='Crítica')-(a.urgencia==='Crítica'))||(dlKey(a)-dlKey(b))||(prioRank(b)-prioRank(a));});
   wrap.style.display='block';
   document.getElementById('dash-tickets-title').textContent='🎫 Tickets pendientes'+(esAdmin?'':' asignados a vos')+' ('+pend.length+')';
   var names={};usersInGroup('Legal').forEach(function(u){names[u.ini]=u.name.split(' ')[0];});
   document.getElementById('dash-tickets').innerHTML=pend.length?pend.slice(0,6).map(function(t){
-    var col='dota';
+    var col=t.urgencia==='Crítica'?'dotr':'dota';
     return '<div class="aitem dash-item" data-tid="'+t.id+'" onclick="goTo(\'tickets\',document.getElementById(\'nav-tickets\'));gestionarTicket(this.dataset.tid)"><div class="dot '+col+'"></div><div style="flex:1"><div class="adesc"><span class="mono" style="font-size:10px">'+t.num+'</span> '+t.asunto+'</div><div class="ameta">'+t.remitente+(esAdmin?' → '+(names[t.resp]||t.resp):'')+' · '+fmtDate(t.fecha)+'</div></div><span class="badge '+'bda'+'" style="margin-left:8px">'+t.estado+'</span></div>';
   }).join(''):'<div class="empty">Sin tickets pendientes 🎉</div>';
 }
@@ -2666,7 +2679,68 @@ function ticketNumFromId(id,fecha){return 'TKT-'+String(id).padStart(4,'0')+'-'+
 // Escapa texto para mostrarlo como HTML sin que se interprete como código
 function escHtml(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 // Los campos de texto de Tickets los escribe cualquier solicitante: se guardan ya escapados para mostrar; *Raw = texto original (para mails)
-function mapTicket(item){var f=item.fields;return{id:item.id,num:escHtml(f.NumTicket||ticketNumFromId(item.id,f.FechaRecibido)),remitente:escHtml(f.Remitente),email:(f.EmailRemitente||'').toLowerCase(),asunto:escHtml(f.Asunto),asuntoRaw:f.Asunto||'',resp:f.Responsable||'',cuerpo:escHtml(f.Cuerpo),fecha:f.FechaRecibido?f.FechaRecibido.split('T')[0]:'',estado:(f.Estado==='Resuelto'?'Resuelto':'En curso'),link:f.LinkMail||'',cat:escHtml(f.Categoria),sitio:escHtml(f.CodigoSitio),deadline:f.Deadline?f.Deadline.split('T')[0]:'',bloq:escHtml(f.BloqQuien),respuesta:escHtml(f.Respuesta),urgencia:escHtml(f.Urgencia),cierre:f.FechaCierre?f.FechaCierre.split('T')[0]:''};}
+function mapTicket(item){var f=item.fields;return{id:item.id,num:escHtml(f.NumTicket||ticketNumFromId(item.id,f.FechaRecibido)),remitente:escHtml(f.Remitente),email:(f.EmailRemitente||'').toLowerCase(),asunto:escHtml(f.Asunto),asuntoRaw:f.Asunto||'',resp:f.Responsable||'',cuerpo:escHtml(f.Cuerpo),fecha:f.FechaRecibido?f.FechaRecibido.split('T')[0]:'',estado:(f.Estado==='Resuelto'?'Resuelto':'En curso'),link:f.LinkMail||'',cat:escHtml(f.Categoria),sitio:escHtml(f.CodigoSitio),deadline:f.Deadline?f.Deadline.split('T')[0]:'',bloq:escHtml(f.BloqQuien),respuesta:escHtml(f.Respuesta),respuestaRaw:f.Respuesta||'',urgencia:escHtml(f.Urgencia),cierre:f.FechaCierre?f.FechaCierre.split('T')[0]:'',
+  // Timeline: creado → tomado por Legal → primera devolución → cerrado (fechas completas)
+  creadoTs:f.FechaRecibido||'',tomadoTs:f.FechaTomado||'',tomadoPor:escHtml(f.TomadoPor),respTs:f.FechaRespuesta||'',cierreTs:f.FechaCierre||''};}
+
+// ─── TICKETS: prioridad, orden y timeline ───────────────────────────────────
+var PRIO_RANK={'Crítica':4,'Alta':3,'Media':2,'Baja':1};
+var PRIO_LABEL={'Crítica':'🚨 Crítica — hoy','Alta':'🔴 Alta','Media':'🟡 Media','Baja':'🟢 Baja'};
+function prioRank(t){return PRIO_RANK[t.urgencia]||0;}
+function dlKey(t){return t.deadline?new Date(t.deadline).getTime():Infinity;}
+// deadline: el más próximo primero (sin deadline al final); empata por prioridad. prioridad: mayor primero; empata por deadline.
+function ordenarTickets(list,modo){
+  return list.sort(function(a,b){
+    if(modo==='recientes')return new Date(b.creadoTs||b.fecha)-new Date(a.creadoTs||a.fecha);
+    if(modo==='prioridad')return (prioRank(b)-prioRank(a))||(dlKey(a)-dlKey(b));
+    return (dlKey(a)-dlKey(b))||(prioRank(b)-prioRank(a));
+  });
+}
+function fmtDateTime(ts){if(!ts)return '';var d=new Date(ts);return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});}
+function ticketTimeline(t,compacto){
+  var pasos=[
+    {lbl:'Creado',ts:t.creadoTs},
+    {lbl:'Tomado por Legal',ts:t.tomadoTs,extra:t.tomadoPor},
+    {lbl:'Devolución de Legal',ts:t.respTs},
+    {lbl:'Cerrado',ts:t.estado==='Resuelto'?t.cierreTs:''}
+  ];
+  // Tickets anteriores al timeline: si ya tienen respuesta o están cerrados, se marca el paso como hecho aunque falte la fecha
+  if(!pasos[2].ts&&(t.respuestaRaw||t.estado==='Resuelto'))pasos[2].sinFecha=true;
+  if(!pasos[1].ts&&(pasos[2].ts||pasos[2].sinFecha||t.estado==='Resuelto'))pasos[1].sinFecha=true;
+  if(!pasos[3].ts&&t.estado==='Resuelto')pasos[3].sinFecha=true;
+  if(compacto){
+    return '<div style="font-size:11px;color:var(--tx3);margin-top:6px">'+pasos.map(function(p){
+      var hecho=p.ts||p.sinFecha;
+      return '<span style="color:'+(hecho?'var(--gr-tx)':'var(--tx3)')+'">'+(hecho?'●':'○')+' '+p.lbl+(p.ts?' '+fmtDateTime(p.ts):'')+'</span>';
+    }).join(' &nbsp;→&nbsp; ')+'</div>';
+  }
+  return '<div style="display:flex;gap:0;align-items:flex-start">'+pasos.map(function(p,i){
+    var hecho=p.ts||p.sinFecha;
+    var col=hecho?'var(--gr-tx)':'var(--tx3)';
+    return '<div style="flex:1;text-align:center;position:relative">'
+      +(i>0?'<div style="position:absolute;top:7px;right:50%;width:100%;height:2px;background:'+(hecho?'var(--gr-tx)':'var(--brd)')+'"></div>':'')
+      +'<div style="position:relative;width:16px;height:16px;border-radius:50%;margin:0 auto 4px;background:'+(hecho?'var(--gr-tx)':'var(--surf)')+';border:2px solid '+col+'"></div>'
+      +'<div style="font-size:10px;font-weight:600;color:'+col+'">'+p.lbl+'</div>'
+      +'<div style="font-size:10px;color:var(--tx3)">'+(p.ts?fmtDateTime(p.ts):p.sinFecha?'(sin registro)':'pendiente')+(p.extra?'<br>'+p.extra:'')+'</div></div>';
+  }).join('')+'</div>';
+}
+function prioBadge(t){
+  if(!t.urgencia)return '';
+  var st=t.urgencia==='Crítica'?'background:var(--rd);color:#fff;font-weight:700':t.urgencia==='Alta'?'background:var(--rd-bg);color:var(--rd-tx)':t.urgencia==='Media'?'background:var(--am-bg);color:var(--am-tx)':'background:var(--gr-bg);color:var(--gr-tx)';
+  return '<span class="badge" style="'+st+'">'+(PRIO_LABEL[t.urgencia]||t.urgencia)+'</span>';
+}
+function onPrioridadChange(){
+  var crit=document.getElementById('tk-urgencia').value==='Crítica';
+  var dl=document.getElementById('tk-deadline');
+  document.getElementById('tk-critica-aviso').style.display=crit?'block':'none';
+  if(crit){dl.value=todayStr();dl.disabled=true;}else{dl.disabled=false;}
+}
+async function tomarTicket(id){
+  try{
+    await updateListItem(LIST_TICKETS,id,{FechaTomado:new Date().toISOString(),TomadoPor:currentUser.ini});
+    await syncAll();gestionarTicket(id);showToast('Ticket tomado ✓');
+  }catch(e){showToast('Error: '+e.message,true);}
+}
 function mapFecha(item){var f=item.fields;var rawF=f.Fecha||f.EventDate||'';return{id:item.id,desc:f.Descripcion||f.Title||'',fecha:rawF?rawF.split('T')[0]:'',cat:f.Categoria||'',pais:f.Pais||'',modulo:f.Modulo||'',ref:f.RefSitio||'',obs:f.Observaciones||''};}
 function mapMLA(item){var f=item.fields;return{id:item.id,nombre:f.Nombre||f.Title||'',contraparte:f.Contraparte||'',pais:f.Pais||'',sitios:f.CantidadContratos||f.Sitios||'',firmaFecha:f.FechaFirma?f.FechaFirma.split('T')[0]:'',vencFecha:f.FechaVencimiento?f.FechaVencimiento.split('T')[0]:'',plazo:f.Plazo||'',precio:f.PrecioBase||'',actualizacion:f.Actualizacion||'',term:f.TerminacionAnticipada||'',cesion:f.Cesion||f.CesionContrato||'',subarr:f.Subarrendamiento||'',estado:f.Estado||'Vigente',link:f.LinkDocumento||'',obs:f.Observaciones||'',moneda:f.Moneda||'',vida:f.VidaRemanente||'',renovacion:f.RenovacionSLA||'',tipoSLA:f.TipoSLA||'',precedencia:f.PrecedenciaSLAMLA||'',aev:f.AEV||'',lineal:f.EspacioLineal||'',suelo:f.EspacioSuelo||'',ran:f.RAN||'',passthrough:f.PassthroughSuelo||'',facturacion:f.PeriodoFacturacion||'',pago:f.PlazoPago||'',descuentos:f.Descuentos||'',derechoRetiro:f.DerechoRetiro||'',derechoSwap:f.DerechoSwap||'',energia:f.EnergiaComercial||'',detalle:f.DetalleCustom||''};}
 function mapInm(item){var f=item.fields;return{id:item.id,sitio:f.Sitio||'',nombre:f.Nombre||'',tipo:f.Tipo||'',direccion:f.Direccion||'',departamento:f.Departamento||'',fechaAdq:f.FechaAdquisicion?f.FechaAdquisicion.split('T')[0]:'',titular:f.TitularRegistral||'',contraparte:f.Contraparte||'',precio:f.Precio||'',inscripto:f.Inscripto||'',vencUsuf:f.VencimientoUsufructo?f.VencimientoUsufructo.split('T')[0]:'',link:f.LinkDocumento||'',obs:f.Observaciones||''};}
@@ -3526,11 +3600,14 @@ function renderTickets(){
   var list=tickets.slice();
   if(fe)list=list.filter(function(t){return t.estado===fe;});
   if(fr)list=list.filter(function(t){return t.resp===fr;});
+  var fpEl=document.getElementById('tickets-prio');var fp=fpEl?fpEl.value:'';
+  if(fp)list=list.filter(function(t){return t.urgencia===fp;});
   // Admin ve todos; Legal ve los asignados y los propios; el resto solo los que envió
   var miEmail=(currentUser.email||'').toLowerCase();
   var esLegal=!!legalUser(currentUser.ini);
   if(currentUser.perfil!=='Admin')list=list.filter(function(t){return (esLegal&&t.resp===currentUser.ini)||(miEmail&&t.email===miEmail);});
-  list.sort(function(a,b){return new Date(b.fecha)-new Date(a.fecha);});
+  var foEl=document.getElementById('tickets-orden');
+  ordenarTickets(list,foEl?foEl.value:'deadline');
   var el=document.getElementById('tickets-list');
   if(!el)return;
   if(!list.length){el.innerHTML='<div class="card"><div class="empty">Sin tickets</div></div>';return;}
@@ -3541,12 +3618,14 @@ function renderTickets(){
     var dias=Math.floor((new Date()-new Date(t.fecha))/86400000);
     var diasTxt=dias===0?'Hoy':dias===1?'Hace 1 dia':'Hace '+dias+' dias';
     var sc=estadoColor[t.estado]||'bdg';
-    html+='<div class="card" style="margin-bottom:10px;padding:14px 18px">';
+    var critPend=t.urgencia==='Crítica'&&t.estado!=='Resuelto';
+    html+='<div class="card" style="margin-bottom:10px;padding:14px 18px'+(critPend?';border:2px solid var(--rd);background:var(--rd-bg)':'')+'">';
     html+='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">';
     html+='<div style="flex:1">';
     html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
     html+='<span class="mono">'+t.num+'</span>';
     html+='<span class="badge '+sc+'">'+t.estado+'</span>';
+    html+=prioBadge(t);
     if(t.cat)html+='<span class="badge bdg">'+t.cat+'</span>';
     html+='</div>';
     html+='<div style="font-size:14px;font-weight:500;margin-bottom:4px">'+t.asunto+'</div>';
@@ -3554,11 +3633,13 @@ function renderTickets(){
     if(t.deadline){var dtk=daysTo(t.deadline);html+='<div style="font-size:11px;margin-top:4px;color:'+(dtk<0?'var(--rd-tx)':dtk<=7?'var(--am-tx)':'var(--tx3)')+'">⏱ Deadline: '+fmtDate(t.deadline)+(dtk<0?' — VENCIDO':dtk===0?' — HOY':dtk<=7?' — '+dtk+' dias':'')+'</div>';}
     if(t.bloq)html+='<div style="font-size:11px;margin-top:3px;color:var(--am-tx)">⚠️ Requiere: '+t.bloq+'</div>';
     if(t.cuerpo)html+='<div style="font-size:12px;color:var(--tx3);margin-top:6px;line-height:1.5">'+t.cuerpo.substring(0,120)+(t.cuerpo.length>120?'...':'')+'</div>';
-    if(t.respuesta)html+='<div style="font-size:12px;margin-top:6px;padding:6px 10px;background:var(--gr-bg);color:var(--gr-tx);border-radius:var(--rs);line-height:1.5">💬 '+t.respuesta+'</div>';
+    if(t.respuesta)html+='<div style="font-size:12px;margin-top:6px;padding:6px 10px;background:var(--gr-bg);color:var(--gr-tx);border-radius:var(--rs);line-height:1.5;white-space:pre-wrap">💬 '+t.respuesta+'</div>';
+    html+=ticketTimeline(t,true);
     html+='</div>';
     html+='<div style="text-align:right;flex-shrink:0">';
     html+='<div style="font-size:11px;color:var(--tx3);margin-bottom:6px">'+diasTxt+'</div>';
     html+='<div style="font-size:11px;color:var(--tx2);margin-bottom:8px">→ '+(respNames[t.resp]||t.resp)+'</div>';
+    if((currentUser.perfil==='Admin'||esLegal)&&!t.tomadoTs&&t.estado!=='Resuelto')html+='<button class="btnedit" data-tid="'+t.id+'" onclick="tomarTicket(this.dataset.tid)" style="font-size:11px;padding:4px 12px;border-radius:20px;margin-bottom:6px;display:block;margin-left:auto">🙋 Tomar</button>';
     if(currentUser.perfil==='Admin'||esLegal)html+='<button class="btnedit" data-tid="'+t.id+'" onclick="gestionarTicket(this.dataset.tid)" style="font-size:11px;padding:4px 12px;border-radius:20px">✏️ Gestionar</button>';
     html+='</div>';
     html+='</div></div>';
@@ -3587,6 +3668,8 @@ function openFormTicket(){
   document.getElementById('tk-sitio').value='';
   document.getElementById('tk-urgencia').value='Media';
   document.getElementById('tk-deadline').value='';
+  document.getElementById('tk-deadline').disabled=false;
+  document.getElementById('tk-critica-aviso').style.display='none';
   document.getElementById('form-ticket').classList.add('open');
 }
 
@@ -3601,10 +3684,23 @@ function gestionarTicket(id){
   document.getElementById('tk-estado-edit').value=t.estado;
   document.getElementById('tk-bloq-quien').value=t.bloq||'';
   document.getElementById('tk-respuesta').value='';
+  var esAdmin=currentUser.perfil==='Admin';
   var header=document.getElementById('tk-detalle-header');
-  header.innerHTML='<div style="font-size:12px;font-weight:600;margin-bottom:4px">'+t.num+' — '+t.asunto+'</div>'
-    +'<div style="font-size:11px;color:var(--tx2)">De: '+t.remitente+'</div>'
-    +(t.cuerpo?'<div style="font-size:11px;color:var(--tx3);margin-top:4px">'+t.cuerpo.substring(0,100)+'...</div>':'');
+  header.innerHTML='<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">'+prioBadge(t)+'<span style="font-size:12px;font-weight:600">'+t.num+' — '+t.asunto+'</span></div>'
+    +'<div style="font-size:11px;color:var(--tx2)">De: '+t.remitente+(t.deadline?' · Deadline: '+fmtDate(t.deadline):'')+'</div>'
+    +(t.cuerpo?'<div style="font-size:11px;color:var(--tx3);margin-top:4px;white-space:pre-wrap">'+t.cuerpo+'</div>':'');
+  // Timeline + botón "Tomar ticket" si Legal todavía no lo tomó
+  document.getElementById('tk-timeline').innerHTML=ticketTimeline(t,false)
+    +(!t.tomadoTs&&t.estado!=='Resuelto'?'<button type="button" class="btnp" style="width:100%;margin-top:10px" data-tid="'+t.id+'" onclick="tomarTicket(this.dataset.tid)">🙋 Tomar ticket</button>':'');
+  // Deadline editable solo para Admin
+  document.getElementById('tk-deadline-edit-wrap').style.display=esAdmin?'block':'none';
+  document.getElementById('tk-deadline-edit').value=t.deadline||'';
+  // Historial de respuestas: Admin lo puede editar/borrar; el resto lo ve
+  document.getElementById('tk-hist-wrap').style.display=(t.respuestaRaw||esAdmin)?'block':'none';
+  document.getElementById('tk-hist-ro').style.display=esAdmin?'none':'block';
+  document.getElementById('tk-hist-ro').innerHTML=t.respuesta||'';
+  document.getElementById('tk-hist-admin').style.display=esAdmin?'block':'none';
+  document.getElementById('tk-hist-edit').value=t.respuestaRaw||'';
   document.getElementById('form-ticket').classList.add('open');
 }
 
@@ -3615,9 +3711,25 @@ async function guardarGestionTicket(){
   var bloq=document.getElementById('tk-bloq-quien').value;
   var respuesta=document.getElementById('tk-respuesta').value.trim();
   var t=tickets.find(function(x){return x.id===editingTicketId;});
+  var esAdmin=currentUser.perfil==='Admin';
   try{
-    var fields={Estado:estado,BloqQuien:bloq,Respuesta:respuesta};
-    if(estado==='Resuelto')fields.FechaCierre=new Date().toISOString();
+    var ahora=new Date().toISOString();
+    var fields={Estado:estado,BloqQuien:bloq};
+    // Historial: se parte de lo guardado (o de lo que editó el Admin) y la respuesta nueva se agrega con fecha e iniciales
+    var hist=esAdmin?document.getElementById('tk-hist-edit').value.trim():(t.respuestaRaw||'');
+    if(respuesta){
+      var sello='['+new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})+' · '+currentUser.ini+']';
+      hist=(hist?hist+'\n\n':'')+sello+' '+respuesta;
+      if(!t.respTs)fields.FechaRespuesta=ahora;
+    }
+    if(hist!==(t.respuestaRaw||''))fields.Respuesta=hist;
+    // Si Legal responde o cierra sin haber tocado "Tomar", se registra igual quién lo tomó
+    if(!t.tomadoTs&&(respuesta||estado==='Resuelto')){fields.FechaTomado=ahora;fields.TomadoPor=currentUser.ini;}
+    // Cierre: se fecha al pasar a Resuelto; si se reabre, se limpia
+    if(estado==='Resuelto'&&t.estado!=='Resuelto')fields.FechaCierre=ahora;
+    if(estado!=='Resuelto'&&t.estado==='Resuelto')fields.FechaCierre=null;
+    // Deadline: solo Admin
+    if(esAdmin){var dl=document.getElementById('tk-deadline-edit').value;if(dl!==(t.deadline||''))fields.Deadline=dl?dl+'T00:00:00Z':null;}
     await updateListItem(LIST_TICKETS,editingTicketId,fields);
     await syncAll();
     if(t&&t.email&&respuesta){
@@ -3666,6 +3778,7 @@ async function submitTicket(){
   var desc=document.getElementById('tk-desc').value.trim();
   var urgencia=document.getElementById('tk-urgencia').value;
   if(!sector||!resp||!asunto||!desc){alert('Por favor completá todos los campos.');return;}
+  if(urgencia==='Crítica'&&!confirm('Vas a marcar este ticket como CRÍTICO: tiene que resolverse HOY.\n\n¿Es realmente impostergable? Si no, elegí Alta.'))return;
 
   var btn=document.getElementById('tk-submit-btn');
   btn.disabled=true;btn.textContent='Enviando...';
@@ -3677,12 +3790,12 @@ async function submitTicket(){
     var userName=accounts.length?accounts[0].name:'Desconocido';
     var userEmail=accounts.length?accounts[0].username:'';
 
-    var urgEmoji=urgencia==='Alta'?'🔴':urgencia==='Media'?'🟡':'🟢';
+    var urgEmoji=urgencia==='Crítica'?'🚨':urgencia==='Alta'?'🔴':urgencia==='Media'?'🟡':'🟢';
 
     // Create ticket in SharePoint
     var cat=document.getElementById('tk-cat').value;
     var sitio=document.getElementById('tk-sitio').value.trim();
-    var deadline=document.getElementById('tk-deadline').value;
+    var deadline=urgencia==='Crítica'?todayStr():document.getElementById('tk-deadline').value;
     var asuntoFull=(cat?cat+' — ':'')+(sitio?sitio+' — ':'')+asunto;
     var fields={
       Title:asuntoFull.substring(0,255),
@@ -3720,7 +3833,7 @@ async function submitTicket(){
     // El mail no se abre solo (el navegador lo bloquea después de esperar a SharePoint): se ofrece con botones
     showMailStep('✅ Ticket '+ticketNum+' creado',
       'Ahora avisale a '+respName+' por mail. Si tenés documentos, <b>adjuntalos en ese mail</b> y tocá Enviar.',
-      respEmail,'['+ticketNum+'] '+asuntoFull+' — Solicitud Legal ATIS',mailBodyText);
+      respEmail,(urgencia==='Crítica'?'🚨 CRÍTICO – RESOLVER HOY — ':'')+'['+ticketNum+'] '+asuntoFull+' — Solicitud Legal ATIS',mailBodyText);
   }catch(e){
     console.error('submitTicket error:',e);
     showToast('Error al guardar: '+e.message,true);
