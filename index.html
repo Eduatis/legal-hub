@@ -349,7 +349,32 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div class="pageview active" id="page-dashboard">
         <div class="ctabs" id="dash-ctabs"></div>
         <div class="metrics" id="dash-metrics"></div>
-        <div id="dash-greeting" style="font-size:22px;font-weight:700;color:var(--bl);margin-bottom:4px;padding:0 2px"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+          <div id="dash-greeting" style="font-size:22px;font-weight:700;color:var(--bl);padding:0 2px"></div>
+          <button class="btnp" id="btn-repaso" style="display:none" onclick="abrirRepaso()">🎙 Repaso del día</button>
+        </div>
+        <!-- Repaso del día por voz (se arma con los datos ya cargados; no sale nada del Hub) -->
+        <div id="repaso" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;align-items:center;justify-content:center;padding:16px">
+          <div style="background:var(--surf);border-radius:14px;max-width:640px;width:100%;padding:22px 24px;box-shadow:0 10px 40px rgba(0,0,0,.25)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <div style="font-size:12px;color:var(--tx3);letter-spacing:.06em;text-transform:uppercase" id="repaso-paso"></div>
+              <button class="btns" style="padding:3px 10px" onclick="cerrarRepaso()">✕</button>
+            </div>
+            <div id="repaso-titulo" style="font-size:18px;font-weight:700;color:var(--bl);margin-bottom:10px"></div>
+            <div id="repaso-texto" style="font-size:15px;line-height:1.6;min-height:90px;max-height:50vh;overflow:auto"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
+              <button class="btns" onclick="repasoIr(-1)">⏮ Anterior</button>
+              <button class="btnp" id="repaso-pausa" onclick="repasoPausa()">⏸ Pausa</button>
+              <button class="btns" onclick="repasoIr(1)">⏭ Siguiente</button>
+              <button class="btns" onclick="repasoRepetir()">🔁 Repetir</button>
+              <button class="btns" onclick="repasoDetalle()">➕ Más detalle</button>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:8px;flex-wrap:wrap">
+              <label style="font-size:12px;color:var(--tx2);display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="repaso-mic" onchange="repasoMicToggle()" style="width:auto"> 🎤 Manejar con la voz <span style="color:var(--tx3)">(“siguiente”, “repetí”, “detalle”, “pará”, “anterior”, “terminar”)</span></label>
+              <span id="repaso-estado" style="font-size:11px;color:var(--tx3)"></span>
+            </div>
+          </div>
+        </div>
         <div class="g1" id="dash-tickets-wrap" style="display:none">
           <div class="card" style="border-left:3px solid var(--bl)"><div class="cardh"><div class="cardht" id="dash-tickets-title">🎫 Tickets pendientes</div><div class="cardhl" onclick="navTo('tickets')">Ver todos</div></div><div id="dash-tickets"></div></div>
         </div>
@@ -1341,6 +1366,8 @@ async function initApp(account){
   fillLegalSelects();
   await syncAll();hideLoading();document.getElementById('app').style.display='block';
   if(currentUser.perfil==='Admin'){document.getElementById('setup-btn-wrap').style.display='flex';}
+  // Repaso del día por voz: para quien tiene dashboard
+  if(currentUser.perfil!=='Solicitante'&&!currentUser.mlaOnly)document.getElementById('btn-repaso').style.display='inline-block';
   // Register login
   registrarLogin();
   // Show pending popup after short delay
@@ -1646,6 +1673,141 @@ function renderDash(){
 function setDashCountry(c){dashCountry=c;renderDash();}
 
 // Dashboard: tickets sin resolver (Admin ve todos; Legal ve los asignados a sí)
+// ─── REPASO DEL DÍA POR VOZ ─────────────────────────────────────────────────
+// Guion fijo armado con los datos ya cargados (sin IA ni servidor). Se lee con una voz LOCAL del sistema
+// para que el texto no salga de la PC; los comandos por voz son opcionales.
+var RP={pasos:[],i:0,pausado:false,detalle:false,rec:null,mic:false,hablando:false};
+function rpFecha(d){var x=new Date(d+'T12:00:00');return x.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});}
+function rpDias(n){return n===0?'hoy':n===1?'mañana':n===-1?'ayer':n<0?('hace '+(-n)+' días'):('en '+n+' días');}
+var RP_PAIS={AR:'Argentina',UY:'Uruguay',PY:'Paraguay',US:'Estados Unidos',Global:'global'};
+function rpPais(p){return RP_PAIS[p]||p;}
+function rpVence(d){return d<0?'venció '+rpDias(d):'vence '+rpDias(d);}
+function rpCap(s){s=String(s||'');return s.charAt(0).toUpperCase()+s.slice(1);}
+function rpLista(arr,max,fn){var a=arr.slice(0,max).map(function(x){return rpCap(fn(x));});var resto=arr.length-a.length;return a.join('. ')+(resto>0?'. Y '+resto+(resto===1?' más':' más')+'.':'.');}
+function rpNum(t){return 'ticket '+parseInt(String(t.num).replace(/\D/g,'').slice(0,4)||t.id,10);}
+function rpNombre(ini){var u=legalUser(ini);return u?u.name.split(' ')[0]:(ini||'sin asignar');}
+function armarRepaso(){
+  var pasos=[], hoyStr=todayStr();
+  var esAdmin=currentUser.perfil==='Admin', esLegal=!!legalUser(currentUser.ini);
+  // Tickets pendientes que me tocan (Admin: todos; Legal: asignados)
+  var tk=tickets.filter(function(t){return t.estado!=='Resuelto'&&(esAdmin||t.resp===currentUser.ini);});
+  var crit=tk.filter(function(t){return t.urgencia==='Crítica';});
+  var venc=tk.filter(function(t){var d=daysTo(t.deadline);return d!==null&&d<0&&t.urgencia!=='Crítica';});
+  var hoyM=tk.filter(function(t){var d=daysTo(t.deadline);return d!==null&&d>=0&&d<=1&&t.urgencia!=='Crítica';});
+  var sinTomar=tk.filter(function(t){return !t.tomadoTs;});
+  var at=vTemas().filter(function(t){return t.estado!=='Cerrado';});
+  var temVenc=at.filter(function(t){var d=daysTo(t.dead);return d!==null&&d<0;}).sort(function(a,b){return new Date(a.dead)-new Date(b.dead);});
+  var tem7=at.filter(function(t){var d=daysTo(t.dead);return d!==null&&d>=0&&d<=7;}).sort(function(a,b){return new Date(a.dead)-new Date(b.dead);});
+  var temMi=at.filter(function(t){return t.bloqueado&&t.bloqQuien===currentUser.ini;});
+  var sc=currentUser.scope||['AR','UY','PY'];
+  var fec=fechas.filter(function(f){var d=daysTo(f.fecha);return (sc.indexOf(f.pais)>=0||f.pais==='Global'||!f.pais)&&d!==null&&d>=0&&d<=14;}).sort(function(a,b){return new Date(a.fecha)-new Date(b.fecha);});
+  var suel=vSuelos().filter(function(s){var d=daysTo(s.fin);return d!==null&&d>=0&&d<=30;}).sort(function(a,b){return new Date(a.fin)-new Date(b.fin);});
+
+  var nombre=(currentUser.greeting||'').replace(/^Hola,?\s*/i,'').replace(/[^\wÁÉÍÓÚáéíóúñÑ ]/g,'').trim()||currentUser.name.split(' ')[0];
+  var h=new Date().getHours(), saludo=h<12?'Buen día':h<19?'Buenas tardes':'Buenas noches';
+  var res=[];
+  if(esAdmin||esLegal)res.push(tk.length+(tk.length===1?' ticket pendiente':' tickets pendientes')+(crit.length?', '+crit.length+(crit.length===1?' crítico':' críticos'):''));
+  res.push(temVenc.length+(temVenc.length===1?' tema vencido':' temas vencidos'));
+  res.push(tem7.length+(tem7.length===1?' tema que vence':' temas que vencen')+' esta semana');
+  if(fec.length)res.push(fec.length+(fec.length===1?' fecha clave':' fechas clave')+' en las próximas dos semanas');
+  pasos.push({t:'Resumen',txt:saludo+', '+nombre+'. Hoy es '+rpFecha(hoyStr)+'. Tenés '+res.join(', ')+'. Arranco.'});
+
+  if(esAdmin||esLegal){
+    if(crit.length)pasos.push({t:'🚨 Tickets críticos',txt:'Atención: '+(crit.length===1?'hay un ticket crítico que se tiene que resolver hoy. ':'hay '+crit.length+' tickets críticos que se tienen que resolver hoy. ')+rpLista(crit,5,function(t){return rpNum(t)+', '+t.asuntoRaw+', de '+String(t.remitente).replace(/&[a-z#0-9]+;/g,'')+(esAdmin?', asignado a '+rpNombre(t.resp):'');}),
+      det:crit.map(function(t){return rpNum(t)+': '+(t.respuestaRaw?'ya tiene respuesta de Legal.':'todavía sin respuesta.');}).join(' ')});
+    var urg=venc.concat(hoyM);
+    if(urg.length)pasos.push({t:'Tickets vencidos o que vencen ya',txt:(venc.length?venc.length+(venc.length===1?' ticket está vencido':' tickets están vencidos'):'')+(venc.length&&hoyM.length?' y ':'')+(hoyM.length?hoyM.length+' vencen hoy o mañana':'')+'. '+rpLista(urg,5,function(t){return rpNum(t)+', '+t.asuntoRaw+', '+rpVence(daysTo(t.deadline))+(esAdmin?', lo tiene '+rpNombre(t.resp):'');}),
+      det:urg.map(function(t){return rpNum(t)+', pedido por '+String(t.remitente).replace(/&[a-z#0-9]+;/g,'')+'. Prioridad '+(t.urgencia||'sin indicar')+'.';}).join(' ')});
+    if(esAdmin){
+      var por={};tk.forEach(function(t){por[t.resp]=(por[t.resp]||0)+1;});
+      var partes=Object.keys(por).map(function(k){return rpNombre(k)+' '+por[k];});
+      pasos.push({t:'Tickets por responsable',txt:partes.length?'Pendientes por persona: '+partes.join(', ')+'.'+(sinTomar.length?' Hay '+sinTomar.length+(sinTomar.length===1?' ticket que nadie tomó todavía.':' tickets que nadie tomó todavía.'):' Todos los pendientes ya fueron tomados.'):'No hay tickets pendientes.',
+        det:sinTomar.length?'Sin tomar: '+rpLista(sinTomar,8,function(t){return rpNum(t)+', '+t.asuntoRaw+', para '+rpNombre(t.resp);}):''});
+    } else if(tk.length&&!crit.length&&!urg.length){
+      pasos.push({t:'Tus tickets',txt:'Tenés '+tk.length+' tickets pendientes, ninguno vencido. '+rpLista(ordenarTickets(tk.slice(),'deadline'),4,function(t){return rpNum(t)+', '+t.asuntoRaw;})});
+    }
+  }
+  if(temMi.length)pasos.push({t:'Temas que esperan tu intervención',txt:rpLista(temMi,5,function(t){return t.tit+', responsable '+rpNombre(t.resp)+(t.bloqQue?', se necesita: '+t.bloqQue:'');})});
+  pasos.push({t:'Temas vencidos',txt:temVenc.length?(temVenc.length===1?'Hay un tema vencido. ':'Hay '+temVenc.length+' temas vencidos. ')+rpLista(temVenc,5,function(t){return t.tit+', venció '+rpDias(daysTo(t.dead))+(esAdmin?', de '+rpNombre(t.resp):'');}):'No hay temas vencidos.',
+    det:temVenc.length>5?'Lista completa: '+temVenc.map(function(t){return t.tit;}).join('. ')+'.':''});
+  pasos.push({t:'Temas que vencen esta semana',txt:tem7.length?rpLista(tem7,6,function(t){return t.tit+', vence '+rpDias(daysTo(t.dead))+(esAdmin?', '+rpNombre(t.resp):'');}):'Ningún tema vence en los próximos siete días.',
+    det:tem7.filter(function(t){return t.desc;}).slice(0,4).map(function(t){return t.tit+': '+String(t.desc).replace(/<[^>]+>/g,'').substring(0,160);}).join('. ')});
+  if(fec.length)pasos.push({t:'Fechas clave',txt:rpLista(fec,6,function(f){return f.desc+', '+rpDias(daysTo(f.fecha))+(f.pais?', '+rpPais(f.pais):'');})});
+  if(suel.length)pasos.push({t:'Contratos de suelo por vencer',txt:(suel.length===1?'Un contrato de suelo vence en los próximos treinta días: ':suel.length+' contratos de suelo vencen en los próximos treinta días: ')+rpLista(suel,5,function(s){return 'sitio '+s.sitio+', '+s.cp+', vence '+rpDias(daysTo(s.fin));})});
+  pasos.push({t:'Fin',txt:'Eso es todo por hoy. '+(crit.length?'Prioridad uno: los tickets críticos.':urgTxt(temVenc,venc))});
+  function urgTxt(a,b){return (a.length||b.length)?'Lo más urgente son los vencidos.':'Buen día de trabajo.';}
+  return pasos;
+}
+function rpVoz(){
+  var vs=speechSynthesis.getVoices().filter(function(v){return /^es/i.test(v.lang);});
+  // Preferimos voces locales (no mandan el texto a internet)
+  var loc=vs.filter(function(v){return v.localService;});
+  var pref=function(arr){return arr.find(function(v){return /es-AR/i.test(v.lang);})||arr.find(function(v){return /es-(MX|US|419)/i.test(v.lang);})||arr[0];};
+  return pref(loc)||null;
+}
+function abrirRepaso(){
+  RP.pasos=armarRepaso();RP.i=0;RP.pausado=false;RP.detalle=false;
+  document.getElementById('repaso').style.display='flex';
+  if(!rpVoz())document.getElementById('repaso-estado').textContent='No hay una voz en español instalada en esta PC: se muestra el texto sin leerlo.';
+  rpMostrar(true);
+}
+function cerrarRepaso(){
+  speechSynthesis.cancel();RP.hablando=false;RP.pausado=true;
+  if(RP.rec){RP.mic=false;try{RP.rec.abort();}catch(e){}}
+  document.getElementById('repaso-mic').checked=false;
+  document.getElementById('repaso').style.display='none';
+}
+function rpMostrar(hablar){
+  var p=RP.pasos[RP.i];if(!p)return;
+  document.getElementById('repaso-paso').textContent='Paso '+(RP.i+1)+' de '+RP.pasos.length;
+  document.getElementById('repaso-titulo').textContent=p.t;
+  var txt=p.txt+(RP.detalle&&p.det?'\n\n'+p.det:'');
+  var el=document.getElementById('repaso-texto');el.textContent=txt;el.style.whiteSpace='pre-wrap';
+  document.getElementById('repaso-pausa').textContent=RP.pausado?'▶ Seguir':'⏸ Pausa';
+  if(hablar&&!RP.pausado)rpHablar(RP.detalle&&p.det?p.det:p.txt);
+}
+function rpHablar(texto){
+  speechSynthesis.cancel();
+  var v=rpVoz();if(!v){RP.hablando=false;return;}
+  var u=new SpeechSynthesisUtterance(texto);u.voice=v;u.lang=v.lang;u.rate=1.02;
+  RP.hablando=true;
+  u.onend=function(){RP.hablando=false;if(RP.pausado)return;
+    // Avanza solo al terminar cada paso (salvo el último)
+    if(RP.i<RP.pasos.length-1)setTimeout(function(){if(!RP.pausado&&!RP.hablando&&document.getElementById('repaso').style.display!=='none'){RP.i++;RP.detalle=false;rpMostrar(true);}},900);};
+  u.onerror=function(){RP.hablando=false;};
+  speechSynthesis.speak(u);
+}
+function repasoIr(d){var n=RP.i+d;if(n<0||n>=RP.pasos.length)return;RP.i=n;RP.detalle=false;RP.pausado=false;rpMostrar(true);}
+function repasoPausa(){RP.pausado=!RP.pausado;if(RP.pausado){speechSynthesis.cancel();RP.hablando=false;rpMostrar(false);}else rpMostrar(true);}
+function repasoRepetir(){RP.pausado=false;rpMostrar(true);}
+function repasoDetalle(){var p=RP.pasos[RP.i];if(!p||!p.det){rpHablarCorto('No tengo más detalle de este punto.');return;}RP.detalle=true;RP.pausado=false;rpMostrar(true);}
+function rpHablarCorto(t){var v=rpVoz();if(!v)return;speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(t);u.voice=v;u.lang=v.lang;speechSynthesis.speak(u);}
+// Comandos por voz (opcional). En Chrome el audio del micrófono lo procesa Google; en Edge, Microsoft.
+function repasoMicToggle(){
+  var on=document.getElementById('repaso-mic').checked;
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(on&&!SR){document.getElementById('repaso-mic').checked=false;document.getElementById('repaso-estado').textContent='Este navegador no reconoce voz: usá Edge o Chrome.';return;}
+  RP.mic=on;
+  if(!on){if(RP.rec)try{RP.rec.abort();}catch(e){}document.getElementById('repaso-estado').textContent='';return;}
+  var r=new SR();r.lang='es-AR';r.continuous=true;r.interimResults=false;RP.rec=r;
+  r.onresult=function(e){
+    var t=e.results[e.results.length-1][0].transcript.toLowerCase().trim();
+    document.getElementById('repaso-estado').textContent='Escuché: “'+t+'”';
+    // Mientras habla el Hub solo se aceptan órdenes para frenar (evita que se escuche a sí mismo)
+    if(/\b(par[aá]|pausa|stop|silencio)\b/.test(t)){if(!RP.pausado)repasoPausa();return;}
+    if(RP.hablando)return;
+    if(/\b(termin|cerr|chau|listo|basta)/.test(t))cerrarRepaso();
+    else if(/\b(siguiente|pr[oó]ximo|segu[ií]|dale|avanz)/.test(t)){if(RP.pausado){RP.pausado=false;}repasoIr(1);}
+    else if(/\b(anterior|atr[aá]s|volv)/.test(t))repasoIr(-1);
+    else if(/\b(repet|otra vez|de nuevo)/.test(t))repasoRepetir();
+    else if(/\b(detalle|m[aá]s info|ampli)/.test(t))repasoDetalle();
+    else if(/\b(continu|reanud|seguir)/.test(t)&&RP.pausado)repasoPausa();
+  };
+  r.onend=function(){if(RP.mic&&document.getElementById('repaso').style.display!=='none'){try{r.start();}catch(e){}}};
+  r.onerror=function(e){if(e.error==='not-allowed'){RP.mic=false;document.getElementById('repaso-mic').checked=false;document.getElementById('repaso-estado').textContent='Permití el micrófono en el navegador.';}};
+  try{r.start();document.getElementById('repaso-estado').textContent='🎤 Escuchando comandos…';}catch(e){}
+}
+
 function renderDashTickets(){
   var wrap=document.getElementById('dash-tickets-wrap');if(!wrap)return;
   var esAdmin=currentUser.perfil==='Admin', esLegal=!!legalUser(currentUser.ini);
