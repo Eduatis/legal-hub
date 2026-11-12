@@ -1390,7 +1390,10 @@ async function initApp(account){
   // Register login
   registrarLogin();
   // Show pending popup after short delay
-  setTimeout(mostrarPopupPendientes, 1200);
+  // Si el Hub se abrió desde el aviso de los lunes (?revision=1), arranca la revisión semanal
+  var abrirRevision=false;try{abrirRevision=sessionStorage.getItem('hubRevision')==='1';sessionStorage.removeItem('hubRevision');}catch(e){}
+  if(abrirRevision&&document.getElementById('btn-repaso').style.display!=='none'){goTo('dashboard',document.getElementById('nav-dashboard'));setTimeout(function(){abrirRepaso('semanal');},800);}
+  else setTimeout(mostrarPopupPendientes, 1200);
   if(currentUser.mlaOnly){
     goTo('mla', document.getElementById('nav-mla'));
     // Hide new MLA button for readonly
@@ -1705,7 +1708,7 @@ function rpCap(s){s=String(s||'');return s.charAt(0).toUpperCase()+s.slice(1);}
 function rpLista(arr,max,fn){var a=arr.slice(0,max).map(function(x){return rpCap(fn(x));});var resto=arr.length-a.length;return a.join('. ')+(resto>0?'. Y '+resto+(resto===1?' más':' más')+'.':'.');}
 function rpNum(t){return 'ticket '+parseInt(String(t.num).replace(/\D/g,'').slice(0,4)||t.id,10);}
 function rpNombre(ini){var u=legalUser(ini);return u?u.name.split(' ')[0]:(ini||'sin asignar');}
-function armarRepaso(){
+function armarRepaso(modo){
   var pasos=[], hoyStr=todayStr();
   var esAdmin=currentUser.perfil==='Admin', esLegal=!!legalUser(currentUser.ini);
   // Tickets pendientes que me tocan (Admin: todos; Legal: asignados)
@@ -1729,7 +1732,7 @@ function armarRepaso(){
   res.push(temVenc.length+(temVenc.length===1?' tema vencido':' temas vencidos'));
   res.push(tem7.length+(tem7.length===1?' tema que vence':' temas que vencen')+' esta semana');
   if(fec.length)res.push(fec.length+(fec.length===1?' fecha clave':' fechas clave')+' en las próximas dos semanas');
-  pasos.push({t:'Resumen',txt:saludo+', '+nombre+'. Hoy es '+rpFecha(hoyStr)+'. Tenés '+res.join(', ')+'. Arranco.'});
+  pasos.push({t:modo==='semanal'?'Revisión semanal':'Resumen',txt:saludo+', '+nombre+'. '+(modo==='semanal'?'Arrancamos la revisión semanal. ':'')+'Hoy es '+rpFecha(hoyStr)+'. Tenés '+res.join(', ')+'. Arranco.'});
 
   if(esAdmin||esLegal){
     if(crit.length)pasos.push({t:'🚨 Tickets críticos',txt:'Atención: '+(crit.length===1?'hay un ticket crítico que se tiene que resolver hoy. ':'hay '+crit.length+' tickets críticos que se tienen que resolver hoy. ')+rpLista(crit,5,function(t){return rpNum(t)+', '+t.asuntoRaw+', de '+String(t.remitente).replace(/&[a-z#0-9]+;/g,'')+(esAdmin?', asignado a '+rpNombre(t.resp):'');}),
@@ -1753,6 +1756,34 @@ function armarRepaso(){
     det:tem7.filter(function(t){return t.desc;}).slice(0,4).map(function(t){return t.tit+': '+String(t.desc).replace(/<[^>]+>/g,'').substring(0,160);}).join('. ')});
   if(fec.length)pasos.push({t:'Fechas clave',txt:rpLista(fec,6,function(f){return f.desc+', '+rpDias(daysTo(f.fecha))+(f.pais?', '+rpPais(f.pais):'');})});
   if(suel.length)pasos.push({t:'Contratos de suelo por vencer',txt:(suel.length===1?'Un contrato de suelo vence en los próximos treinta días: ':suel.length+' contratos de suelo vencen en los próximos treinta días: ')+rpLista(suel,5,function(s){return 'sitio '+s.sitio+', '+s.cp+', vence '+rpDias(daysTo(s.fin));})});
+  if(modo==='semanal'){
+    // Revisión semanal (lunes): mirada de gerente sobre todo el equipo
+    var legal=usersInGroup('Legal');
+    var hace7=new Date(TODAY);hace7.setDate(hace7.getDate()-7);
+    var carga=legal.map(function(u){
+      var tm=at.filter(function(t){return t.resp===u.ini;});
+      var tv=tm.filter(function(t){var d=daysTo(t.dead);return d!==null&&d<0;}).length;
+      var tkU=tickets.filter(function(t){return t.estado!=='Resuelto'&&t.resp===u.ini;}).length;
+      return {u:u,tm:tm,tv:tv,tk:tkU};
+    });
+    pasos.push({t:'Carga del equipo',txt:carga.map(function(c){return c.u.name.split(' ')[0]+': '+c.tm.length+(c.tm.length===1?' tema activo':' temas activos')+(c.tv?', '+c.tv+(c.tv===1?' vencido':' vencidos'):'')+' y '+c.tk+(c.tk===1?' ticket pendiente':' tickets pendientes');}).join('. ')+'.'});
+    var tem14=at.filter(function(t){var d=daysTo(t.dead);return d!==null&&d>7&&d<=14;}).sort(function(a,b){return new Date(a.dead)-new Date(b.dead);});
+    pasos.push({t:'La semana que viene',txt:tem14.length?'Entre ocho y catorce días vencen: '+rpLista(tem14,6,function(t){return t.tit+', '+rpDias(daysTo(t.dead))+', '+rpNombre(t.resp);}):'No hay temas que venzan entre ocho y catorce días.'});
+    var sinDead=at.filter(function(t){return !t.dead;});
+    if(sinDead.length)pasos.push({t:'Temas sin deadline',txt:(sinDead.length===1?'Hay un tema activo sin deadline: ':'Hay '+sinDead.length+' temas activos sin deadline. Conviene ponerles fecha: ')+rpLista(sinDead,5,function(t){return t.tit+', '+rpNombre(t.resp);})});
+    carga.forEach(function(c){
+      if(!c.tm.length)return;
+      var ord=c.tm.slice().sort(function(a,b){return (a.dead?new Date(a.dead):Infinity)-(b.dead?new Date(b.dead):Infinity);});
+      pasos.push({t:'Temas de '+c.u.name.split(' ')[0],txt:rpLista(ord,8,function(t){return t.tit+(t.dead?', '+rpVence(daysTo(t.dead)):', sin deadline')+(t.bloqueado?', bloqueado':'');}),
+        det:ord.length>8?'Lista completa: '+ord.map(function(t){return t.tit;}).join('. ')+'.':''});
+    });
+    var cerT=vTemas().filter(function(t){return t.estado==='Cerrado'&&t.fc&&new Date(t.fc)>=hace7;});
+    var cerK=tickets.filter(function(t){return t.estado==='Resuelto'&&t.cierreTs&&new Date(t.cierreTs)>=hace7&&(esAdmin||t.resp===currentUser.ini);});
+    pasos.push({t:'La semana pasada',txt:'En los últimos siete días se cerraron '+cerT.length+(cerT.length===1?' tema':' temas')+' y '+cerK.length+(cerK.length===1?' ticket.':' tickets.')+(cerT.length?' Temas cerrados: '+rpLista(cerT,5,function(t){return t.tit;}):'')});
+    pasos.push({t:'Tus prioridades',txt:'Para terminar: definí tus tres prioridades de la semana y, si hace falta, reasigná o poné fecha a lo que quedó trabado.'});
+    pasos.push({t:'Fin',txt:'Revisión semanal terminada. Buena semana.'});
+    return pasos;
+  }
   pasos.push({t:'Fin',txt:'Eso es todo por hoy. '+(crit.length?'Prioridad uno: los tickets críticos.':urgTxt(temVenc,venc))});
   function urgTxt(a,b){return (a.length||b.length)?'Lo más urgente son los vencidos.':'Buen día de trabajo.';}
   return pasos;
@@ -1764,8 +1795,8 @@ function rpVoz(){
   var pref=function(arr){return arr.find(function(v){return /es-AR/i.test(v.lang);})||arr.find(function(v){return /es-(MX|US|419)/i.test(v.lang);})||arr[0];};
   return pref(loc)||null;
 }
-function abrirRepaso(){
-  RP.pasos=armarRepaso();RP.i=0;RP.pausado=false;RP.detalle=false;
+function abrirRepaso(modo){
+  RP.pasos=armarRepaso(modo);RP.i=0;RP.pausado=false;RP.detalle=false;
   document.getElementById('repaso').style.display='flex';
   if(!rpVoz())document.getElementById('repaso-estado').textContent='No hay una voz en español instalada en esta PC: se muestra el texto sin leerlo.';
   rpMostrar(true);
@@ -4112,6 +4143,8 @@ async function submitTicket(){
   btn.disabled=false;btn.textContent='Enviar solicitud';
 }
 
+// Guardar el pedido de revisión antes del login (el redirect de Microsoft pierde el ?revision=1)
+try{if(/[?&]revision=1/.test(location.search))sessionStorage.setItem('hubRevision','1');}catch(e){}
 (async function(){
   try{
     await msalInstance.initialize();
