@@ -1098,6 +1098,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px"><span style="font-size:11px;color:var(--tx3)">Como Admin podés corregir o borrar texto acá.</span><button type="button" class="btns" style="font-size:11px;padding:3px 10px" onclick="document.getElementById('tk-hist-edit').value=''">🗑 Borrar todas</button></div>
         </div>
       </div>
+      <div class="field"><label>Respuesta modelo <span style="color:var(--tx3);font-weight:400">(opcional — después la podés editar)</span></label>
+        <select id="tk-modelo" onchange="aplicarRespuestaModelo()"><option value="">— Elegir un texto listo —</option></select>
+      </div>
       <div class="field"><label>Nueva respuesta / comentario</label>
         <textarea id="tk-respuesta" placeholder="Escribí tu respuesta o comentario... (se agrega al historial con fecha y tus iniciales)"></textarea>
       </div>
@@ -3934,6 +3937,29 @@ function renderTickets(){
   }).join('');
 }
 // Botón rápido: registra la devolución (y la toma, si faltaba) sin tener que escribir respuesta
+// Respuestas modelo (textos genéricos; {nombre}, {num} y {deadline} se completan con los datos del ticket)
+var RESPUESTAS_MODELO=[
+  {k:'recibido',lbl:'📥 Recibido, lo estamos viendo',txt:'Hola {nombre}, recibimos tu pedido {num}. Ya lo estamos revisando y te respondemos antes del {deadline}.'},
+  {k:'falta-info',lbl:'❓ Falta información',txt:'Hola {nombre}, para avanzar con {num} necesitamos que nos envíes: [completar]. Apenas lo tengamos, seguimos.'},
+  {k:'falta-doc',lbl:'📎 Falta documentación',txt:'Hola {nombre}, para avanzar con {num} necesitamos la documentación respaldatoria (contrato vigente, antecedentes o versión editable en Word). Podés responder este mail adjuntándola.'},
+  {k:'tercero',lbl:'⏳ En revisión con un tercero',txt:'Hola {nombre}, tu pedido {num} está en revisión con [contraparte / otra área]. Te avisamos apenas tengamos novedades.'},
+  {k:'entregado',lbl:'📤 Te enviamos lo pedido',txt:'Hola {nombre}, te enviamos lo solicitado en {num}. Revisalo y, si tenés comentarios, respondé este mail.'},
+  {k:'cerrado',lbl:'✅ Lo damos por resuelto',txt:'Hola {nombre}, damos por resuelto el pedido {num}. Si necesitás algo más, cargá un nuevo ticket en el Legal Hub.'}];
+function llenarRespuestasModelo(){
+  var s=document.getElementById('tk-modelo');if(!s||s.options.length>1)return;
+  s.innerHTML='<option value="">— Elegir un texto listo —</option>'+RESPUESTAS_MODELO.map(function(r){return '<option value="'+r.k+'">'+r.lbl+'</option>';}).join('');
+}
+function aplicarRespuestaModelo(){
+  var s=document.getElementById('tk-modelo'), r=RESPUESTAS_MODELO.find(function(x){return x.k===s.value;});if(!r)return;
+  var t=tickets.find(function(x){return x.id===editingTicketId;})||{};
+  var nombre=String(nombreSolicitante(t)||'').split(' ')[0]||'';
+  var txt=r.txt.replace('{nombre}',nombre).replace(/\{num\}/g,t.num?String(t.num).replace(/&[a-z#0-9]+;/g,''):'tu pedido').replace('{deadline}',t.deadline?fmtDate(t.deadline):'la fecha acordada');
+  var ta=document.getElementById('tk-respuesta');ta.value=ta.value?ta.value+'\n\n'+txt:txt;
+  // "Te enviamos" y "resuelto" implican devolución; "resuelto" sugiere cerrar el ticket
+  if(r.k==='entregado'||r.k==='cerrado'){var dv=document.getElementById('tk-devuelto');if(!dv.disabled)dv.checked=true;}
+  if(r.k==='cerrado')document.getElementById('tk-estado-edit').value='Resuelto';
+  s.value='';ta.focus();
+}
 async function marcarDevolucion(id){
   var t=tickets.find(function(x){return x.id===id;});if(!t)return;
   var ahora=new Date().toISOString(), f={FechaRespuesta:ahora};
@@ -4300,6 +4326,7 @@ function gestionarTicket(id){
   document.getElementById('tk-estado-edit').value=t.estado;
   document.getElementById('tk-bloq-quien').value=t.bloq||'';
   document.getElementById('tk-respuesta').value='';
+  llenarRespuestasModelo();
   var esAdmin=currentUser.perfil==='Admin';
   var header=document.getElementById('tk-detalle-header');
   header.innerHTML='<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">'+prioBadge(t)+'<span style="font-size:12px;font-weight:600">'+t.num+' — '+t.asunto+'</span></div>'
