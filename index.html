@@ -330,6 +330,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <div class="sbfoot">
       <div id="setup-btn-wrap" style="display:none;margin-bottom:10px;flex-direction:column;gap:6px">
         <button onclick="abrirPanelRecordatorios()" style="width:100%;font-size:11px;padding:7px;border-radius:var(--rs);border:1px solid var(--gr-tx);background:var(--gr-bg);color:var(--gr-tx);cursor:pointer;font-weight:500">📬 Recordatorios</button>
+        <button id="btn-respaldo" onclick="hacerRespaldo(true)" style="width:100%;font-size:11px;padding:7px;border-radius:var(--rs);border:1px solid var(--brd2);background:var(--surf);color:var(--tx2);cursor:pointer;font-weight:500">💾 Respaldar ahora</button>
       </div>
       <div class="sbuser">
         <div class="av" id="sb-av" style="width:28px;height:28px;font-size:10px"></div>
@@ -1416,6 +1417,8 @@ async function initApp(account){
   if(currentUser.perfil!=='Solicitante'&&!currentUser.mlaOnly)document.getElementById('nav-calendario').style.display='flex';
   // Register login
   registrarLogin();
+  // Respaldo mensual automático (solo Admin, en segundo plano)
+  setTimeout(respaldoAutomatico,4000);
   // Show pending popup after short delay
   // Si el Hub se abrió desde el aviso de los lunes (?revision=1), arranca la revisión semanal
   var abrirRevision=false;try{abrirRevision=sessionStorage.getItem('hubRevision')==='1';sessionStorage.removeItem('hubRevision');}catch(e){}
@@ -4287,6 +4290,55 @@ function renderCalendario(){
 // Alerta en el dashboard: poderes y mandatos que vencen en 60 días o ya vencidos
 function alertasRiesgoLegal(){
   return eventosCalendario().filter(function(e){var d=daysTo(e.fecha);return (e.tipo==='poder'||e.tipo==='mandato')&&d!==null&&d<=60&&d>=-90;}).sort(function(a,b){return a.fecha<b.fecha?-1:1;});
+}
+
+// ─── RESPALDO: copia de todas las listas en la biblioteca de LegalOps ──────
+// Carpeta "Respaldos Legal Hub/AAAA-MM-DD" del sitio: un CSV por lista (se abre en Excel) + un JSON completo.
+// Se hace solo una vez por mes cuando entra el Admin, o a mano con "Respaldar ahora".
+var RESPALDO_CARPETA='Respaldos Legal Hub';
+var RESPALDO_LISTAS=['Documentos_Legal','Temas_Legal','ContratosSuelo','DueDiligence_UY','INTORU','Poderes_Legal','Societario_Autoridades','Societario_Accionistas','MLA_Legal','FechasClaves','Tickets_Legal','Legal_Logins','Inmuebles_Propios_UY','Usuarios_Hub','Semanas_Tickets'];
+function aCSV(items){
+  var cols=[];items.forEach(function(i){Object.keys(i.fields||{}).forEach(function(k){if(k.charAt(0)!=='@'&&k.indexOf('odata')<0&&cols.indexOf(k)<0)cols.push(k);});});
+  var esc=function(v){if(v==null)return '';if(typeof v==='object')v=JSON.stringify(v);v=String(v);return /[;"\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  // Separador ";" para que Excel en español lo abra en columnas
+  return '﻿'+['ID'].concat(cols).join(';')+'\r\n'+items.map(function(i){return [i.id].concat(cols.map(function(c){return esc(i.fields[c]);})).join(';');}).join('\r\n');
+}
+async function subirArchivoSitio(ruta,contenido,tipo){
+  var site=await getSiteId();
+  var url='https://graph.microsoft.com/v1.0/sites/'+site+'/drive/root:/'+ruta.split('/').map(encodeURIComponent).join('/')+':/content';
+  var r=await graphFetch(url,{method:'PUT',headers:{'Content-Type':tipo},body:contenido});
+  if(!r.ok)throw new Error(await graphError(r,ruta));
+}
+async function ultimoRespaldo(){
+  var site=await getSiteId();
+  var r=await graphFetch('https://graph.microsoft.com/v1.0/sites/'+site+'/drive/root:/'+encodeURIComponent(RESPALDO_CARPETA)+':/children?$select=name,folder&$top=500');
+  if(r.status===404)return null;
+  if(!r.ok)throw new Error(await graphError(r,RESPALDO_CARPETA));
+  var d=await r.json();
+  var fechasR=(d.value||[]).filter(function(x){return x.folder&&/^\d{4}-\d{2}-\d{2}/.test(x.name);}).map(function(x){return x.name.slice(0,10);}).sort();
+  return fechasR.length?fechasR[fechasR.length-1]:null;
+}
+async function hacerRespaldo(manual){
+  var btn=document.getElementById('btn-respaldo');if(btn){btn.disabled=true;btn.textContent='⏳ Respaldando…';}
+  var hoy=todayStr(), carpeta=RESPALDO_CARPETA+'/'+hoy, todo={fecha:new Date().toISOString(),listas:{}}, ok=0, fallas=[];
+  try{
+    for(var i=0;i<RESPALDO_LISTAS.length;i++){
+      var nombre=RESPALDO_LISTAS[i];
+      try{var items=await getListItems(nombre);todo.listas[nombre]=items.map(function(x){return {id:x.id,fields:x.fields};});
+        await subirArchivoSitio(carpeta+'/'+nombre+'.csv',aCSV(items),'text/csv');ok++;}
+      catch(e){fallas.push(nombre);console.warn('Respaldo',nombre,e.message);}
+    }
+    await subirArchivoSitio(carpeta+'/respaldo-completo.json',JSON.stringify(todo),'application/json');
+    showToast('💾 Respaldo guardado: '+ok+' listas en "'+carpeta+'"'+(fallas.length?' ('+fallas.length+(fallas.length===1?' no se pudo leer: ':' no se pudieron leer: ')+fallas.join(', ')+')':''),!!fallas.length&&!ok,7000);
+  }catch(e){showToast('Error en el respaldo: '+e.message,true,7000);}
+  if(btn){btn.disabled=false;btn.textContent='💾 Respaldar ahora';}
+}
+// Al entrar el Admin: si el último respaldo tiene más de 30 días (o no hay), se hace solo
+async function respaldoAutomatico(){
+  if(currentUser.perfil!=='Admin')return;
+  try{var u=await ultimoRespaldo();var dias=u?Math.floor((new Date(todayStr())-new Date(u))/86400000):null;
+    if(u===null||dias>=30)await hacerRespaldo(false);}
+  catch(e){console.warn('Respaldo automático:',e.message);}
 }
 
 async function cambiarEstadoTicket(id, estado){
