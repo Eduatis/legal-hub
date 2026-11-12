@@ -506,9 +506,12 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <!-- Cómo venimos: indicadores + gráfico (solo Legal/Admin) -->
         <div id="tk-panel" style="display:none">
           <div class="metrics" id="tk-kpis"></div>
-          <div class="card" style="margin-bottom:16px"><div class="cardh"><div class="cardht">Cómo venimos — tickets creados vs. cerrados por semana</div><div class="cardhl" id="tk-chart-tabla-btn" onclick="toggleTkTabla()">Ver tabla</div></div>
-            <div class="chart-wrap" style="height:200px"><canvas id="ch-tk-semanas"></canvas></div>
-            <div id="tk-chart-tabla" style="display:none;margin-top:10px"></div>
+          <div class="card" style="margin-bottom:12px"><div class="cardh"><div class="cardht">¿En qué etapa están? <span style="font-weight:400;color:var(--tx3);font-size:11px">— tocá un tramo para filtrar</span></div></div>
+            <div id="tk-etapas"></div>
+          </div>
+          <div class="g2" style="margin-bottom:12px">
+            <div class="card"><div class="cardh"><div class="cardht">¿Qué está por vencer? <span style="font-weight:400;color:var(--tx3);font-size:11px">— solo lo que todavía no respondimos</span></div></div><div id="tk-venc"></div></div>
+            <div class="card"><div class="cardh"><div class="cardht">¿Quién tiene qué?</div></div><div id="tk-por-resp"></div></div>
           </div>
           <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--tx2);margin:0 2px 10px">
             <span><b>Semáforo:</b></span><span>🔴 Vencido</span><span>🟠 Vence hoy o mañana</span><span>🟡 Vence en 7 días</span><span>🟢 En plazo</span><span>⚪ Sin deadline</span>
@@ -520,6 +523,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <select class="fsel" id="tickets-etapa" onchange="renderTickets()"><option value="">Todas las etapas</option><option value="nuevo">⚪ Nuevos (sin tomar)</option><option value="tomado">🔵 Tomados, sin responder</option><option value="respondido">✅ Respondidos</option><option value="cerrado">⬛ Cerrados</option></select>
           <select class="fsel" id="tickets-resp" onchange="renderTickets()"><option value="">Todos los responsables</option><option value="EG">Eduardo Galindo</option><option value="CS">Camila Soto</option><option value="ST">Samira Taboada</option></select>
           <select class="fsel" id="tickets-solic" onchange="renderTickets()"><option value="">Todos los solicitantes</option></select>
+          <select class="fsel" id="tickets-venc" onchange="renderTickets()"><option value="">Todos los vencimientos</option><option value="vencido">🔴 Vencidos</option><option value="hoy">🟠 Vencen hoy</option><option value="manana">🟠 Vencen mañana</option><option value="semana">🟡 Próximos 7 días</option><option value="mas">🟢 Más adelante</option><option value="sin">⚪ Sin deadline</option></select>
           <select class="fsel" id="tickets-prio" onchange="renderTickets()"><option value="">Todas las prioridades</option><option value="Crítica">🚨 Crítica — hoy</option><option value="Alta">🔴 Alta</option><option value="Media">🟡 Media</option><option value="Baja">🟢 Baja</option></select>
           <select class="fsel" id="tickets-orden" onchange="renderTickets()"><option value="deadline" selected>Ordenar por deadline</option><option value="prioridad">Ordenar por prioridad</option><option value="recientes">Más recientes primero</option></select>
         </div>
@@ -3855,13 +3859,17 @@ function renderTickets(){
   llenarFiltroSolicitantes(base);
   var solEl=document.getElementById('tickets-solic');if(solEl)solEl.style.display=puedeGestionar?'':'none';
   renderTicketPanel(base,puedeGestionar);
-  var fe=val('tickets-estado'),fr=val('tickets-resp'),fp=val('tickets-prio'),fs=val('tickets-solic'),fet=val('tickets-etapa');
-  var list=base.filter(function(t){return (!fe||t.estado===fe)&&(!fr||t.resp===fr)&&(!fp||t.urgencia===fp)&&(!fs||t.email===fs)&&(!fet||etapaTicket(t)===fet);});
+  var fe=val('tickets-estado'),fr=val('tickets-resp'),fp=val('tickets-prio'),fs=val('tickets-solic'),fet=val('tickets-etapa'),fv=val('tickets-venc');
+  var extra=typeof TK_EXTRA!=='undefined'?TK_EXTRA:'';
+  var list=base.filter(function(t){return (!fe||t.estado===fe)&&(!fr||t.resp===fr)&&(!fp||t.urgencia===fp)&&(!fs||t.email===fs)&&(!fet||etapaTicket(t)===fet)&&(!fv||vencBucket(t)===fv)
+    &&(extra!=='estancado'||esEstancado(t))&&(extra!=='vence7'||['hoy','manana','semana'].indexOf(vencBucket(t))>=0);});
   ordenarTickets(list,val('tickets-orden')||'deadline');
   var el=document.getElementById('tickets-list');if(!el)return;
-  if(!list.length){el.innerHTML='<div class="card"><div class="empty">Sin tickets para este filtro</div></div>';return;}
+  // Filtros especiales que vienen del tablero (no tienen selector propio)
+  var chip=extra?'<div style="margin-bottom:10px"><span class="badge" style="background:var(--bl-bg);color:var(--bl);cursor:pointer;padding:4px 10px" onclick="TK_EXTRA=\'\';renderTickets()">Filtro: '+(extra==='estancado'?'⏸ Estancados':'Vencen en los próximos 7 días')+' ✕</span></div>':'';
+  if(!list.length){el.innerHTML=chip+'<div class="card"><div class="empty">Sin tickets para este filtro</div></div>';return;}
   var respNames={};usersInGroup('Legal').forEach(function(u){respNames[u.ini]=u.name;});
-  el.innerHTML=list.map(function(t){
+  el.innerHTML=chip+list.map(function(t){
     var et=etapaTicket(t), eu=ETAPA_UI[et], sem=semaforoTicket(t), cat=catDeTicket(t);
     var col=CAT_COLOR[cat]||'#9CA3AF', sector=sectorSolicitante(t);
     var critPend=t.urgencia==='Crítica'&&t.estado!=='Resuelto';
@@ -3899,47 +3907,95 @@ async function marcarDevolucion(id){
   try{await updateListItem(LIST_TICKETS,id,f);await syncAll();showToast('📤 Devolución registrada');}
   catch(e){showToast('Error: '+e.message,true);}
 }
-// Panel superior de Tickets: indicadores + gráfico semanal (solo Legal/Admin)
+// Panel superior de Tickets: "cómo estamos" (solo Legal/Admin). Todo es clickeable y filtra la lista.
+// Tramo de vencimiento: solo aplica a lo que todavía no respondimos (nuevo o tomado)
+function vencBucket(t){
+  var et=etapaTicket(t);if(et==='respondido'||et==='cerrado')return '';
+  var d=daysTo(t.deadline);
+  if(d===null)return 'sin';if(d<0)return 'vencido';if(d===0)return 'hoy';if(d===1)return 'manana';if(d<=7)return 'semana';return 'mas';
+}
+function diasDesde(ts){return ts?Math.floor((new Date()-new Date(ts))/86400000):0;}
+function esEstancado(t){return etapaTicket(t)==='tomado'&&diasDesde(t.tomadoTs)>3;}
+function esSinTomarViejo(t){return etapaTicket(t)==='nuevo'&&diasDesde(t.creadoTs)>2;}
+// Aplica un filtro desde el tablero y baja a la lista
+function filtrarTk(o){
+  var set=function(id,v){var e=document.getElementById(id);if(e)e.value=v;};
+  set('tickets-estado',o.etapa==='cerrado'?'Resuelto':(o.todos?'':'En curso'));
+  set('tickets-etapa',o.etapa||'');set('tickets-venc',o.venc||'');set('tickets-resp',o.resp||'');
+  set('tickets-prio','');set('tickets-solic','');
+  TK_EXTRA=o.extra||'';
+  renderTickets();
+  var l=document.getElementById('tickets-list');if(l)l.scrollIntoView({behavior:'smooth',block:'start'});
+}
+var TK_EXTRA='';
 function renderTicketPanel(base,puedeGestionar){
   var panel=document.getElementById('tk-panel');if(!panel)return;
   if(!puedeGestionar){panel.style.display='none';return;}
   panel.style.display='block';
-  var pend=base.filter(function(t){return t.estado!=='Resuelto';});
-  var venc=pend.filter(function(t){var d=daysTo(t.deadline);return d!==null&&d<0;});
-  var sinResp=pend.filter(function(t){var e=etapaTicket(t);return e==='nuevo'||e==='tomado';});
   var hace30=new Date(TODAY);hace30.setDate(hace30.getDate()-30);
-  // Cumplidos en plazo: devueltos o cerrados en los últimos 30 días que tenían deadline, respondidos a tiempo
+  var por={nuevo:[],tomado:[],respondido:[],cerrado:[]};
+  base.forEach(function(t){var e=etapaTicket(t);if(e!=='cerrado'||(t.cierreTs&&new Date(t.cierreTs)>=hace30))por[e].push(t);});
+  var sinResp=por.nuevo.concat(por.tomado);
+  var venc=sinResp.filter(function(t){return vencBucket(t)==='vencido';});
+  var estanc=base.filter(esEstancado), sinTomarViejo=base.filter(esSinTomarViejo);
+  // Cumplidos en plazo (últimos 30 días) y tiempo de respuesta
   var cumpl=base.filter(function(t){var fin=t.respTs||(t.estado==='Resuelto'?t.cierreTs:'');return fin&&t.deadline&&new Date(fin)>=hace30;});
   var enPlazo=cumpl.filter(function(t){return (t.respTs||t.cierreTs).split('T')[0]<=t.deadline;}).length;
   var pct=cumpl.length?Math.round(enPlazo*100/cumpl.length):null;
   var conResp=base.filter(function(t){return t.respTs&&t.creadoTs&&new Date(t.respTs)>=hace30;});
   var prom=conResp.length?Math.round(conResp.reduce(function(s,t){return s+Math.max(0,(new Date(t.respTs)-new Date(t.creadoTs))/86400000);},0)/conResp.length*10)/10:null;
-  var tile=function(lbl,v,sub,cls){return '<div class="metric"><div class="metlbl">'+lbl+'</div><div class="metval'+(cls?' '+cls:'')+'">'+v+'</div><div class="metsub">'+sub+'</div></div>';};
+  var tile=function(lbl,v,sub,cls,click){return '<div class="metric" style="cursor:pointer" onclick="'+click+'"><div class="metlbl">'+lbl+'</div><div class="metval'+(cls?' '+cls:'')+'">'+v+'</div><div class="metsub">'+sub+'</div></div>';};
   document.getElementById('tk-kpis').innerHTML=
-    tile('Pendientes',pend.length,sinResp.length+' sin respuesta todavía','')+
-    tile('🔴 Vencidos',venc.length,venc.length?'Requieren atención':'Ninguno vencido 🎉',venc.length?'d':'')+
-    tile('Cumplidos en plazo',pct===null?'—':pct+'%',pct===null?'Sin datos de los últimos 30 días':enPlazo+' de '+cumpl.length+' (últimos 30 días)',pct!==null&&pct<70?'w':'')+
-    tile('Tiempo de respuesta',prom===null?'—':String(prom).replace('.',',')+' días','Promedio hasta la devolución (30 días)','');
-  // Gráfico: creados vs cerrados por semana, últimas 8 semanas (lunes a domingo)
-  var lunes=new Date(TODAY);lunes.setDate(lunes.getDate()-((lunes.getDay()+6)%7));
-  var semanas=[];
-  for(var i=7;i>=0;i--){var a=new Date(lunes);a.setDate(a.getDate()-7*i);var b=new Date(a);b.setDate(b.getDate()+7);semanas.push({a:a,b:b,lbl:a.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})});}
-  var cuenta=function(campo){return semanas.map(function(s){return base.filter(function(t){var v=campo(t);if(!v)return false;var dd=new Date(v);return dd>=s.a&&dd<s.b;}).length;});};
-  var creados=cuenta(function(t){return t.creadoTs;}), cerrados=cuenta(function(t){return t.estado==='Resuelto'?t.cierreTs:'';});
-  if(charts['ch-tk-semanas'])charts['ch-tk-semanas'].destroy();
-  var ctx=document.getElementById('ch-tk-semanas');
-  if(ctx&&window.Chart){
-    charts['ch-tk-semanas']=new Chart(ctx,{type:'line',data:{labels:semanas.map(function(s){return s.lbl;}),datasets:[
-      {label:'Creados',data:creados,borderColor:'#1B4FD8',backgroundColor:'#1B4FD8',borderWidth:2,pointRadius:4,pointHoverRadius:6,tension:0},
-      {label:'Cerrados',data:cerrados,borderColor:'#D97706',backgroundColor:'#D97706',borderWidth:2,pointRadius:4,pointHoverRadius:6,pointStyle:'rectRot',tension:0,borderDash:[5,4]}]},
-      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-        plugins:{legend:{display:true,position:'top',align:'end',labels:{boxWidth:12,font:{size:11}}},
-          tooltip:{callbacks:{title:function(it){return 'Semana del '+semanas[it[0].dataIndex].lbl;}}}},
-        scales:{y:{beginAtZero:true,ticks:{stepSize:1,precision:0,font:{size:11}},grid:{color:'rgba(0,0,0,.06)'}},x:{ticks:{font:{size:11}},grid:{display:false}}}}});
-  }
-  document.getElementById('tk-chart-tabla').innerHTML='<table class="dtable"><thead><tr><th>Semana del</th><th style="text-align:center">Creados</th><th style="text-align:center">Cerrados</th></tr></thead><tbody>'+semanas.map(function(s,i){return '<tr><td>'+s.lbl+'</td><td style="text-align:center">'+creados[i]+'</td><td style="text-align:center">'+cerrados[i]+'</td></tr>';}).join('')+'</tbody></table>';
+    tile('Sin respuesta todavía',sinResp.length,por.nuevo.length+' sin empezar · '+por.tomado.length+' tomados'+(sinTomarViejo.length?' · '+sinTomarViejo.length+' sin tomar hace +2 días':''),'',"filtrarTk({etapa:'nuevo'})")+
+    tile('🔴 Vencidos sin responder',venc.length,venc.length?'Tocá para verlos':'Ninguno vencido 🎉',venc.length?'d':'',"filtrarTk({venc:'vencido'})")+
+    tile('⏸ Estancados',estanc.length,'Tomados hace más de 3 días sin devolución',estanc.length?'w':'',"filtrarTk({extra:'estancado'})")+
+    tile('✔️ Cumplidos en plazo',pct===null?'—':pct+'%',(pct===null?'Sin datos de 30 días':enPlazo+' de '+cumpl.length+' en 30 días')+(prom!==null?' · respuesta promedio '+String(prom).replace('.',',')+(prom===1?' día':' días'):''),pct!==null&&pct<70?'w':'',"filtrarTk({etapa:'respondido'})");
+
+  // 1) Etapas: barra segmentada proporcional + etiquetas con cantidad
+  var seg=[
+    {k:'nuevo',lbl:'Sin empezar',sub:'nadie lo tomó',col:'#9CA3AF',n:por.nuevo.length},
+    {k:'tomado',lbl:'Tomados',sub:'sin devolución todavía',col:'#1B4FD8',n:por.tomado.length},
+    {k:'respondido',lbl:'Devueltos',sub:'falta cerrarlos',col:'#15803D',n:por.respondido.length},
+    {k:'cerrado',lbl:'Cerrados',sub:'últimos 30 días',col:'#374151',n:por.cerrado.length}];
+  var tot=seg.reduce(function(s,x){return s+x.n;},0)||1;
+  var barra='<div style="display:flex;height:22px;border-radius:6px;overflow:hidden;gap:2px;background:var(--surf);margin-bottom:12px">'+seg.filter(function(x){return x.n;}).map(function(x){
+    return '<div title="'+x.lbl+': '+x.n+'" onclick="filtrarTk({etapa:\''+x.k+'\'})" style="cursor:pointer;flex:'+x.n+';min-width:26px;background:'+x.col+';color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center">'+x.n+'</div>';}).join('')+'</div>';
+  var etiquetas='<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">'+seg.map(function(x){
+    return '<div onclick="filtrarTk({etapa:\''+x.k+'\'})" style="cursor:pointer;border-left:4px solid '+x.col+';padding:4px 10px;border-radius:4px;background:var(--surf2)"><div style="font-size:20px;font-weight:600">'+x.n+'</div><div style="font-size:12px;font-weight:600">'+x.lbl+'</div><div style="font-size:11px;color:var(--tx3)">'+x.sub+' · '+Math.round(x.n*100/tot)+'%</div></div>';}).join('')+'</div>';
+  document.getElementById('tk-etapas').innerHTML=barra+etiquetas;
+
+  // 2) Vencimientos de lo no respondido: barras verticales por tramo
+  var tramos=[
+    {k:'vencido',lbl:'Vencidos',icon:'🔴',col:'#DC2626'},{k:'hoy',lbl:'Hoy',icon:'🟠',col:'#EA580C'},{k:'manana',lbl:'Mañana',icon:'🟠',col:'#F59E0B'},
+    {k:'semana',lbl:'Próx. 7 días',icon:'🟡',col:'#CA8A04'},{k:'mas',lbl:'Más adelante',icon:'🟢',col:'#16A34A'},{k:'sin',lbl:'Sin deadline',icon:'⚪',col:'#9CA3AF'}];
+  tramos.forEach(function(x){x.n=sinResp.filter(function(t){return vencBucket(t)===x.k;}).length;});
+  var max=Math.max.apply(null,tramos.map(function(x){return x.n;}).concat([1]));
+  document.getElementById('tk-venc').innerHTML='<div style="display:flex;align-items:flex-end;gap:8px;height:150px;padding-top:6px">'+tramos.map(function(x){
+    var h=x.n?Math.max(6,Math.round(x.n/max*110)):2;
+    return '<div onclick="filtrarTk({venc:\''+x.k+'\'})" title="'+x.lbl+': '+x.n+'" style="cursor:pointer;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">'
+      +'<div style="font-size:15px;font-weight:600;margin-bottom:3px">'+x.n+'</div>'
+      +'<div style="width:70%;max-width:46px;height:'+h+'px;background:'+(x.n?x.col:'var(--brd)')+';border-radius:4px 4px 0 0"></div>'
+      +'<div style="font-size:10px;color:var(--tx2);margin-top:5px;text-align:center;line-height:1.2">'+x.icon+'<br>'+x.lbl+'</div></div>';}).join('')+'</div>';
+
+  // 3) Por responsable
+  var gente=usersInGroup('Legal');
+  if(currentUser.perfil!=='Admin')gente=gente.filter(function(u){return u.ini===currentUser.ini;});
+  var celda=function(n,filtro,alerta){return '<td style="text-align:center"><span onclick="filtrarTk('+filtro+')" style="cursor:pointer;'+(n&&alerta?'color:var(--rd-tx);font-weight:700':(n?'font-weight:600':'color:var(--tx3)'))+'">'+n+'</span></td>';};
+  var filas=gente.map(function(u){
+    var mio=base.filter(function(t){return t.resp===u.ini;});
+    var c=function(fn){return mio.filter(fn).length;};
+    var r="'"+u.ini+"'";
+    return '<tr><td style="font-weight:600">'+escHtml(u.name.split(' ')[0])+'</td>'
+      +celda(c(function(t){return etapaTicket(t)==='nuevo';}),"{etapa:'nuevo',resp:"+r+"}")
+      +celda(c(function(t){return etapaTicket(t)==='tomado';}),"{etapa:'tomado',resp:"+r+"}")
+      +celda(c(function(t){return vencBucket(t)==='vencido';}),"{venc:'vencido',resp:"+r+"}",true)
+      +celda(c(function(t){var b=vencBucket(t);return b==='hoy'||b==='manana'||b==='semana';}),"{extra:'vence7',resp:"+r+"}")
+      +celda(c(esEstancado),"{extra:'estancado',resp:"+r+"}",true)
+      +'</tr>';
+  }).join('');
+  document.getElementById('tk-por-resp').innerHTML='<table class="dtable"><thead><tr><th></th><th style="text-align:center">Sin empezar</th><th style="text-align:center">Tomados</th><th style="text-align:center">🔴 Vencidos</th><th style="text-align:center">Vencen ≤7 días</th><th style="text-align:center">⏸ Estancados</th></tr></thead><tbody>'+filas+'</tbody></table>'
+    +'<div style="font-size:11px;color:var(--tx3);margin-top:8px">Vencidos y por vencer cuentan solo lo que todavía no respondimos. Estancado = tomado hace más de 3 días sin devolución.</div>';
 }
-function toggleTkTabla(){var t=document.getElementById('tk-chart-tabla');var on=t.style.display==='none';t.style.display=on?'block':'none';document.getElementById('tk-chart-tabla-btn').textContent=on?'Ocultar tabla':'Ver tabla';}
 
 async function cambiarEstadoTicket(id, estado){
   try{
