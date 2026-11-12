@@ -301,6 +301,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div class="navi" id="nav-tickets" onclick="goTo('tickets',this)">
           <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1" y="2" width="12" height="10" rx="1.5" stroke="currentColor"/><path d="M4 5h6M4 7.5h4" stroke="currentColor" stroke-linecap="round"/><circle cx="10.5" cy="7.5" r="1" fill="currentColor"/></svg>Tickets
         </div>
+        <div class="navi" id="nav-semanas" style="display:none" onclick="goTo('semanas',this)">
+          <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1.5" y="2.5" width="11" height="10" rx="1.5" stroke="currentColor"/><path d="M1.5 5.5h11M4.5 1v3M9.5 1v3M4 8h2M8 8h2M4 10.5h2" stroke="currentColor" stroke-linecap="round"/></svg>Semanas
+        </div>
         <div class="navi" id="nav-fechas" onclick="goTo('fechas',this)">
           <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1" y="2" width="12" height="11" rx="1.5" stroke="currentColor"/><path d="M4 1v2M10 1v2M1 5h12" stroke="currentColor" stroke-linecap="round"/><circle cx="4.5" cy="8.5" r="1" fill="currentColor"/><circle cx="7" cy="8.5" r="1" fill="var(--rd)"/><circle cx="9.5" cy="8.5" r="1" fill="currentColor"/></svg>Fechas Clave
         </div>
@@ -528,6 +531,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <select class="fsel" id="tickets-orden" onchange="renderTickets()"><option value="deadline" selected>Ordenar por deadline</option><option value="prioridad">Ordenar por prioridad</option><option value="recientes">Más recientes primero</option></select>
         </div>
         <div id="tickets-list"></div>
+      </div>
+      <div class="pageview" id="page-semanas">
+        <div class="card" style="margin-bottom:14px"><div class="cardh"><div class="cardht">Track record semanal</div></div><div id="sem-track"><div class="empty">Cargando…</div></div></div>
+        <div id="sem-detalle"></div>
       </div>
 
       <!-- FECHAS CLAVE -->
@@ -1038,6 +1045,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <input type="date" id="tk-deadline">
         </div>
       </div>
+      <div id="tk-sla-hint" style="font-size:11px;color:var(--tx3);margin-top:4px"></div>
       <div id="tk-critica-aviso" style="display:none;margin-top:8px;padding:8px 12px;border-radius:var(--rs);background:var(--rd-bg);color:var(--rd-tx);font-size:12px;line-height:1.5">🚨 <b>Crítica — hoy</b> significa que <b>tiene que resolverse en el día</b>. Usala solo en casos excepcionales: si no es realmente impostergable, elegí Alta. El deadline queda fijado en hoy.</div>
       <div style="display:flex;gap:8px;margin-top:8px">
         <button class="btnp" style="flex:1" id="tk-submit-btn" onclick="submitTicket()">Enviar solicitud</button>
@@ -1391,6 +1399,8 @@ async function initApp(account){
   if(currentUser.perfil==='Admin'){document.getElementById('setup-btn-wrap').style.display='flex';}
   // Repaso del día por voz: para quien tiene dashboard
   if(currentUser.perfil!=='Solicitante'&&!currentUser.mlaOnly)document.getElementById('btn-repaso').style.display='inline-block';
+  // Semanas: para quien gestiona tickets (Admin y Legal)
+  if(currentUser.perfil==='Admin'||legalUser(currentUser.ini))document.getElementById('nav-semanas').style.display='flex';
   // Register login
   registrarLogin();
   // Show pending popup after short delay
@@ -2177,6 +2187,10 @@ function goTo(page,el){
   document.getElementById('tb-title').textContent=T[page]||page;document.getElementById('tb-sub').textContent=S[page]||'';
   var A={tickets:'<button class="btnp" onclick="openFormTicket()">+ Nueva solicitud</button>',fechas:'<button class="btnp" onclick="openFormFecha()">+ Nueva fecha clave</button>',mla:'<button class="btnp" onclick="openFormMLA()">+ Nuevo MLA</button>',inm:'<button class="btnp" onclick="openFormInm()">+ Nuevo inmueble</button>',poderes:'<button class="btns" onclick="exportCSV(\'poderes\')" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormPoder()">+ Nuevo poder</button>',societario:socTab==="autoridades"?'<button class="btnp" onclick="openFormSocAut()">+ Nueva autoridad</button>':'<button class="btnp" onclick="openFormSocAcc()">+ Nuevo accionista</button>',temas:'<button class="btns" onclick="exportCSV(\"temas\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormTema()">+ Nuevo tema</button>',documentos:'<button class="btns" onclick="exportCSV(\"documentos\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDoc()">+ Nuevo documento</button>',suelo:'<button class="btns" onclick="exportCSV(\"suelo\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormSuelo()">+ Nuevo contrato</button>',intoru:'<button class="btns" onclick="exportCSV(\"intoru\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormINTORU()">+ Nuevo sitio</button>',dd:'<button class="btns" onclick="exportCSV(\"dd\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDD()">+ Nuevo sitio</button>'};
   document.getElementById('tb-act').innerHTML=A[page]||'';
+  var EXTRA_T={semanas:['Semanas','Seguimiento semanal de tickets — reunión de los lunes'],calendario:['Calendario','Todos los vencimientos en un solo lugar']};
+  if(EXTRA_T[page]){document.getElementById('tb-title').textContent=EXTRA_T[page][0];document.getElementById('tb-sub').textContent=EXTRA_T[page][1];}
+  if(page==='semanas')setTimeout(renderSemanas,50);
+  if(page==='calendario'&&typeof renderCalendario==='function')setTimeout(renderCalendario,50);
   if(page==='analytics')setTimeout(renderAnalytics,100);
   if(page==='fechas')setTimeout(renderFechas,50);
   if(page==='mla')setTimeout(renderMLA,50);
@@ -2945,11 +2959,17 @@ function prioBadge(t){
   var st=t.urgencia==='Crítica'?'background:var(--rd);color:#fff;font-weight:700':t.urgencia==='Alta'?'background:var(--rd-bg);color:var(--rd-tx)':t.urgencia==='Media'?'background:var(--am-bg);color:var(--am-tx)':'background:var(--gr-bg);color:var(--gr-tx)';
   return '<span class="badge" style="'+st+'">'+(PRIO_LABEL[t.urgencia]||t.urgencia)+'</span>';
 }
+// Plazo de respuesta por prioridad (días hábiles, lunes a viernes) cuando el solicitante no pone deadline
+var SLA_DIAS={'Crítica':0,'Alta':2,'Media':5,'Baja':10};
+function sumarDiasHabiles(desde,n){var d=new Date(desde);d.setHours(12,0,0,0);while(n>0){d.setDate(d.getDate()+1);var w=d.getDay();if(w!==0&&w!==6)n--;}return d.toISOString().split('T')[0];}
+function deadlinePorPrioridad(p){return sumarDiasHabiles(new Date(),SLA_DIAS[p]!=null?SLA_DIAS[p]:5);}
 function onPrioridadChange(){
-  var crit=document.getElementById('tk-urgencia').value==='Crítica';
+  var p=document.getElementById('tk-urgencia').value, crit=p==='Crítica';
   var dl=document.getElementById('tk-deadline');
   document.getElementById('tk-critica-aviso').style.display=crit?'block':'none';
-  if(crit){dl.value=todayStr();dl.disabled=true;}else{dl.disabled=false;}
+  if(crit){dl.value=todayStr();dl.disabled=true;}else{dl.disabled=false;if(dl.value===todayStr())dl.value='';}
+  var h=document.getElementById('tk-sla-hint');
+  if(h)h.textContent=crit?'':'Si no ponés fecha, el plazo queda en '+SLA_DIAS[p]+' días hábiles: '+fmtDate(deadlinePorPrioridad(p))+'.';
 }
 async function tomarTicket(id){
   try{
@@ -3997,6 +4017,157 @@ function renderTicketPanel(base,puedeGestionar){
     +'<div style="font-size:11px;color:var(--tx3);margin-top:8px">Vencidos y por vencer cuentan solo lo que todavía no respondimos. Estancado = tomado hace más de 3 días sin devolución.</div>';
 }
 
+// ─── SEMANAS: seguimiento semanal de tickets y track record ─────────────────
+// Las métricas de cada semana se calculan con las fechas del timeline (sirve también para semanas pasadas).
+// "Guardar semana" congela la foto y los acuerdos de la reunión en la lista Semanas_Tickets.
+const LIST_SEMANAS='Semanas_Tickets';
+var SEM={guardadas:null,listaOk:true,sel:null};
+function isoSemana(dt){var d=new Date(Date.UTC(dt.getFullYear(),dt.getMonth(),dt.getDate()));var dia=d.getUTCDay()||7;d.setUTCDate(d.getUTCDate()+4-dia);var ini=new Date(Date.UTC(d.getUTCFullYear(),0,1));return {anio:d.getUTCFullYear(),sem:Math.ceil(((d-ini)/86400000+1)/7)};}
+function lunesDe(dt){var d=new Date(dt);d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return d;}
+function claveSemana(lunes){var s=isoSemana(lunes);return s.anio+'-S'+String(s.sem).padStart(2,'0');}
+function rangoTxt(a){var b=new Date(a);b.setDate(b.getDate()+6);var f=function(x){return x.toLocaleDateString('es-AR',{day:'numeric',month:'short'});};return f(a)+' – '+f(b);}
+function semanasDisponibles(base){
+  var hoyL=lunesDe(new Date()), primero=hoyL;
+  base.forEach(function(t){if(t.creadoTs){var l=lunesDe(new Date(t.creadoTs));if(l<primero)primero=l;}});
+  var out=[];for(var l=new Date(hoyL);l>=primero&&out.length<52;l.setDate(l.getDate()-7))out.push(new Date(l));
+  return out;
+}
+// Etapa de un ticket en un momento dado
+function etapaEn(t,T){
+  var ms=T.getTime(),ok=function(ts){return ts&&new Date(ts).getTime()<=ms;};
+  if(t.estado==='Resuelto'&&ok(t.cierreTs))return 'cerrado';
+  if(ok(t.respTs))return 'respondido';
+  if(ok(t.tomadoTs))return 'tomado';
+  return 'nuevo';
+}
+var ETAPA_RANK={nuevo:0,tomado:1,respondido:2,cerrado:3};
+function calcSemana(base,lunes){
+  var fin=new Date(lunes);fin.setDate(fin.getDate()+7);
+  var corte=fin>new Date()?new Date():new Date(fin.getTime()-1);
+  var en=function(ts){if(!ts)return false;var d=new Date(ts);return d>=lunes&&d<fin;};
+  var abiertoEn=function(t,T){return t.creadoTs&&new Date(t.creadoTs)<=T&&!(t.estado==='Resuelto'&&t.cierreTs&&new Date(t.cierreTs)<=T);};
+  var abiertos=base.filter(function(t){return abiertoEn(t,corte);});
+  var sinResp=abiertos.filter(function(t){var e=etapaEn(t,corte);return e==='nuevo'||e==='tomado';});
+  var corteDia=corte.toISOString().split('T')[0];
+  var resp=base.filter(function(t){return en(t.respTs);});
+  var respDl=resp.filter(function(t){return t.deadline;});
+  var enPlazo=respDl.filter(function(t){return t.respTs.split('T')[0]<=t.deadline;}).length;
+  return {
+    abiertos:abiertos.length,
+    nuevos:base.filter(function(t){return en(t.creadoTs);}).length,
+    devueltos:resp.length,
+    cerrados:base.filter(function(t){return t.estado==='Resuelto'&&en(t.cierreTs);}).length,
+    vencidos:sinResp.filter(function(t){return t.deadline&&t.deadline<corteDia;}).length,
+    sinTomar:abiertos.filter(function(t){return etapaEn(t,corte)==='nuevo';}).length,
+    enPlazo:respDl.length?Math.round(enPlazo*100/respDl.length):null,
+    abiertosIds:base.filter(function(t){return abiertoEn(t,lunes);}).map(function(t){return t.id;})
+  };
+}
+async function cargarSemanasGuardadas(){
+  if(SEM.guardadas!==null)return;
+  try{
+    var items=await getListItems(LIST_SEMANAS);
+    SEM.guardadas={};
+    items.forEach(function(i){var f=i.fields;var m=null;try{m=JSON.parse(f.Metricas||'null');}catch(e){}
+      SEM.guardadas[f.Semana||f.Title]={id:i.id,metricas:m,acuerdos:f.Acuerdos||'',por:f.ActualizadoPor||'',fecha:f.FechaCorte||'',abiertos:(function(){try{return JSON.parse(f.TicketsAbiertos||'[]');}catch(e){return [];}})()};});
+  }catch(e){SEM.guardadas={};SEM.listaOk=false;console.warn('Semanas_Tickets:',e.message);}
+}
+async function renderSemanas(){
+  var el=document.getElementById('sem-track');if(!el)return;
+  await cargarSemanasGuardadas();
+  var base=ticketsVisibles(), semanas=semanasDisponibles(base);
+  if(!SEM.sel)SEM.sel=claveSemana(semanas[0]);
+  var flecha=function(act,ant,maloSiSube){if(ant==null||act==null||act===ant)return '';var sube=act>ant;var malo=maloSiSube?sube:!sube;return ' <span style="font-size:10px;color:'+(malo?'var(--rd-tx)':'var(--gr-tx)')+'">'+(sube?'▲':'▼')+Math.abs(act-ant)+'</span>';};
+  var filas=semanas.map(function(l,i){
+    var k=claveSemana(l), g=SEM.guardadas[k], m=(g&&g.metricas)||calcSemana(base,l);
+    var prev=semanas[i+1]?((SEM.guardadas[claveSemana(semanas[i+1])]||{}).metricas||calcSemana(base,semanas[i+1])):null;
+    var actual=i===0;
+    return '<tr data-k="'+k+'" onclick="SEM.sel=this.dataset.k;renderSemanas()" style="cursor:pointer'+(k===SEM.sel?';background:var(--bl-bg)':'')+'">'
+      +'<td><b>Sem. '+k.split('-S')[1]+'</b> <span style="color:var(--tx3);font-size:11px">'+rangoTxt(l)+(actual?' · en curso':'')+'</span></td>'
+      +'<td style="text-align:center">'+m.abiertos+flecha(m.abiertos,prev&&prev.abiertos,true)+'</td>'
+      +'<td style="text-align:center">'+m.nuevos+'</td><td style="text-align:center">'+m.devueltos+'</td><td style="text-align:center">'+m.cerrados+'</td>'
+      +'<td style="text-align:center;'+(m.vencidos?'color:var(--rd-tx);font-weight:600':'')+'">'+m.vencidos+flecha(m.vencidos,prev&&prev.vencidos,true)+'</td>'
+      +'<td style="text-align:center">'+m.sinTomar+'</td>'
+      +'<td style="text-align:center">'+(m.enPlazo==null?'—':m.enPlazo+'%')+'</td>'
+      +'<td style="text-align:center">'+(g?'📸':'')+'</td></tr>';
+  }).join('');
+  el.innerHTML='<div class="dwrap"><table class="dtable"><thead><tr><th>Semana</th><th style="text-align:center">Abiertos al cierre</th><th style="text-align:center">Nuevos</th><th style="text-align:center">Devueltos</th><th style="text-align:center">Cerrados</th><th style="text-align:center">🔴 Vencidos</th><th style="text-align:center">Sin tomar</th><th style="text-align:center">% en plazo</th><th style="text-align:center">Guardada</th></tr></thead><tbody>'+filas+'</tbody></table></div>'
+    +'<div style="font-size:11px;color:var(--tx3);margin-top:8px">Tocá una semana para ver el detalle. ▲▼ = cambio contra la semana anterior (rojo si empeora). 📸 = semana guardada: sus números quedan congelados.'+(SEM.listaOk?'':' <b style="color:var(--rd-tx)">Falta la lista Semanas_Tickets en SharePoint: todavía no se pueden guardar semanas.</b>')+'</div>';
+  renderSemanaDetalle(base,semanas);
+}
+function renderSemanaDetalle(base,semanas){
+  var el=document.getElementById('sem-detalle');if(!el)return;
+  var l=semanas.find(function(x){return claveSemana(x)===SEM.sel;})||semanas[0];
+  var k=claveSemana(l), g=SEM.guardadas[k], calc=calcSemana(base,l), m=(g&&g.metricas)||calc;
+  var ids=(g&&g.abiertos&&g.abiertos.length)?g.abiertos:calc.abiertosIds;
+  var respNames={};usersInGroup('Legal').forEach(function(u){respNames[u.ini]=u.name.split(' ')[0];});
+  var puede=currentUser.perfil==='Admin'||!!legalUser(currentUser.ini);
+  // Tickets que estaban abiertos el lunes y cómo siguieron hasta hoy
+  var filas=ids.map(function(id){return base.find(function(t){return t.id===id;});}).filter(Boolean).map(function(t){
+    var antes=etapaEn(t,l), ahora=etapaTicket(t), avanzo=ETAPA_RANK[ahora]-ETAPA_RANK[antes];
+    var sem=semaforoTicket(t);
+    return {t:t,antes:antes,ahora:ahora,avanzo:avanzo,sem:sem};
+  }).sort(function(a,b){return a.avanzo-b.avanzo||dlKey(a.t)-dlKey(b.t);});
+  var avanzaron=filas.filter(function(x){return x.avanzo>0;}).length, quietos=filas.length-avanzaron;
+  var lista=filas.map(function(x){var t=x.t;
+    return '<tr><td><span class="mono" style="font-size:10px">'+t.num+'</span> '+t.asunto+'</td><td>'+escHtml(respNames[t.resp]||t.resp)+'</td>'
+      +'<td>'+ETAPA_UI[x.antes].icon+' '+ETAPA_UI[x.antes].lbl+'</td><td>'+ETAPA_UI[x.ahora].icon+' '+ETAPA_UI[x.ahora].lbl+'</td>'
+      +'<td style="font-weight:600;color:'+(x.avanzo>0?'var(--gr-tx)':'var(--am-tx)')+'">'+(x.avanzo>0?'✔ Avanzó':'⏸ Sin avance')+'</td>'
+      +'<td style="color:'+x.sem.col+';font-size:12px">'+x.sem.icon+' '+x.sem.lbl+'</td></tr>';}).join('');
+  var tile=function(lbl,v,sub,cls){return '<div class="metric"><div class="metlbl">'+lbl+'</div><div class="metval'+(cls?' '+cls:'')+'">'+v+'</div><div class="metsub">'+sub+'</div></div>';};
+  el.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">'
+      +'<div><div style="font-size:16px;font-weight:700">Semana '+k.split('-S')[1]+' · '+rangoTxt(l)+'</div>'
+      +'<div style="font-size:11px;color:var(--tx3)">'+(g?'📸 Guardada'+(g.por?' por '+escHtml(g.por):'')+(g.fecha?' el '+fmtDate(g.fecha.split('T')[0]):''):'Todavía no guardada: los números se calculan con los datos actuales')+'</div></div>'
+      +'<div style="display:flex;gap:8px">'+(puede&&SEM.listaOk?'<button class="btnp" onclick="guardarSemana(\''+k+'\')">📸 Guardar semana</button>':'')+'<button class="btns" onclick="reporteSemanal(\''+k+'\')">🖨 Reporte semanal</button></div></div>'
+    +'<div class="metrics">'+tile('Abiertos al cierre',m.abiertos,m.nuevos+' nuevos en la semana','')+tile('Devueltos / cerrados',m.devueltos+' / '+m.cerrados,'en la semana','')+tile('🔴 Vencidos al cierre',m.vencidos,m.sinTomar+' sin tomar',m.vencidos?'d':'')+tile('% en plazo',m.enPlazo==null?'—':m.enPlazo+'%','de lo devuelto en la semana','')+'</div>'
+    +'<div class="card" style="margin-bottom:12px"><div class="cardh"><div class="cardht">Tickets abiertos al lunes y cómo avanzaron</div><div style="font-size:12px;color:var(--tx2)">'+avanzaron+' avanzaron · <b style="color:var(--am-tx)">'+quietos+' sin avance</b></div></div>'
+      +(filas.length?'<div class="dwrap"><table class="dtable"><thead><tr><th>Ticket</th><th>Responsable</th><th>El lunes</th><th>Hoy</th><th>Avance</th><th>Vencimiento</th></tr></thead><tbody>'+lista+'</tbody></table></div>':'<div class="empty">No había tickets abiertos ese lunes</div>')+'</div>'
+    +'<div class="card"><div class="cardh"><div class="cardht">Acuerdos de la reunión</div></div>'
+      +'<textarea id="sem-acuerdos" style="min-height:110px" '+(puede?'':'disabled ')+'placeholder="Qué se definió con el equipo: prioridades, reasignaciones, próximos pasos...">'+escHtml(g?g.acuerdos:'')+'</textarea>'
+      +'<div style="font-size:11px;color:var(--tx3);margin-top:4px">Se guardan con “📸 Guardar semana”.</div></div>';
+}
+async function guardarSemana(k){
+  var base=ticketsVisibles(), l=semanasDisponibles(base).find(function(x){return claveSemana(x)===k;});if(!l)return;
+  var m=calcSemana(base,l), g=SEM.guardadas[k];
+  var fields={Title:k,Semana:k,Metricas:JSON.stringify(m),TicketsAbiertos:JSON.stringify(m.abiertosIds),Acuerdos:document.getElementById('sem-acuerdos').value,FechaCorte:new Date().toISOString(),ActualizadoPor:currentUser.ini};
+  try{
+    if(g)await updateListItem(LIST_SEMANAS,g.id,fields);else await createListItem(LIST_SEMANAS,fields);
+    SEM.guardadas=null;await renderSemanas();showToast('📸 Semana '+k.split('-S')[1]+' guardada');
+  }catch(e){showToast('Error al guardar: '+e.message,true);}
+}
+function reporteSemanal(k){
+  var base=ticketsVisibles(), semanas=semanasDisponibles(base);
+  var i=semanas.findIndex(function(x){return claveSemana(x)===k;});if(i<0)return;
+  var l=semanas[i], g=SEM.guardadas[k], m=(g&&g.metricas)||calcSemana(base,l);
+  var p=semanas[i+1]?((SEM.guardadas[claveSemana(semanas[i+1])]||{}).metricas||calcSemana(base,semanas[i+1])):null;
+  var respNames={};usersInGroup('Legal').forEach(function(u){respNames[u.ini]=u.name;});
+  var dif=function(a,b,maloSiSube){if(b==null)return '';var d=a-b;if(!d)return ' (=)';return ' ('+(d>0?'+':'')+d+')';};
+  var abiertosHoy=base.filter(function(t){return t.estado!=='Resuelto';});
+  var porResp=usersInGroup('Legal').map(function(u){var mio=abiertosHoy.filter(function(t){return t.resp===u.ini;});
+    return '<tr><td>'+escHtml(u.name)+'</td><td>'+mio.length+'</td><td>'+mio.filter(function(t){return vencBucket(t)==='vencido';}).length+'</td><td>'+mio.filter(esEstancado).length+'</td></tr>';}).join('');
+  var lista=ordenarTickets(abiertosHoy.slice(),'deadline').map(function(t){var s=semaforoTicket(t);
+    return '<tr><td>'+t.num+'</td><td>'+t.asunto+'</td><td>'+escHtml(nombreSolicitante(t))+'</td><td>'+escHtml(respNames[t.resp]||t.resp)+'</td><td>'+ETAPA_UI[etapaTicket(t)].lbl+'</td><td>'+(t.deadline?fmtDate(t.deadline):'—')+'</td><td>'+s.icon+' '+s.lbl+'</td></tr>';}).join('');
+  var acuerdos=document.getElementById('sem-acuerdos')?document.getElementById('sem-acuerdos').value:(g?g.acuerdos:'');
+  var html='<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Reporte semanal Legal — Semana '+k.split('-S')[1]+'</title><style>'
+    +'body{font-family:"Segoe UI",Arial,sans-serif;color:#1F1E1B;margin:24px;font-size:12px}h1{color:#1B4FD8;font-size:20px;margin:0}h2{font-size:14px;margin:18px 0 6px;border-bottom:2px solid #EEF2FF;padding-bottom:3px}'
+    +'.k{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.k div{border:1px solid #E4E2DA;border-radius:6px;padding:8px}.k b{display:block;font-size:20px}'
+    +'table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:4px 6px;border-bottom:1px solid #E4E2DA}th{background:#EEF2FF;color:#1B4FD8}.ac{white-space:pre-wrap;border:1px solid #E4E2DA;border-radius:6px;padding:8px;min-height:40px}'
+    +'@page{size:A4;margin:14mm}</style></head><body>'
+    +'<div style="color:#8A8982;font-size:10px;letter-spacing:.1em">ATIS GROUP · LEGAL</div><h1>Reporte semanal de tickets — Semana '+k.split('-S')[1]+' ('+rangoTxt(l)+')</h1>'
+    +'<div style="color:#55544F;margin-top:2px">Generado el '+new Date().toLocaleDateString('es-AR',{day:'numeric',month:'long',year:'numeric'})+(g?' · semana guardada':'')+'</div>'
+    +'<h2>Números de la semana</h2><div class="k">'
+    +'<div>Abiertos al cierre<b>'+m.abiertos+'</b>'+dif(m.abiertos,p&&p.abiertos)+' vs. semana anterior</div>'
+    +'<div>Nuevos / devueltos / cerrados<b>'+m.nuevos+' / '+m.devueltos+' / '+m.cerrados+'</b></div>'
+    +'<div>Vencidos al cierre<b>'+m.vencidos+'</b>'+dif(m.vencidos,p&&p.vencidos)+' · '+m.sinTomar+' sin tomar</div>'
+    +'<div>% devueltos en plazo<b>'+(m.enPlazo==null?'—':m.enPlazo+'%')+'</b></div></div>'
+    +'<h2>Carga actual por responsable</h2><table><tr><th>Responsable</th><th>Abiertos</th><th>Vencidos</th><th>Estancados</th></tr>'+porResp+'</table>'
+    +'<h2>Tickets abiertos hoy ('+abiertosHoy.length+')</h2><table><tr><th>N°</th><th>Asunto</th><th>Solicitante</th><th>Responsable</th><th>Etapa</th><th>Deadline</th><th>Vencimiento</th></tr>'+lista+'</table>'
+    +'<h2>Acuerdos de la reunión</h2><div class="ac">'+escHtml(acuerdos||'—')+'</div>'
+    +'<script>setTimeout(function(){window.print();},400);<\/script></body></html>';
+  var w=window.open('','_blank');if(!w){showToast('El navegador bloqueó la ventana del reporte: permití ventanas emergentes.',true);return;}
+  w.document.open();w.document.write(html);w.document.close();
+}
+
 async function cambiarEstadoTicket(id, estado){
   try{
     await updateListItem(LIST_TICKETS,id,{Estado:estado});
@@ -4019,6 +4190,7 @@ function openFormTicket(){
   document.getElementById('tk-deadline').value='';
   document.getElementById('tk-deadline').disabled=false;
   document.getElementById('tk-critica-aviso').style.display='none';
+  setTimeout(onPrioridadChange,0);
   document.getElementById('form-ticket').classList.add('open');
 }
 
@@ -4151,7 +4323,8 @@ async function submitTicket(){
     // Create ticket in SharePoint
     var cat=document.getElementById('tk-cat').value;
     var sitio=document.getElementById('tk-sitio').value.trim();
-    var deadline=urgencia==='Crítica'?todayStr():document.getElementById('tk-deadline').value;
+    // Sin fecha: plazo automático según prioridad (Crítica hoy, Alta 2, Media 5, Baja 10 días hábiles)
+    var deadline=urgencia==='Crítica'?todayStr():(document.getElementById('tk-deadline').value||deadlinePorPrioridad(urgencia));
     var asuntoFull=(cat?cat+' — ':'')+(sitio?sitio+' — ':'')+asunto;
     var fields={
       Title:asuntoFull.substring(0,255),
