@@ -307,6 +307,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div class="navi" id="nav-fechas" onclick="goTo('fechas',this)">
           <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1" y="2" width="12" height="11" rx="1.5" stroke="currentColor"/><path d="M4 1v2M10 1v2M1 5h12" stroke="currentColor" stroke-linecap="round"/><circle cx="4.5" cy="8.5" r="1" fill="currentColor"/><circle cx="7" cy="8.5" r="1" fill="var(--rd)"/><circle cx="9.5" cy="8.5" r="1" fill="currentColor"/></svg>Fechas Clave
         </div>
+        <div class="navi" id="nav-calendario" style="display:none" onclick="goTo('calendario',this)">
+          <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1.5" y="2.5" width="11" height="10" rx="1.5" stroke="currentColor"/><path d="M1.5 5.5h11M4.5 1v3M9.5 1v3" stroke="currentColor" stroke-linecap="round"/><circle cx="7" cy="9" r="1.3" fill="currentColor"/></svg>Calendario
+        </div>
         <div class="navi" id="nav-mla" onclick="goTo('mla',this)">
           <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1" y="3" width="12" height="9" rx="1.5" stroke="currentColor"/><path d="M4 3V2a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" stroke="currentColor"/><line x1="1" y1="6" x2="13" y2="6" stroke="currentColor"/><line x1="4" y1="9" x2="10" y2="9" stroke="currentColor" stroke-dasharray="1.5 1.5"/></svg>MLA
         </div>
@@ -378,6 +381,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
             </div>
           </div>
         </div>
+        <div class="g1" id="dash-riesgo-wrap" style="display:none"><div class="card" style="border-left:3px solid var(--rd)"><div class="cardh"><div class="cardht">⚖️ Poderes y mandatos por vencer (60 días)</div><div class="cardhl" onclick="navTo('calendario')">Ver calendario</div></div><div id="dash-riesgo"></div></div></div>
         <div class="g1" id="dash-tickets-wrap" style="display:none">
           <div class="card" style="border-left:3px solid var(--bl)"><div class="cardh"><div class="cardht" id="dash-tickets-title">🎫 Tickets pendientes</div><div class="cardhl" onclick="navTo('tickets')">Ver todos</div></div><div id="dash-tickets"></div></div>
         </div>
@@ -535,6 +539,11 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div class="pageview" id="page-semanas">
         <div class="card" style="margin-bottom:14px"><div class="cardh"><div class="cardht">Track record semanal</div></div><div id="sem-track"><div class="empty">Cargando…</div></div></div>
         <div id="sem-detalle"></div>
+      </div>
+      <div class="pageview" id="page-calendario">
+        <div id="cal-filtros" style="margin-bottom:8px"></div>
+        <div class="g2" id="cal-alertas" style="margin-bottom:12px"></div>
+        <div id="cal-cont"></div>
       </div>
 
       <!-- FECHAS CLAVE -->
@@ -1401,6 +1410,7 @@ async function initApp(account){
   if(currentUser.perfil!=='Solicitante'&&!currentUser.mlaOnly)document.getElementById('btn-repaso').style.display='inline-block';
   // Semanas: para quien gestiona tickets (Admin y Legal)
   if(currentUser.perfil==='Admin'||legalUser(currentUser.ini))document.getElementById('nav-semanas').style.display='flex';
+  if(currentUser.perfil!=='Solicitante'&&!currentUser.mlaOnly)document.getElementById('nav-calendario').style.display='flex';
   // Register login
   registrarLogin();
   // Show pending popup after short delay
@@ -1601,6 +1611,10 @@ function renderDash(){
     m2.style.gridTemplateColumns='repeat(4,minmax(0,1fr))';
   }
   renderDashTickets();
+  // Riesgo legal: poderes y mandatos que vencen pronto o ya vencieron
+  var rl=(typeof alertasRiesgoLegal==='function')?alertasRiesgoLegal():[];
+  document.getElementById('dash-riesgo-wrap').style.display=rl.length?'block':'none';
+  if(rl.length)document.getElementById('dash-riesgo').innerHTML=rl.slice(0,6).map(calItem).join('');
   // Alertas 48hs — Temas + DD + INTORU
   var alertTemas=activos.filter(function(t){var dt=daysTo(t.dead);return dt!==null&&dt<=2;}).map(function(t){var dt=daysTo(t.dead);return {tipo:'TEMAS',label:t.tit,sub:fmtDate(t.dead)+(t.cli?' · '+t.cli:''),dt:dt,id:t.id,sitio:null};});
   var alertDD=dd.filter(function(s){var dt=daysTo(s.plazoFecha);return dt!==null&&dt<=2;}).map(function(s){var dt=daysTo(s.plazoFecha);return {tipo:'DD',label:s.sitio,sub:'Plazo DD · '+fmtDate(s.plazoFecha),dt:dt,sitio:s.sitio};});
@@ -4166,6 +4180,87 @@ function reporteSemanal(k){
     +'<script>setTimeout(function(){window.print();},400);<\/script></body></html>';
   var w=window.open('','_blank');if(!w){showToast('El navegador bloqueó la ventana del reporte: permití ventanas emergentes.',true);return;}
   w.document.open();w.document.write(html);w.document.close();
+}
+
+// ─── CALENDARIO: todos los vencimientos en un solo lugar ────────────────────
+var CAL={mes:null,dia:null,vista:'mes',tipos:null};
+var CAL_TIPOS={
+  tema:{lbl:'Temas',col:'#1B4FD8',page:'temas'},ticket:{lbl:'Tickets',col:'#0369A1',page:'tickets'},fecha:{lbl:'Fechas clave',col:'#7C3AED',page:'fechas'},
+  poder:{lbl:'Poderes',col:'#B91C1C',page:'poderes'},mandato:{lbl:'Mandatos (autoridades)',col:'#BE185D',page:'societario'},suelo:{lbl:'Contratos de suelo',col:'#B45309',page:'suelo'},
+  mla:{lbl:'MLAs',col:'#4338CA',page:'mla'},usufructo:{lbl:'Usufructos',col:'#0F766E',page:'inm'},intoru:{lbl:'INTORU',col:'#15803D',page:'intoru'},dd:{lbl:'Due diligence',col:'#6B7280',page:'dd'}};
+var MESES_ABR={ENE:0,FEB:1,MAR:2,ABR:3,MAY:4,JUN:5,JUL:6,AGO:7,SEP:8,SET:8,OCT:9,NOV:10,DIC:11};
+// "Vigencia" de autoridades es texto libre: se reconocen dd/mm/aaaa, aaaa-mm-dd y "MES AAAA" (fin de ese mes)
+function fechaDeVigencia(txt){
+  var s=String(txt||'').toUpperCase();
+  var m=s.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);if(m)return m[3]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[1]).padStart(2,'0');
+  m=s.match(/(\d{4})-(\d{2})-(\d{2})/);if(m)return m[0];
+  m=s.match(/\b(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|SET|OCT|NOV|DIC)[A-Z]*\.?\s*(?:DE\s*)?(\d{4})/);
+  if(m){var d=new Date(parseInt(m[2],10),MESES_ABR[m[1]]+1,0);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  return '';
+}
+function eventosCalendario(){
+  var ev=[], sc=currentUser.scope||['AR','UY','PY'], enScope=function(p){return !p||p==='Global'||sc.indexOf(p)>=0;};
+  var add=function(tipo,fecha,titulo,sub,extra){if(fecha)ev.push(Object.assign({tipo:tipo,fecha:String(fecha).split('T')[0],titulo:String(titulo||'—'),sub:String(sub||'')},extra||{}));};
+  vTemas().filter(function(t){return t.estado!=='Cerrado';}).forEach(function(t){add('tema',t.dead,t.tit,(rpNombre(t.resp))+(t.cli?' · '+t.cli:''),{pend:true});});
+  ticketsVisibles().filter(function(t){var e=etapaTicket(t);return e==='nuevo'||e==='tomado';}).forEach(function(t){add('ticket',t.deadline,t.asuntoRaw,'Ticket '+t.num+' · '+rpNombre(t.resp),{pend:true});});
+  fechas.filter(function(f){return enScope(f.pais);}).forEach(function(f){add('fecha',f.fecha,f.desc,(f.cat||'')+(f.pais?' · '+f.pais:''));});
+  poderes.filter(function(p){return enScope(p.pais);}).forEach(function(p){add('poder',p.fechaVen,'Vence poder: '+p.apoderado,(p.tipo||'')+(p.pais?' · '+p.pais:''),{pend:true});});
+  socAut.filter(function(a){return enScope(a.pais);}).forEach(function(a){add('mandato',fechaDeVigencia(a.vigencia),'Vence mandato: '+a.nombre,(a.cargo||'')+' · '+(a.sociedad||''),{pend:true});});
+  vSuelos().forEach(function(s){add('suelo',s.fin,'Vence contrato '+s.sitio,s.cp+(s.pais?' · '+s.pais:''),{pend:true});});
+  (mla||[]).filter(function(m){return enScope(m.pais);}).forEach(function(m){add('mla',m.vencFecha,'Vence MLA '+m.nombre,m.contraparte||'',{pend:true});});
+  (inm||[]).forEach(function(i){add('usufructo',i.vencUsuf,'Vence usufructo '+(i.sitio||i.nombre),i.nombre||'',{pend:true});});
+  if(sc.indexOf('UY')>=0){(intoru||[]).forEach(function(s){add('intoru',s.cierre,'Cierre INTORU '+s.sitio,s.nombre||'');});(dd||[]).forEach(function(s){add('dd',s.plazoFecha,'Plazo DD '+s.sitio,'');});}
+  return ev;
+}
+function calTiposActivos(){if(!CAL.tipos){CAL.tipos={};Object.keys(CAL_TIPOS).forEach(function(k){CAL.tipos[k]=true;});}return CAL.tipos;}
+function calChip(e){var c=CAL_TIPOS[e.tipo];return '<div title="'+escHtml(c.lbl+': '+e.titulo)+'" style="font-size:10px;line-height:1.3;padding:1px 5px;border-radius:3px;margin-top:2px;background:'+c.col+'1F;color:'+c.col+';border-left:3px solid '+c.col+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(e.titulo)+'</div>';}
+function calItem(e){
+  var c=CAL_TIPOS[e.tipo], d=daysTo(e.fecha);
+  var cuando=d===0?'hoy':d===1?'mañana':d<0?'hace '+(-d)+' días':'en '+d+' días';
+  return '<div onclick="navTo(\''+c.page+'\')" style="cursor:pointer;display:flex;gap:10px;align-items:center;padding:7px 4px;border-bottom:1px solid var(--brd)">'
+    +'<div style="width:4px;align-self:stretch;background:'+c.col+';border-radius:2px"></div>'
+    +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">'+escHtml(e.titulo)+'</div><div style="font-size:11px;color:var(--tx3)">'+c.lbl+(e.sub?' · '+escHtml(e.sub):'')+'</div></div>'
+    +'<div style="text-align:right;font-size:11px;white-space:nowrap"><div style="font-weight:600;color:'+(d<0?'var(--rd-tx)':d<=7?'var(--am-tx)':'var(--tx2)')+'">'+cuando+'</div><div style="color:var(--tx3)">'+fmtDate(e.fecha)+'</div></div></div>';
+}
+function renderCalendario(){
+  var cont=document.getElementById('cal-cont');if(!cont)return;
+  var act=calTiposActivos(), todos=eventosCalendario();
+  var ev=todos.filter(function(e){return act[e.tipo];});
+  if(!CAL.mes){var h=new Date();CAL.mes=new Date(h.getFullYear(),h.getMonth(),1);}
+  // Filtros por tipo (con cantidad de los próximos 90 días)
+  var en90=function(e){var d=daysTo(e.fecha);return d!==null&&d>=-30&&d<=90;};
+  document.getElementById('cal-filtros').innerHTML=Object.keys(CAL_TIPOS).map(function(k){
+    var c=CAL_TIPOS[k], n=todos.filter(function(e){return e.tipo===k&&en90(e);}).length;
+    return '<span onclick="CAL.tipos.'+k+'=!CAL.tipos.'+k+';renderCalendario()" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 9px;border-radius:20px;border:1px solid '+(act[k]?c.col:'var(--brd)')+';background:'+(act[k]?c.col+'14':'transparent')+';color:'+(act[k]?c.col:'var(--tx3)')+';margin:0 6px 6px 0"><span style="width:8px;height:8px;border-radius:50%;background:'+(act[k]?c.col:'var(--brd2)')+'"></span>'+c.lbl+' ('+n+')</span>';}).join('');
+  // Alertas: vencidos sin resolver (últimos 60 días) y lo que vence en los próximos 30
+  var venc=ev.filter(function(e){var d=daysTo(e.fecha);return e.pend&&d!==null&&d<0&&d>=-60;}).sort(function(a,b){return a.fecha<b.fecha?-1:1;});
+  var prox=ev.filter(function(e){var d=daysTo(e.fecha);return d!==null&&d>=0&&d<=30;}).sort(function(a,b){return a.fecha<b.fecha?-1:1;});
+  document.getElementById('cal-alertas').innerHTML=
+    '<div class="card"><div class="cardh"><div class="cardht">🔴 Vencido y sin resolver ('+venc.length+')</div></div>'+(venc.length?venc.slice(0,12).map(calItem).join(''):'<div class="empty">Nada vencido 🎉</div>')+'</div>'
+    +'<div class="card"><div class="cardh"><div class="cardht">⏳ Próximos 30 días ('+prox.length+')</div></div>'+(prox.length?prox.slice(0,12).map(calItem).join('')+(prox.length>12?'<div style="font-size:11px;color:var(--tx3);padding:6px 4px">… y '+(prox.length-12)+' más: miralos en el calendario</div>':''):'<div class="empty">Sin vencimientos en 30 días</div>')+'</div>';
+  // Grilla del mes (lunes a domingo)
+  var y=CAL.mes.getFullYear(), m=CAL.mes.getMonth();
+  var primero=new Date(y,m,1), offset=(primero.getDay()+6)%7, diasMes=new Date(y,m+1,0).getDate();
+  var porDia={};ev.forEach(function(e){(porDia[e.fecha]=porDia[e.fecha]||[]).push(e);});
+  var hoy=todayStr(), celdas='';
+  for(var i=0;i<offset;i++)celdas+='<div style="background:var(--surf2);min-height:84px"></div>';
+  for(var dnum=1;dnum<=diasMes;dnum++){
+    var key=y+'-'+String(m+1).padStart(2,'0')+'-'+String(dnum).padStart(2,'0'), lst=porDia[key]||[], esHoy=key===hoy, sel=key===CAL.dia;
+    celdas+='<div onclick="CAL.dia=\''+key+'\';renderCalendario()" style="cursor:pointer;min-height:84px;padding:4px 5px;background:'+(sel?'var(--bl-bg)':'var(--surf)')+';'+(esHoy?'box-shadow:inset 0 0 0 2px var(--bl);':'')+'overflow:hidden">'
+      +'<div style="font-size:11px;font-weight:'+(esHoy?'700':'500')+';color:'+(esHoy?'var(--bl)':'var(--tx2)')+'">'+dnum+'</div>'
+      +lst.slice(0,3).map(calChip).join('')+(lst.length>3?'<div style="font-size:10px;color:var(--tx3);margin-top:2px">+'+(lst.length-3)+' más</div>':'')+'</div>';
+  }
+  var nombreMes=primero.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
+  var detalleDia=CAL.dia&&(porDia[CAL.dia]||[]).length?'<div class="card" style="margin-top:12px"><div class="cardh"><div class="cardht">'+rpCap(new Date(CAL.dia+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'}))+'</div></div>'+porDia[CAL.dia].map(calItem).join('')+'</div>':'';
+  cont.innerHTML='<div class="card"><div class="cardh"><div style="display:flex;align-items:center;gap:10px"><button class="btns" style="padding:3px 10px" onclick="CAL.mes=new Date(CAL.mes.getFullYear(),CAL.mes.getMonth()-1,1);renderCalendario()">◀</button>'
+    +'<div class="cardht" style="min-width:150px;text-align:center">'+rpCap(nombreMes)+'</div><button class="btns" style="padding:3px 10px" onclick="CAL.mes=new Date(CAL.mes.getFullYear(),CAL.mes.getMonth()+1,1);renderCalendario()">▶</button>'
+    +'<button class="btns" style="padding:3px 10px" onclick="CAL.mes=null;CAL.dia=todayStr();renderCalendario()">Hoy</button></div></div>'
+    +'<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;background:var(--brd);border:1px solid var(--brd);border-radius:6px;overflow:hidden">'
+    +['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(function(d){return '<div style="background:var(--surf2);font-size:11px;font-weight:600;color:var(--tx3);text-align:center;padding:4px">'+d+'</div>';}).join('')+celdas+'</div></div>'+detalleDia;
+}
+// Alerta en el dashboard: poderes y mandatos que vencen en 60 días o ya vencidos
+function alertasRiesgoLegal(){
+  return eventosCalendario().filter(function(e){var d=daysTo(e.fecha);return (e.tipo==='poder'||e.tipo==='mandato')&&d!==null&&d<=60&&d>=-90;}).sort(function(a,b){return a.fecha<b.fecha?-1:1;});
 }
 
 async function cambiarEstadoTicket(id, estado){
