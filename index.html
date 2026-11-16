@@ -304,7 +304,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1" y="2" width="12" height="10" rx="1.5" stroke="currentColor"/><path d="M4 5h6M4 7.5h4" stroke="currentColor" stroke-linecap="round"/><circle cx="10.5" cy="7.5" r="1" fill="currentColor"/></svg>Tickets
         </div>
         <div class="navi" id="nav-semanas" style="display:none" onclick="goTo('semanas',this)">
-          <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1.5" y="2.5" width="11" height="10" rx="1.5" stroke="currentColor"/><path d="M1.5 5.5h11M4.5 1v3M9.5 1v3M4 8h2M8 8h2M4 10.5h2" stroke="currentColor" stroke-linecap="round"/></svg>Semanas
+          <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1.5" y="2.5" width="11" height="10" rx="1.5" stroke="currentColor"/><path d="M1.5 5.5h11M4.5 1v3M9.5 1v3M4 8h2M8 8h2M4 10.5h2" stroke="currentColor" stroke-linecap="round"/></svg>Punteo semanal
         </div>
         <div class="navi" id="nav-fechas" onclick="goTo('fechas',this)">
           <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1" y="2" width="12" height="11" rx="1.5" stroke="currentColor"/><path d="M4 1v2M10 1v2M1 5h12" stroke="currentColor" stroke-linecap="round"/><circle cx="4.5" cy="8.5" r="1" fill="currentColor"/><circle cx="7" cy="8.5" r="1" fill="var(--rd)"/><circle cx="9.5" cy="8.5" r="1" fill="currentColor"/></svg>Fechas Clave
@@ -498,6 +498,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
       <!-- TICKETS -->
       <div class="pageview" id="page-tickets">
+        <div id="tk-vista" style="display:none;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
         <!-- Cómo venimos: indicadores + gráfico (solo Legal/Admin) -->
         <div id="tk-panel" style="display:none">
           <div class="metrics" id="tk-kpis"></div>
@@ -525,8 +526,11 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div id="tickets-list"></div>
       </div>
       <div class="pageview" id="page-semanas">
-        <div class="card" style="margin-bottom:14px"><div class="cardh"><div class="cardht">Track record semanal</div></div><div id="sem-track"><div class="empty">Cargando…</div></div></div>
-        <div id="sem-detalle"></div>
+        <div id="punteo"></div>
+        <details style="margin-top:16px"><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--tx2);padding:6px 2px">📈 Números por semana (versión anterior)</summary>
+          <div class="card" style="margin:10px 0 14px"><div class="cardh"><div class="cardht">Track record semanal</div></div><div id="sem-track"><div class="empty">Cargando…</div></div></div>
+          <div id="sem-detalle"></div>
+        </details>
       </div>
       <div class="pageview" id="page-calendario">
         <div id="cal-filtros" style="margin-bottom:8px"></div>
@@ -608,6 +612,16 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div class="field" style="margin:0"><label>Prioridad</label><select id="ft-prio"><option>Alta</option><option>Media</option><option>Baja</option></select></div>
     </div>
     <div class="field" style="margin-top:4px"><label>Estado</label><select id="ft-estado"><option>No iniciado</option><option>En curso</option></select></div>
+    <div class="sectit">Reunión de management</div>
+    <div class="field" style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <input type="checkbox" id="ft-pm" onchange="document.getElementById('pm-fields').style.display=this.checked?'block':'none'" style="width:auto;cursor:pointer">
+      <label for="ft-pm" style="margin:0;cursor:pointer;font-size:13px;color:var(--tx)">📊 Para la reunión de management (aparece en “Modo reunión”)</label>
+    </div>
+    <div id="pm-fields" style="display:none">
+      <div class="field"><label>Novedad de la semana</label><textarea id="ft-nov" style="min-height:56px" placeholder="Qué cambió desde la última reunión (1-2 líneas)"></textarea></div>
+      <div class="field"><label>Próximo paso</label><textarea id="ft-prox" style="min-height:56px" placeholder="Qué sigue (el responsable y la fecha salen del tema)"></textarea></div>
+      <div class="field"><label>Decisión que necesitamos de management <span style="color:var(--tx3);font-weight:400">(opcional)</span></label><textarea id="ft-dec" style="min-height:56px" placeholder="Ej: aprobar ir a juicio / validar el tope de negociación"></textarea></div>
+    </div>
     <div class="sectit">Bloqueo</div>
     <div class="field" style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
       <input type="checkbox" id="ft-bloq" onchange="toggleBloq()" style="width:auto;cursor:pointer">
@@ -1091,6 +1105,14 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           </div>
         </div>
       </details>
+      <div class="field" style="border:1px solid var(--brd);border-radius:var(--rs);padding:10px 12px">
+        <label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin:0;font-size:13px;font-weight:600;color:var(--bl)"><input type="checkbox" id="tk-es-proyecto" onchange="onProyectoToggle()" style="width:auto"> 🗂 Es un proyecto (tema grande y largo, con etapas)</label>
+        <div id="tk-hitos-wrap" style="display:none;margin-top:10px">
+          <div style="font-size:11px;color:var(--tx3);margin-bottom:6px">Etapas en orden. Tildá las cumplidas; la fecha es el objetivo de cada etapa.</div>
+          <div id="tk-hitos-lista"></div>
+          <div style="display:flex;gap:6px;margin-top:4px"><button type="button" class="btns" style="font-size:11px;padding:4px 10px" onclick="agregarHito()">+ Agregar etapa</button><button type="button" class="btns" style="font-size:11px;padding:4px 10px" onclick="cargarHitosModelo()">Usar etapas modelo</button></div>
+        </div>
+      </div>
       <div class="field"><label>Estado</label>
         <select id="tk-estado-edit" onchange="onEstadoTicketChange()">
           <option value="En curso">🟡 En curso (pendiente)</option>
@@ -1536,7 +1558,7 @@ async function deleteListItem(listName,id){
 
 // ─── MAP ────────────────────────────────────────────────────────────────────
 function mapDoc(item){var f=item.fields;return{id:item.id,code:f.Codigo||'',nombre:f.NombreDoc||'',tipo:f.Tipo||'',ref:f.Referencia||'',pais:f.Pais||'',cp:f.Contraparte||'',fi:f.FechaInicio?f.FechaInicio.split('T')[0]:'',estado:f.Estado||'Borrador',resp:f.Responsable||'',link:f.LinkArchivo||'',obs:f.Observaciones||''};}
-function mapTema(item){var f=item.fields;return{id:item.id,tit:f.Titulo||'',desc:f.Descripcion||'',resp:f.Responsable||'',pais:f.Pais||'',cli:f.Cliente||'',dead:f.Deadline?f.Deadline.split('T')[0]:'',prio:f.Prioridad||'Media',estado:f.Estado||'No iniciado',fc:f.FechaCierre?f.FechaCierre.split('T')[0]:null,bloqueado:f.Bloqueado||false,bloqQuien:f.BloqQuien||'',bloqQue:f.BloqQue||'',bloqEmail:f.BloqEmail||'',bloqNombre:f.BloqNombre||''};}
+function mapTema(item){var f=item.fields;return{id:item.id,tit:f.Titulo||'',desc:f.Descripcion||'',resp:f.Responsable||'',pais:f.Pais||'',cli:f.Cliente||'',dead:f.Deadline?f.Deadline.split('T')[0]:'',prio:f.Prioridad||'Media',estado:f.Estado||'No iniciado',fc:f.FechaCierre?f.FechaCierre.split('T')[0]:null,bloqueado:f.Bloqueado||false,bloqQuien:f.BloqQuien||'',bloqQue:f.BloqQue||'',bloqEmail:f.BloqEmail||'',bloqNombre:f.BloqNombre||'',pm:!!f.ParaManagement,nov:f.Novedad||'',prox:f.ProximoPaso||'',dec:f.DecisionRequerida||''};}
 function mapSuelo(item){var f=item.fields;return{id:item.id,sitio:f.Sitio||'',pais:f.Pais||'',cp:f.Contraparte||'',firma:f.FechaFirma?f.FechaFirma.split('T')[0]:'',inicio:f.InicioContrato?f.InicioContrato.split('T')[0]:'',fin:f.FinContrato?f.FinContrato.split('T')[0]:'',precio:f.Precio||'',actualizacion:f.Actualizacion||'',cesion:f.Cesion||'',subarr:f.Subarrendamiento||'',term:f.TerminacionAnticipada||'',inscripto:f.Inscripto||'',titular:f.TitularRegistral||'',obs:f.Observaciones||''};}
 
 // ─── SYNC ───────────────────────────────────────────────────────────────────
@@ -2168,17 +2190,257 @@ function goTo(page,el){
   var T={dashboard:'Dashboard',tickets:'Tickets',temas:'Temas',documentos:'Documentos',suelo:'Contratos de Suelo',intoru:'INTORU',dd:'DD Sitios Uruguay',poderes:'Poderes',societario:'Societario',fechas:'Fechas Clave',mla:'MLA',inm:'Inmuebles Propios UY',search:'Búsqueda',analytics:'Analytics'};
   var S={dashboard:'Resumen general',tickets:'Solicitudes del equipo ATIS',temas:'Follow-up y gestión',documentos:'Registro documental',suelo:'Matriz de contratos LOC',intoru:'Análisis de Sitios por Lotes — Uruguay',dd:'Due Diligence — Fases 1 y 2',poderes:'Registro de poderes vigentes',societario:'Estructura societaria',fechas:'Vencimientos y plazos institucionales',mla:'Master Lease Agreements',inm:'Inmuebles adquiridos en Uruguay',search:'Buscar en todos los módulos',analytics:'Indicadores y gráficos'};
   document.getElementById('tb-title').textContent=T[page]||page;document.getElementById('tb-sub').textContent=S[page]||'';
-  var A={tickets:'<button class="btnp" onclick="openFormTicket()">+ Nueva solicitud</button>',fechas:'<button class="btnp" onclick="openFormFecha()">+ Nueva fecha clave</button>',mla:'<button class="btnp" onclick="openFormMLA()">+ Nuevo MLA</button>',inm:'<button class="btnp" onclick="openFormInm()">+ Nuevo inmueble</button>',poderes:'<button class="btns" onclick="exportCSV(\'poderes\')" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormPoder()">+ Nuevo poder</button>',societario:socTab==="autoridades"?'<button class="btnp" onclick="openFormSocAut()">+ Nueva autoridad</button>':'<button class="btnp" onclick="openFormSocAcc()">+ Nuevo accionista</button>',temas:'<button class="btns" onclick="exportCSV(\"temas\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormTema()">+ Nuevo tema</button>',documentos:'<button class="btns" onclick="exportCSV(\"documentos\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDoc()">+ Nuevo documento</button>',suelo:'<button class="btns" onclick="exportCSV(\"suelo\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormSuelo()">+ Nuevo contrato</button>',intoru:'<button class="btns" onclick="exportCSV(\"intoru\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormINTORU()">+ Nuevo sitio</button>',dd:'<button class="btns" onclick="exportCSV(\"dd\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDD()">+ Nuevo sitio</button>'};
+  var A={tickets:'<button class="btnp" onclick="openFormTicket()">+ Nueva solicitud</button>',fechas:'<button class="btnp" onclick="openFormFecha()">+ Nueva fecha clave</button>',mla:'<button class="btnp" onclick="openFormMLA()">+ Nuevo MLA</button>',inm:'<button class="btnp" onclick="openFormInm()">+ Nuevo inmueble</button>',poderes:'<button class="btns" onclick="exportCSV(\'poderes\')" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormPoder()">+ Nuevo poder</button>',societario:socTab==="autoridades"?'<button class="btnp" onclick="openFormSocAut()">+ Nueva autoridad</button>':'<button class="btnp" onclick="openFormSocAcc()">+ Nuevo accionista</button>',temas:'<button class="btns" onclick="abrirReunion()" style="font-size:12px">📊 Modo reunión</button><button class="btns" onclick="exportCSV(\"temas\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormTema()">+ Nuevo tema</button>',documentos:'<button class="btns" onclick="exportCSV(\"documentos\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDoc()">+ Nuevo documento</button>',suelo:'<button class="btns" onclick="exportCSV(\"suelo\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormSuelo()">+ Nuevo contrato</button>',intoru:'<button class="btns" onclick="exportCSV(\"intoru\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormINTORU()">+ Nuevo sitio</button>',dd:'<button class="btns" onclick="exportCSV(\"dd\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDD()">+ Nuevo sitio</button>'};
   document.getElementById('tb-act').innerHTML=A[page]||'';
-  var EXTRA_T={semanas:['Semanas','Seguimiento semanal de tickets — reunión de los lunes'],calendario:['Calendario','Todos los vencimientos en un solo lugar']};
+  var EXTRA_T={semanas:['Punteo semanal','Repaso de tickets uno por uno — reunión de los lunes con el equipo'],calendario:['Calendario','Todos los vencimientos en un solo lugar']};
   if(EXTRA_T[page]){document.getElementById('tb-title').textContent=EXTRA_T[page][0];document.getElementById('tb-sub').textContent=EXTRA_T[page][1];}
-  if(page==='semanas')setTimeout(renderSemanas,50);
+  if(page==='semanas')setTimeout(function(){renderPunteo();renderSemanas();},50);
   if(page==='calendario'&&typeof renderCalendario==='function')setTimeout(renderCalendario,50);
   if(page==='analytics')setTimeout(renderAnalytics,100);
   if(page==='fechas')setTimeout(renderFechas,50);
   if(page==='mla')setTimeout(renderMLA,50);
   if(page==='inm')setTimeout(renderInm,50);
 }
+
+// ─── PROYECTOS (tickets grandes con pipeline de hitos) ─────────────────────
+var TK_VISTA='dia'; // 'dia' = día a día, 'proy' = proyectos
+function parseHitos(s){try{var a=JSON.parse(s||'[]');return Array.isArray(a)?a.filter(function(h){return h&&h.t;}):[];}catch(e){return [];}}
+var HITOS_MODELO=['Relevamiento y documentación','Análisis / due diligence','Borrador','Negociación con la contraparte','Aprobaciones internas','Firma','Cierre y archivo'];
+// Barra de pipeline: hechos en verde, el actual en azul, los que faltan en gris
+function pipelineHTML(hitos,grande){
+  if(!hitos.length)return '<div style="font-size:11px;color:var(--tx3);margin-top:6px">Proyecto sin etapas cargadas todavía.</div>';
+  var hechos=hitos.filter(function(h){return h.ok;}).length, actual=hitos.findIndex(function(h){return !h.ok;});
+  var pct=Math.round(hechos*100/hitos.length);
+  return '<div style="margin-top:8px"><div style="display:flex;gap:3px">'+hitos.map(function(h,i){
+      var col=h.ok?'var(--gr-tx)':i===actual?'var(--bl)':'var(--brd2)';
+      return '<div title="'+escHtml(h.t)+(h.f?' · '+fmtDate(h.f):'')+'" style="flex:1;height:'+(grande?10:7)+'px;border-radius:4px;background:'+col+'"></div>';
+    }).join('')+'</div>'
+    +'<div style="display:flex;justify-content:space-between;font-size:'+(grande?13:11)+'px;margin-top:4px;color:var(--tx2)"><span>'+(actual<0?'✅ Todas las etapas cumplidas':'Etapa actual: <b style="color:var(--bl)">'+escHtml(hitos[actual].t)+'</b>'+(hitos[actual].f?' · objetivo '+fmtDate(hitos[actual].f):''))+'</span><span>'+hechos+'/'+hitos.length+' · '+pct+'%</span></div></div>';
+}
+// Editor de etapas dentro de "Gestionar"
+var HITOS_EDIT=[];
+function renderHitosEditor(){
+  var el=document.getElementById('tk-hitos-lista');if(!el)return;
+  el.innerHTML=HITOS_EDIT.length?HITOS_EDIT.map(function(h,i){
+    return '<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">'
+      +'<input type="checkbox" '+(h.ok?'checked':'')+' onchange="HITOS_EDIT['+i+'].ok=this.checked" style="width:auto" title="Cumplida">'
+      +'<input type="text" value="'+escHtml(h.t)+'" oninput="HITOS_EDIT['+i+'].t=this.value" style="flex:1;font-size:12px;padding:5px 8px">'
+      +'<input type="date" value="'+escHtml(h.f||'')+'" onchange="HITOS_EDIT['+i+'].f=this.value" style="width:140px;font-size:12px;padding:5px 6px" title="Fecha objetivo">'
+      +'<button type="button" class="btns" style="padding:2px 6px;font-size:11px" onclick="moverHito('+i+',-1)" title="Subir">↑</button>'
+      +'<button type="button" class="btns" style="padding:2px 6px;font-size:11px" onclick="HITOS_EDIT.splice('+i+',1);renderHitosEditor()" title="Quitar">✕</button></div>';
+  }).join(''):'<div style="font-size:11px;color:var(--tx3);margin-bottom:6px">Todavía no hay etapas.</div>';
+}
+function moverHito(i,d){var j=i+d;if(j<0||j>=HITOS_EDIT.length)return;var x=HITOS_EDIT[i];HITOS_EDIT[i]=HITOS_EDIT[j];HITOS_EDIT[j]=x;renderHitosEditor();}
+function agregarHito(){HITOS_EDIT.push({t:'',ok:false,f:''});renderHitosEditor();var ins=document.querySelectorAll('#tk-hitos-lista input[type=text]');if(ins.length)ins[ins.length-1].focus();}
+function cargarHitosModelo(){if(HITOS_EDIT.length&&!confirm('¿Reemplazar las etapas actuales por las del modelo?'))return;HITOS_EDIT=HITOS_MODELO.map(function(t){return {t:t,ok:false,f:''};});renderHitosEditor();}
+function onProyectoToggle(){document.getElementById('tk-hitos-wrap').style.display=document.getElementById('tk-es-proyecto').checked?'block':'none';}
+function setVistaTickets(v){TK_VISTA=v;renderTickets();}
+
+// ─── MODO REUNIÓN (management de los lunes) ────────────────────────────────
+var REU={slides:[],i:0};
+function temasManagement(){
+  var rank={Alta:0,Media:1,Baja:2};
+  return vTemas().filter(function(t){return t.pm&&t.estado!=='Cerrado';}).sort(function(a,b){
+    return ((rank[a.prio]||1)-(rank[b.prio]||1))||((a.dead||'9999')<(b.dead||'9999')?-1:1);});
+}
+function semaforoTema(t){
+  var d=daysTo(t.dead);
+  if(t.bloqueado)return {c:'var(--am-tx)',bg:'var(--am-bg)',txt:'⏸ Bloqueado'+(t.bloqQuien?' — espera a '+bloqLabelDe(t.bloqQuien):'')};
+  if(d!==null&&d<0)return {c:'var(--rd-tx)',bg:'var(--rd-bg)',txt:'🔴 Vencido hace '+(-d)+(d===-1?' día':' días')};
+  if(d!==null&&d<=7)return {c:'var(--am-tx)',bg:'var(--am-bg)',txt:'🟡 Vence '+(d===0?'hoy':d===1?'mañana':'en '+d+' días')};
+  return {c:'var(--gr-tx)',bg:'var(--gr-bg)',txt:'🟢 En plazo'+(d!==null?' · vence '+fmtDate(t.dead):'')};
+}
+function slideTemaHTML(t,n,total){
+  var s=semaforoTema(t);
+  var bloque=function(tit,txt,estilo){return '<div style="margin-top:18px'+(estilo||'')+'"><div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);margin-bottom:6px">'+tit+'</div><div style="font-size:19px;line-height:1.5;white-space:pre-wrap">'+txt+'</div></div>';};
+  return '<div style="font-size:12px;color:var(--tx3);margin-bottom:10px">Tema '+n+' de '+total+'</div>'
+    +'<div style="font-size:30px;font-weight:700;line-height:1.2;color:var(--tx)">'+escHtml(t.tit)+'</div>'
+    +'<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px;font-size:14px;color:var(--tx2)">'
+      +'<span style="padding:4px 12px;border-radius:20px;font-weight:600;background:'+s.bg+';color:'+s.c+'">'+escHtml(s.txt)+'</span>'
+      +'<span>'+escHtml([t.pais,t.cli,'Resp.: '+rpNombre(t.resp),t.prio?'Prioridad '+t.prio:''].filter(Boolean).join(' · '))+'</span></div>'
+    +bloque('📰 Novedad',t.nov?escHtml(t.nov):'<span style="color:var(--tx3)">Sin novedades cargadas</span>')
+    +bloque('➡️ Próximo paso',(t.prox?escHtml(t.prox):'<span style="color:var(--tx3)">Sin próximo paso cargado</span>')+'<div style="font-size:14px;color:var(--tx2);margin-top:4px">'+escHtml(rpNombre(t.resp))+(t.dead?' · '+fmtDate(t.dead):'')+'</div>')
+    +(t.bloqueado&&t.bloqQue?bloque('⏸ Qué se necesita para destrabar',escHtml(t.bloqQue)):'')
+    +(t.dec?bloque('🗳️ Decisión que necesitamos de management',escHtml(t.dec),';background:var(--am-bg);border-left:4px solid var(--am);padding:12px 16px;border-radius:8px'):'');
+}
+function armarReunion(){
+  var ts=temasManagement();
+  var riesgo=ts.filter(function(t){var d=daysTo(t.dead);return t.bloqueado||(d!==null&&d<=7);}).length;
+  var decs=ts.filter(function(t){return t.dec;});
+  var hoy=new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  var portada='<div style="font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3)">Legal · Reunión de management</div>'
+    +'<div style="font-size:34px;font-weight:700;margin:8px 0 4px;color:var(--bl)">'+rpCap(hoy)+'</div>'
+    +'<div style="display:flex;gap:14px;flex-wrap:wrap;margin:22px 0">'
+      +[[ts.length,'temas para revisar','var(--tx)'],[riesgo,'en riesgo (vencen en 7 días o bloqueados)',riesgo?'var(--rd-tx)':'var(--gr-tx)'],[decs.length,'decisiones que pedimos',decs.length?'var(--am-tx)':'var(--tx2)']].map(function(k){
+        return '<div style="flex:1;min-width:160px;border:1px solid var(--brd);border-radius:10px;padding:14px 16px"><div style="font-size:40px;font-weight:700;color:'+k[2]+'">'+k[0]+'</div><div style="font-size:13px;color:var(--tx2)">'+k[1]+'</div></div>';}).join('')
+    +'</div>'
+    +'<div style="font-size:15px;line-height:1.9">'+ts.map(function(t,i){var s=semaforoTema(t);return '<div>'+(i+1)+'. '+escHtml(t.tit)+' <span style="font-size:12px;color:'+s.c+'">'+escHtml(s.txt.split(' — ')[0])+'</span></div>';}).join('')+'</div>';
+  var cierre='<div style="font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3)">Resumen</div>'
+    +'<div style="font-size:30px;font-weight:700;margin:8px 0 18px">Decisiones que necesitamos</div>'
+    +(decs.length?decs.map(function(t){return '<div style="margin-bottom:14px;padding:12px 16px;border-left:4px solid var(--am);background:var(--am-bg);border-radius:8px"><div style="font-size:13px;color:var(--tx2)">'+escHtml(t.tit)+'</div><div style="font-size:18px;margin-top:4px;white-space:pre-wrap">'+escHtml(t.dec)+'</div></div>';}).join(''):'<div style="font-size:18px;color:var(--gr-tx)">No hay decisiones pendientes para management.</div>');
+  return [portada].concat(ts.map(function(t,i){return slideTemaHTML(t,i+1,ts.length);})).concat([cierre]);
+}
+function abrirReunion(){
+  if(!temasManagement().length){alert('No hay temas marcados para la reunión.\n\nEn Temas, editá los que quieras presentar y tildá “Para la reunión de management”.');return;}
+  REU.slides=armarReunion();REU.i=0;
+  var ov=document.getElementById('reunion');
+  if(!ov){
+    ov=document.createElement('div');ov.id='reunion';
+    ov.style.cssText='position:fixed;inset:0;background:var(--bg);z-index:700;display:flex;flex-direction:column';
+    ov.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 18px;border-bottom:1px solid var(--brd);gap:8px;flex-wrap:wrap">'
+      +'<div style="font-size:13px;font-weight:600;color:var(--bl)">📊 Modo reunión</div><div style="display:flex;gap:6px;flex-wrap:wrap">'
+      +'<button class="btns" onclick="reunionIr(-1)">◀ Anterior</button><span id="reunion-pag" style="font-size:12px;color:var(--tx3);align-self:center;min-width:60px;text-align:center"></span><button class="btnp" onclick="reunionIr(1)">Siguiente ▶</button>'
+      +'<button class="btns" onclick="imprimirReunion()">🖨 PDF</button><button class="btns" onclick="cerrarReunion()">✕ Salir</button></div></div>'
+      +'<div style="flex:1;overflow:auto;display:flex;justify-content:center;padding:36px 20px"><div id="reunion-slide" style="max-width:900px;width:100%"></div></div>'
+      +'<div style="text-align:center;font-size:11px;color:var(--tx3);padding:6px">← → para moverte · Esc para salir</div>';
+    document.body.appendChild(ov);
+    document.addEventListener('keydown',function(e){
+      if(document.getElementById('reunion').style.display==='none')return;
+      if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();reunionIr(1);}
+      else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();reunionIr(-1);}
+      else if(e.key==='Escape')cerrarReunion();
+    });
+  }
+  ov.style.display='flex';reunionIr(0);
+}
+function reunionIr(d){REU.i=Math.max(0,Math.min(REU.slides.length-1,REU.i+d));document.getElementById('reunion-slide').innerHTML=REU.slides[REU.i];document.getElementById('reunion-pag').textContent=(REU.i+1)+' / '+REU.slides.length;}
+function cerrarReunion(){var o=document.getElementById('reunion');if(o)o.style.display='none';}
+function imprimirReunion(){
+  var css=Array.prototype.map.call(document.querySelectorAll('style'),function(s){return s.textContent;}).join('\n');
+  var w=window.open('','_blank');if(!w){alert('El navegador bloqueó la ventana. Permití las ventanas emergentes para este sitio.');return;}
+  w.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Legal — Reunión de management</title><style>'+css+'body{background:#fff;padding:0}.sl{padding:28px 36px;page-break-after:always;max-width:900px;margin:0 auto}@page{size:A4 landscape;margin:12mm}</style></head><body>'
+    +REU.slides.map(function(s){return '<div class="sl">'+s+'</div>';}).join('')+'</body></html>');
+  w.document.close();setTimeout(function(){w.print();},400);
+}
+
+// ─── PUNTEO SEMANAL DE TICKETS (con Camila, uno por uno) ───────────────────
+const LIST_PUNTEO='Punteo_Tickets';
+var PUN={rows:null,ok:true,sem:null,lista:[],i:0};
+var PUN_UI={'Avanzó':{icon:'✅',col:'var(--gr-tx)',bg:'var(--gr-bg)'},'Sin avance':{icon:'⏸',col:'var(--am-tx)',bg:'var(--am-bg)'},'Cerrado':{icon:'🔒',col:'var(--tx2)',bg:'var(--surf2)'}};
+function semanaActualPunteo(){return claveSemana(lunesDe(new Date()));}
+async function cargarPunteo(forzar){
+  if(PUN.rows&&!forzar)return;
+  try{PUN.rows=(await getListItems(LIST_PUNTEO)).map(function(i){var f=i.fields;return {id:i.id,sem:f.Semana||'',tid:String(f.TicketId||''),res:f.Resultado||'',nota:f.Nota||'',por:f.Por||''};});PUN.ok=true;}
+  catch(e){PUN.rows=[];PUN.ok=false;console.warn('Punteo:',e.message);}
+}
+function punteoDe(tid,sem){return (PUN.rows||[]).find(function(r){return r.tid===String(tid)&&r.sem===sem;})||null;}
+function punteoAnterior(tid,sem){return (PUN.rows||[]).filter(function(r){return r.tid===String(tid)&&r.sem<sem;}).sort(function(a,b){return a.sem<b.sem?1:-1;})[0]||null;}
+// Semanas seguidas sin avance (contando la actual si ya se punteó así)
+function rachaSinAvance(tid,sem){
+  var rs=(PUN.rows||[]).filter(function(r){return r.tid===String(tid)&&r.sem<=sem;}).sort(function(a,b){return a.sem<b.sem?1:-1;});
+  var n=0;for(var i=0;i<rs.length;i++){if(rs[i].res==='Sin avance')n++;else break;}return n;
+}
+function listaPunteo(sem){
+  var esActual=sem===semanaActualPunteo();
+  var base=ticketsVisibles().filter(function(t){return esActual?(t.estado!=='Resuelto'||punteoDe(t.id,sem)):!!punteoDe(t.id,sem);});
+  ordenarTickets(base,'deadline');
+  // Proyectos primero; dentro de cada grupo, por deadline
+  return base.filter(function(t){return t.esProyecto;}).concat(base.filter(function(t){return !t.esProyecto;}));
+}
+async function renderPunteo(){
+  var el=document.getElementById('punteo');if(!el)return;
+  if(!PUN.rows)el.innerHTML='<div class="card"><div class="empty">Cargando punteo…</div></div>';
+  await cargarPunteo();
+  var actual=semanaActualPunteo();
+  if(!PUN.sem)PUN.sem=actual;
+  var sem=PUN.sem, esActual=sem===actual, lista=listaPunteo(sem);PUN.lista=lista;
+  var semanas=[actual].concat((PUN.rows||[]).map(function(r){return r.sem;}).filter(function(s,i,a){return s!==actual&&a.indexOf(s)===i;}).sort().reverse());
+  var cuenta={'Avanzó':0,'Sin avance':0,'Cerrado':0},pend=0,rojos=0;
+  lista.forEach(function(t){var r=punteoDe(t.id,sem);if(r&&cuenta[r.res]!=null)cuenta[r.res]++;else pend++;if(rachaSinAvance(t.id,sem)>=2)rojos++;});
+  var hechos=lista.length-pend, pct=lista.length?Math.round(hechos*100/lista.length):0;
+  var lunes=lunesDe(new Date());
+  var h='<div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'
+    +'<div><div style="font-size:18px;font-weight:700;color:var(--bl)">Punteo semana '+escHtml(sem.split('-S')[1]||sem)+(esActual?' <span style="font-size:12px;font-weight:400;color:var(--tx3)">'+rangoTxt(lunes)+' · en curso</span>':'')+'</div>'
+    +'<div style="font-size:12px;color:var(--tx2);margin-top:2px">Repasá los tickets abiertos uno por uno: ¿avanzó o no? Cada semana arranca desde lo que quedó la anterior.</div></div>'
+    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select class="fsel" onchange="PUN.sem=this.value;renderPunteo()">'+semanas.map(function(s){return '<option value="'+escHtml(s)+'"'+(s===sem?' selected':'')+'>Semana '+escHtml(s.split('-S')[1]||s)+' · '+escHtml(s.split('-S')[0])+(s===actual?' (actual)':'')+'</option>';}).join('')+'</select>'
+    +(esActual&&lista.length?'<button class="btnp" onclick="abrirPunteo()">'+(hechos?'▶ Seguir punteo':'▶ Empezar punteo')+'</button>':'')+'</div></div>'
+    +'<div style="height:8px;background:var(--surf2);border-radius:6px;margin:14px 0 8px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:var(--gr-tx)"></div></div>'
+    +'<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px"><span><b>'+hechos+'/'+lista.length+'</b> punteados</span><span style="color:var(--gr-tx)">✅ '+cuenta['Avanzó']+' avanzaron</span><span style="color:var(--am-tx)">⏸ '+cuenta['Sin avance']+' sin avance</span><span>🔒 '+cuenta['Cerrado']+' cerrados</span>'+(pend?'<span style="color:var(--tx3)">⏳ '+pend+' pendientes</span>':'')+(rojos?'<span style="color:var(--rd-tx);font-weight:600">🔴 '+rojos+' con 2+ semanas sin avance</span>':'')+'</div>'
+    +(PUN.ok?'':'<div style="font-size:12px;color:var(--rd-tx);margin-top:8px">No se pudo leer la lista Punteo_Tickets de SharePoint.</div>')+'</div>';
+  if(!lista.length){el.innerHTML=h+'<div class="card"><div class="empty">'+(esActual?'No hay tickets abiertos para puntear 🎉':'Esa semana no tiene punteo guardado.')+'</div></div>';return;}
+  h+='<div class="card" style="padding:0;overflow:hidden"><div class="dwrap"><table class="dtable"><thead><tr><th>Ticket</th><th>Resp.</th><th>Semana anterior</th><th>Esta semana</th></tr></thead><tbody>'
+    +lista.map(function(t,i){
+      var r=punteoDe(t.id,sem), p=punteoAnterior(t.id,sem), racha=rachaSinAvance(t.id,sem);
+      var celda=function(x){if(!x)return '<span style="color:var(--tx3)">—</span>';var u=PUN_UI[x.res]||{icon:'',col:'var(--tx2)'};return '<span style="color:'+u.col+';font-weight:600">'+u.icon+' '+escHtml(x.res)+'</span>'+(x.nota?'<div style="font-size:11px;color:var(--tx2);white-space:pre-wrap">'+escHtml(x.nota.length>120?x.nota.substring(0,120)+'…':x.nota)+'</div>':'');};
+      return '<tr'+(esActual?' style="cursor:pointer" onclick="abrirPunteo('+i+')"':'')+(racha>=2?' title="'+racha+' semanas seguidas sin avance"':'')+'>'
+        +'<td style="max-width:340px">'+(racha>=2?'<span style="color:var(--rd-tx);font-weight:700">🔴 </span>':'')+(t.esProyecto?'<span class="badge" style="background:var(--bl-bg);color:var(--bl)">🗂 Proyecto</span> ':'')+'<span class="mono" style="font-size:10px">'+t.num+'</span> '+t.asunto
+          +(p?'':'<span class="badge" style="background:var(--bl-bg);color:var(--bl);margin-left:4px">nuevo</span>')+(t.estado==='Resuelto'?' <span class="badge">cerrado</span>':'')+'</td>'
+        +'<td>'+escHtml(rpNombre(t.resp))+'</td><td style="max-width:220px">'+celda(p)+'</td><td style="max-width:220px">'+(r?celda(r):(esActual?'<span style="color:var(--tx3)">⏳ pendiente</span>':'—'))+'</td></tr>';
+    }).join('')+'</tbody></table></div></div>';
+  el.innerHTML=h;
+}
+// Vista "uno por uno"
+function abrirPunteo(i){
+  var lista=PUN.lista;if(!lista.length)return;
+  if(i==null){i=lista.findIndex(function(t){return !punteoDe(t.id,PUN.sem);});if(i<0)i=0;}
+  PUN.i=i;
+  var ov=document.getElementById('punteo-ov');
+  if(!ov){
+    ov=document.createElement('div');ov.id='punteo-ov';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:650;display:flex;align-items:center;justify-content:center;padding:16px';
+    ov.innerHTML='<div style="background:var(--surf);border-radius:14px;max-width:720px;width:100%;max-height:92vh;overflow:auto;padding:22px 24px;box-shadow:0 10px 40px rgba(0,0,0,.25)" id="punteo-card"></div>';
+    ov.addEventListener('click',function(e){if(e.target===ov)cerrarPunteo();});
+    document.body.appendChild(ov);
+  }
+  ov.style.display='flex';pintarPunteo();
+}
+function cerrarPunteo(){var o=document.getElementById('punteo-ov');if(o)o.style.display='none';renderPunteo();}
+function pintarPunteo(){
+  var lista=PUN.lista, t=lista[PUN.i], c=document.getElementById('punteo-card');if(!t||!c)return;
+  var r=punteoDe(t.id,PUN.sem), p=punteoAnterior(t.id,PUN.sem);
+  var rachaPrev=p?rachaSinAvance(t.id,p.sem):0;
+  var sem=semaforoTicket(t), et=ETAPA_UI[etapaTicket(t)];
+  var ultResp=String(t.respuestaRaw||'').split(/\n\n/).filter(Boolean).pop()||'';
+  var hechos=lista.filter(function(x){return punteoDe(x.id,PUN.sem);}).length;
+  c.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:12px;color:var(--tx3)">Ticket '+(PUN.i+1)+' de '+lista.length+' · '+hechos+' punteados</div><button class="btns" style="padding:3px 10px" onclick="cerrarPunteo()">✕</button></div>'
+    +'<div style="height:5px;background:var(--surf2);border-radius:4px;margin-bottom:14px;overflow:hidden"><div style="height:100%;width:'+Math.round(hechos*100/lista.length)+'%;background:var(--gr-tx)"></div></div>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px">'+(t.esProyecto?'<span class="badge" style="background:var(--bl-bg);color:var(--bl)">🗂 Proyecto</span>':'')+'<span class="mono" style="font-size:11px">'+t.num+'</span>'+prioBadge(t)+'<span class="badge" style="background:'+et.bg+';color:'+et.tx+'">'+et.icon+' '+et.lbl+'</span><span style="font-size:12px;font-weight:600;color:'+sem.col+'">'+sem.icon+' '+sem.lbl+'</span></div>'
+    +'<div style="font-size:20px;font-weight:700;line-height:1.3">'+t.asunto+'</div>'
+    +'<div style="font-size:13px;color:var(--tx2);margin-top:4px">De <b>'+escHtml(nombreSolicitante(t))+'</b> → '+escHtml(rpNombre(t.resp))+(t.deadline?' · Deadline '+fmtDate(t.deadline):'')+'</div>'
+    +(t.esProyecto?pipelineHTML(t.hitos||[],true):'')
+    +(ultResp?'<div style="font-size:12px;margin-top:10px;padding:8px 10px;background:var(--gr-bg);color:var(--gr-tx);border-radius:var(--rs);white-space:pre-wrap">💬 Última respuesta: '+escHtml(ultResp.length>300?ultResp.substring(0,300)+'…':ultResp)+'</div>':'')
+    +'<div style="margin-top:12px;padding:10px 12px;border-radius:var(--rs);background:var(--surf2);font-size:13px"><b>Semana anterior:</b> '+(p?'<span style="color:'+(PUN_UI[p.res]||{}).col+'">'+((PUN_UI[p.res]||{}).icon||'')+' '+escHtml(p.res)+'</span>'+(p.nota?' — '+escHtml(p.nota):''):'<span style="color:var(--tx3)">primer punteo de este ticket</span>')
+      +(rachaPrev>=1?'<div style="color:'+(rachaPrev>=2?'var(--rd-tx)':'var(--am-tx)')+';font-weight:600;margin-top:4px">'+(rachaPrev>=2?'🔴 ':'')+rachaPrev+(rachaPrev===1?' semana':' semanas seguidas')+' sin avance</div>':'')+'</div>'
+    +'<div class="field" style="margin-top:12px"><label>Nota de esta semana <span style="color:var(--tx3);font-weight:400">(qué pasó / qué falta)</span></label><textarea id="punteo-nota" style="min-height:70px">'+escHtml(r?r.nota:'')+'</textarea></div>'
+    +(r?'<div style="font-size:12px;margin-bottom:8px;color:'+(PUN_UI[r.res]||{}).col+'">Ya punteado esta semana: '+((PUN_UI[r.res]||{}).icon||'')+' '+escHtml(r.res)+' — podés cambiarlo.</div>':'')
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+      +'<button class="btnp" style="flex:1;background:var(--gr-tx);border-color:var(--gr-tx)" onclick="guardarPunteo(\'Avanzó\')">✅ Avanzó</button>'
+      +'<button class="btnp" style="flex:1;background:var(--am);border-color:var(--am)" onclick="guardarPunteo(\'Sin avance\')">⏸ Sin avance</button>'
+      +(t.estado!=='Resuelto'?'<button class="btns" onclick="guardarPunteo(\'Cerrado\')">🔒 Cerrar ticket</button>':'')+'</div>'
+    +'<div style="display:flex;justify-content:space-between;margin-top:12px"><button class="btns" onclick="moverPunteo(-1)"'+(PUN.i?'':' disabled')+'>⏮ Anterior</button>'
+      +'<button class="btns" data-tid="'+t.id+'" onclick="cerrarPunteo();goTo(\'tickets\',document.getElementById(\'nav-tickets\'));gestionarTicket(this.dataset.tid)">✏️ Abrir ticket</button>'
+      +'<button class="btns" onclick="moverPunteo(1)"'+(PUN.i<lista.length-1?'':' disabled')+'>Saltear ⏭</button></div>';
+}
+function moverPunteo(d){var n=PUN.i+d;if(n<0||n>=PUN.lista.length)return;PUN.i=n;pintarPunteo();}
+async function guardarPunteo(res){
+  var t=PUN.lista[PUN.i];if(!t)return;
+  var nota=document.getElementById('punteo-nota').value.trim();
+  if(res==='Cerrado'&&!confirm('¿Cerrar el ticket '+String(t.num).replace(/&[a-z#0-9]+;/g,'')+' como Resuelto?'))return;
+  var r=punteoDe(t.id,PUN.sem);
+  var fields={Title:PUN.sem+' · '+String(t.num).replace(/&[a-z#0-9]+;/g,''),Semana:PUN.sem,TicketId:String(t.id),Resultado:res,Nota:nota,Por:currentUser.ini};
+  try{
+    if(r){await updateListItem(LIST_PUNTEO,r.id,fields);r.res=res;r.nota=nota;r.por=currentUser.ini;}
+    else{var c=await createListItem(LIST_PUNTEO,fields);PUN.rows.push({id:c.id,sem:PUN.sem,tid:String(t.id),res:res,nota:nota,por:currentUser.ini});}
+    if(res==='Cerrado'){
+      var ahora=new Date().toISOString(), f={Estado:'Resuelto',FechaCierre:ahora};
+      if(!t.tomadoTs){f.FechaTomado=ahora;f.TomadoPor=currentUser.ini;}
+      if(nota)f.Respuesta=(t.respuestaRaw?t.respuestaRaw+'\n\n':'')+'['+new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})+' · '+currentUser.ini+'] Cierre: '+nota;
+      await updateListItem(LIST_TICKETS,t.id,f);t.estado='Resuelto';if(f.Respuesta)t.respuestaRaw=f.Respuesta;
+    }
+    // Siguiente pendiente; si no queda ninguno, resumen
+    var sig=-1;for(var k=1;k<=PUN.lista.length;k++){var j=(PUN.i+k)%PUN.lista.length;if(!punteoDe(PUN.lista[j].id,PUN.sem)){sig=j;break;}}
+    if(sig<0){finPunteo();}else{PUN.i=sig;pintarPunteo();}
+  }catch(e){showToast('Error al guardar el punteo: '+e.message,true);}
+}
+function finPunteo(){
+  var c=document.getElementById('punteo-card');var cnt={'Avanzó':0,'Sin avance':0,'Cerrado':0},rojos=[];
+  PUN.lista.forEach(function(t){var r=punteoDe(t.id,PUN.sem);if(r&&cnt[r.res]!=null)cnt[r.res]++;if(rachaSinAvance(t.id,PUN.sem)>=2)rojos.push(t);});
+  c.innerHTML='<div style="font-size:22px;font-weight:700;color:var(--gr-tx);margin-bottom:10px">✅ Punteo de la semana completo</div>'
+    +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">'+[['✅',cnt['Avanzó'],'avanzaron','var(--gr-tx)'],['⏸',cnt['Sin avance'],'sin avance','var(--am-tx)'],['🔒',cnt['Cerrado'],'cerrados','var(--tx2)']].map(function(k){return '<div style="flex:1;min-width:120px;border:1px solid var(--brd);border-radius:10px;padding:10px 14px"><div style="font-size:28px;font-weight:700;color:'+k[3]+'">'+k[0]+' '+k[1]+'</div><div style="font-size:12px;color:var(--tx2)">'+k[2]+'</div></div>';}).join('')+'</div>'
+    +(rojos.length?'<div style="font-size:13px;font-weight:600;color:var(--rd-tx);margin-bottom:6px">🔴 Llevan 2 semanas o más sin avance:</div>'+rojos.map(function(t){return '<div style="font-size:13px;margin-bottom:3px">· <span class="mono" style="font-size:10px">'+t.num+'</span> '+t.asunto+' — '+escHtml(rpNombre(t.resp))+'</div>';}).join(''):'<div style="font-size:13px;color:var(--gr-tx)">Ningún ticket lleva 2 semanas o más sin avance.</div>')
+    +'<button class="btnp" style="width:100%;margin-top:16px" onclick="cerrarPunteo()">Listo</button>';
+}
+
 function navTo(page){var el=document.getElementById('nav-'+page);if(el)goTo(page,el);}
 
 function navToFilter(filter){
@@ -2390,6 +2652,7 @@ function openFormTema(){
   document.getElementById('ft-pais').value='Global';
   document.getElementById('ft-cli').value='';document.getElementById('ft-prio').value='Alta';document.getElementById('ft-estado').value='No iniciado';
   document.getElementById('ft-bloq').checked=false;document.getElementById('ft-bloq-quien').value=defaultBloqQuien();
+  document.getElementById('ft-pm').checked=false;['ft-nov','ft-prox','ft-dec'].forEach(function(i){document.getElementById(i).value='';});document.getElementById('pm-fields').style.display='none';
   toggleBloq();toggleTerceroNombre();document.getElementById('form-tema').classList.add('open');
 }
 function closeFormTema(){document.getElementById('form-tema').classList.remove('open');}
@@ -2407,6 +2670,8 @@ function editTema(id){
   document.getElementById('ft-prio').value=t.prio||'Alta';
   document.getElementById('ft-estado').value=t.estado==='Cerrado'?'No iniciado':(t.estado||'No iniciado');
   document.getElementById('ft-bloq').checked=t.bloqueado||false;
+  document.getElementById('ft-pm').checked=!!t.pm;document.getElementById('ft-nov').value=t.nov||'';document.getElementById('ft-prox').value=t.prox||'';document.getElementById('ft-dec').value=t.dec||'';
+  document.getElementById('pm-fields').style.display=t.pm?'block':'none';
   setBloqQuien(t.bloqQuien);
   document.getElementById('ft-bloq-que').value=t.bloqQue||'';
   document.getElementById('ft-bloq-email').value=t.bloqEmail||'';
@@ -2427,7 +2692,7 @@ async function saveTema(){
   var quien=bloq?document.getElementById('ft-bloq-quien').value:'';
   var nombre=document.getElementById('ft-bloq-nombre').value;
   if(quien==='tercero'&&nombre)quien='tercero: '+nombre;
-  var fields={Titulo:tit,Descripcion:document.getElementById('ft-desc').value||'',Responsable:document.getElementById('ft-resp').value,Pais:document.getElementById('ft-pais').value,Cliente:document.getElementById('ft-cli').value||'',Deadline:document.getElementById('ft-dead').value?document.getElementById('ft-dead').value+'T00:00:00Z':null,Prioridad:document.getElementById('ft-prio').value,Estado:document.getElementById('ft-estado').value,Bloqueado:bloq,BloqQuien:quien,BloqQue:bloq?document.getElementById('ft-bloq-que').value:''};
+  var fields={Titulo:tit,Descripcion:document.getElementById('ft-desc').value||'',Responsable:document.getElementById('ft-resp').value,Pais:document.getElementById('ft-pais').value,Cliente:document.getElementById('ft-cli').value||'',Deadline:document.getElementById('ft-dead').value?document.getElementById('ft-dead').value+'T00:00:00Z':null,Prioridad:document.getElementById('ft-prio').value,Estado:document.getElementById('ft-estado').value,Bloqueado:bloq,BloqQuien:quien,BloqQue:bloq?document.getElementById('ft-bloq-que').value:'',ParaManagement:document.getElementById('ft-pm').checked,Novedad:document.getElementById('ft-nov').value.trim(),ProximoPaso:document.getElementById('ft-prox').value.trim(),DecisionRequerida:document.getElementById('ft-dec').value.trim()};
   try{
     if(editingTemaId)await updateListItem(LIST_TEMAS,editingTemaId,fields);
     else await createListItem(LIST_TEMAS,fields);
@@ -2898,7 +3163,7 @@ function escUrl(s){s=String(s==null?'':s).trim();return (/^[a-z][a-z0-9+.\-]*:/i
 // Los campos de texto de Tickets los escribe cualquier solicitante: se guardan ya escapados para mostrar; *Raw = texto original (para mails)
 function mapTicket(item){var f=item.fields;return{id:item.id,num:escHtml(f.NumTicket||ticketNumFromId(item.id,f.FechaRecibido)),remitente:escHtml(f.Remitente),remitenteRaw:f.Remitente||'',email:(f.EmailRemitente||'').toLowerCase(),asunto:escHtml(f.Asunto),asuntoRaw:f.Asunto||'',resp:f.Responsable||'',cuerpo:escHtml(f.Cuerpo),cuerpoRaw:f.Cuerpo||'',fecha:f.FechaRecibido?f.FechaRecibido.split('T')[0]:'',estado:(f.Estado==='Resuelto'?'Resuelto':'En curso'),link:f.LinkMail||'',cat:escHtml(f.Categoria),catRaw:f.Categoria||'',sitio:escHtml(f.CodigoSitio),sitioRaw:f.CodigoSitio||'',deadline:f.Deadline?f.Deadline.split('T')[0]:'',bloq:escHtml(f.BloqQuien),respuesta:escHtml(f.Respuesta),respuestaRaw:f.Respuesta||'',urgencia:escHtml(f.Urgencia),urgenciaRaw:f.Urgencia||'',cierre:f.FechaCierre?f.FechaCierre.split('T')[0]:'',
   // Timeline: creado → tomado por Legal → primera devolución → cerrado (fechas completas)
-  creadoTs:f.FechaRecibido||'',tomadoTs:f.FechaTomado||'',tomadoPor:escHtml(f.TomadoPor),respTs:f.FechaRespuesta||'',cierreTs:f.FechaCierre||''};}
+  creadoTs:f.FechaRecibido||'',tomadoTs:f.FechaTomado||'',tomadoPor:escHtml(f.TomadoPor),respTs:f.FechaRespuesta||'',cierreTs:f.FechaCierre||'',esProyecto:!!f.EsProyecto,hitos:parseHitos(f.Hitos)};}
 
 // ─── TICKETS: prioridad, orden y timeline ───────────────────────────────────
 var PRIO_RANK={'Crítica':4,'Alta':3,'Media':2,'Baja':1};
@@ -3862,10 +4127,17 @@ function llenarFiltroSolicitantes(base){
 function renderTickets(){
   var val=function(id){var e=document.getElementById(id);return e?e.value:'';};
   var base=ticketsVisibles();
+  var esLegalV=!!legalUser(currentUser.ini), puedeV=currentUser.perfil==='Admin'||esLegalV;
+  var nProy=base.filter(function(t){return t.esProyecto&&t.estado!=='Resuelto';}).length, nDia=base.filter(function(t){return !t.esProyecto&&t.estado!=='Resuelto';}).length;
+  var vt=document.getElementById('tk-vista');
+  if(vt){vt.style.display=(puedeV||nProy)?'flex':'none';
+    var btnV=function(k,lbl,n){var on=TK_VISTA===k;return '<button class="'+(on?'btnp':'btns')+'" onclick="setVistaTickets(\''+k+'\')">'+lbl+' <span style="opacity:.75">('+n+')</span></button>';};
+    vt.innerHTML=btnV('dia','📥 Día a día',nDia)+btnV('proy','🗂 Proyectos',nProy)+'<span style="font-size:11px;color:var(--tx3);align-self:center">'+(TK_VISTA==='proy'?'Temas grandes y largos, con etapas. Para pasar un ticket a proyecto: ✏️ Gestionar → “Es un proyecto”.':'')+'</span>';}
+  base=base.filter(function(t){return TK_VISTA==='proy'?t.esProyecto:!t.esProyecto;});
   var esLegal=!!legalUser(currentUser.ini), puedeGestionar=currentUser.perfil==='Admin'||esLegal;
   llenarFiltroSolicitantes(base);
   var solEl=document.getElementById('tickets-solic');if(solEl)solEl.style.display=puedeGestionar?'':'none';
-  renderTicketPanel(base,puedeGestionar);
+  renderTicketPanel(base,puedeGestionar&&TK_VISTA!=='proy');
   var fe=val('tickets-estado'),fr=val('tickets-resp'),fp=val('tickets-prio'),fs=val('tickets-solic'),fet=val('tickets-etapa'),fv=val('tickets-venc');
   var extra=typeof TK_EXTRA!=='undefined'?TK_EXTRA:'';
   var list=base.filter(function(t){return (!fe||t.estado===fe)&&(!fr||t.resp===fr)&&(!fp||t.urgencia===fp)&&(!fs||t.email===fs)&&(!fet||etapaTicket(t)===fet)&&(!fv||vencBucket(t)===fv)
@@ -3888,6 +4160,7 @@ function renderTickets(){
     h+='<span style="font-size:12px;font-weight:600;color:'+sem.col+'">'+sem.icon+' '+sem.lbl+'</span>';
     h+='<span class="mono" style="font-size:10px">'+t.num+'</span>';
     h+='<span class="badge" style="background:'+eu.bg+';color:'+eu.tx+'">'+eu.icon+' '+eu.lbl+'</span>';
+    if(t.esProyecto)h+='<span class="badge" style="background:var(--bl-bg);color:var(--bl)">🗂 Proyecto</span>';
     h+=prioBadge(t);
     if(cat)h+='<span class="badge" style="background:'+col+'1A;color:'+col+'">'+escHtml(cat)+'</span>';
     h+='</div>';
@@ -3896,6 +4169,7 @@ function renderTickets(){
     if(t.bloq)h+='<div style="font-size:11px;margin-top:3px;color:var(--am-tx)">⚠️ Requiere: '+t.bloq+'</div>';
     if(t.cuerpo)h+='<div style="font-size:12px;color:var(--tx3);margin-top:6px;line-height:1.5">'+t.cuerpo.substring(0,140)+(t.cuerpo.length>140?'…':'')+'</div>';
     if(t.respuesta)h+='<div style="font-size:12px;margin-top:6px;padding:6px 10px;background:var(--gr-bg);color:var(--gr-tx);border-radius:var(--rs);line-height:1.5;white-space:pre-wrap">💬 '+t.respuesta+'</div>';
+    if(t.esProyecto)h+=pipelineHTML(t.hitos||[],false);
     h+=ticketTimeline(t,true);
     h+='</div>';
     h+='<div style="padding:12px 14px;display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0'+(critPend?';background:var(--rd-bg)':'')+'">';
@@ -4263,7 +4537,7 @@ function alertasRiesgoLegal(){
 // Carpeta "Respaldos Legal Hub/AAAA-MM-DD" del sitio: un CSV por lista (se abre en Excel) + un JSON completo.
 // Se hace solo una vez por mes cuando entra el Admin, o a mano con "Respaldar ahora".
 var RESPALDO_CARPETA='Respaldos Legal Hub';
-var RESPALDO_LISTAS=['Documentos_Legal','Temas_Legal','ContratosSuelo','DueDiligence_UY','INTORU','Poderes_Legal','Societario_Autoridades','Societario_Accionistas','MLA_Legal','FechasClaves','Tickets_Legal','Legal_Logins','Inmuebles_Propios_UY','Usuarios_Hub','Semanas_Tickets'];
+var RESPALDO_LISTAS=['Documentos_Legal','Temas_Legal','ContratosSuelo','DueDiligence_UY','INTORU','Poderes_Legal','Societario_Autoridades','Societario_Accionistas','MLA_Legal','FechasClaves','Tickets_Legal','Legal_Logins','Inmuebles_Propios_UY','Usuarios_Hub','Semanas_Tickets','Punteo_Tickets'];
 function aCSV(items){
   var cols=[];items.forEach(function(i){Object.keys(i.fields||{}).forEach(function(k){if(k.charAt(0)!=='@'&&k.indexOf('odata')<0&&cols.indexOf(k)<0)cols.push(k);});});
   var esc=function(v){if(v==null)return '';if(typeof v==='object')v=JSON.stringify(v);v=String(v);return /[;"\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
@@ -4374,6 +4648,10 @@ function gestionarTicket(id){
   // Comentario de cierre: aparece al pasar a Resuelto
   document.getElementById('tk-cierre-coment').value='';
   onEstadoTicketChange();
+  // Proyecto: casilla + etapas
+  document.getElementById('tk-es-proyecto').checked=!!t.esProyecto;
+  HITOS_EDIT=(t.hitos||[]).map(function(h){return {t:h.t,ok:!!h.ok,f:h.f||''};});
+  renderHitosEditor();onProyectoToggle();
   // Historial de respuestas: Admin lo puede editar/borrar; el resto lo ve
   document.getElementById('tk-hist-wrap').style.display=(t.respuestaRaw||esAdmin)?'block':'none';
   document.getElementById('tk-hist-ro').style.display=esAdmin?'none':'block';
@@ -4428,6 +4706,11 @@ async function guardarGestionTicket(){
     if(estado!=='Resuelto'&&t.estado==='Resuelto')fields.FechaCierre=null;
     // Deadline: solo Admin
     if(esAdmin){var dl=document.getElementById('tk-deadline-edit').value;if(dl!==(t.deadline||''))fields.Deadline=dl?dl+'T00:00:00Z':null;}
+    // Proyecto y etapas
+    var esProy=document.getElementById('tk-es-proyecto').checked;
+    if(esProy!==!!t.esProyecto)fields.EsProyecto=esProy;
+    var hitosNuevos=JSON.stringify(HITOS_EDIT.filter(function(h){return String(h.t||'').trim();}).map(function(h){return {t:String(h.t).trim(),ok:!!h.ok,f:h.f||''};}));
+    if(hitosNuevos!==JSON.stringify((t.hitos||[]).map(function(h){return {t:h.t,ok:!!h.ok,f:h.f||''};})))fields.Hitos=hitosNuevos;
     await updateListItem(LIST_TICKETS,editingTicketId,fields);
     await syncAll();
     var mailTo=fields.EmailRemitente!==undefined?fields.EmailRemitente:(t&&t.email);
