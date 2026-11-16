@@ -384,7 +384,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         </div>
         <!-- Tablero high level: fechas clave de los próximos 7 días + semáforo por área (el detalle está en cada solapa) -->
         <div id="dash-semana" style="margin-bottom:16px"></div>
-        <div id="dash-areas" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px"></div>
+        <div id="dash-areas" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px"></div>
 
       </div>
 
@@ -397,7 +397,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div id="tfilter-activos" class="filters">
           <div class="sbox"><svg class="sico" width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4" stroke="#1A1916" stroke-width="1.2"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="#1A1916" stroke-width="1.2" stroke-linecap="round"/></svg><input type="text" placeholder="Buscar temas..." id="tema-q" oninput="renderTemas()"></div>
           <select class="fsel" id="tema-estado" onchange="renderTemas()"><option value="">Todos los estados</option><option>No iniciado</option><option>En curso</option></select>
-          <select class="fsel" id="tema-dead" onchange="renderTemas()" style="display:none"><option value="">Todos</option><option value="7">Vencen en 7 días</option><option value="30">Vencen en 30 días</option></select>
+          <select class="fsel" id="tema-dead" onchange="renderTemas()" style="display:none"><option value="">Todos</option><option value="venc">Vencidos</option><option value="7">Vencen en 7 días</option><option value="30">Vencen en 30 días</option><option value="mio">Esperan mi intervención</option></select>
           <select class="fsel" id="tema-resp" onchange="renderTemas()"><option value="">Todos</option><option>EG</option><option>CS</option><option>ST</option></select>
           <select class="fsel" id="tema-pais" onchange="renderTemas()"><option value="">Todos los países</option><option>AR</option><option>UY</option><option>PY</option><option>Global</option></select>
         </div>
@@ -1650,65 +1650,51 @@ function renderDash(){
         +(vencClave?'<div style="font-size:12px;color:var(--rd-tx)">🔴 '+vencClave+' vencido'+(vencClave>1?'s':'')+' sin resolver</div>':'')+verCal+'</div>';
   }
 
-  // 2) Semáforo por área: un número grande y una línea; el detalle está en cada solapa
+  // 2) Temas y Tickets: número grande + partes clickeables que llevan a la lista ya filtrada
   var tiles=[];
   var nivel=function(rojo,amarillo){return rojo?'r':amarillo?'a':'g';};
-  var plural=function(n,s,p){return n+' '+(n===1?s:p);};
-
+  var link=function(n,txt,go,col){return n?'<span class="dash-link" onclick="event.stopPropagation();'+go+'" style="cursor:pointer;text-decoration:underline;text-underline-offset:3px;color:'+(col||'inherit')+'">'+n+' '+txt+'</span>':'';};
   if(navOk('temas')){
     var act=vTemas().filter(function(t){return t.estado!=='Cerrado';});
     var tv=act.filter(function(t){var d=daysTo(t.dead);return d!==null&&d<0;}).length;
     var t7=act.filter(function(t){var d=daysTo(t.dead);return d!==null&&d>=0&&d<=7;}).length;
     var esLegalDash=currentUser.perfil==='Admin'||!!legalUser(currentUser.ini);
     var bloqYo=esLegalDash?act.filter(function(t){return t.bloqueado&&t.bloqQuien===currentUser.ini;}).length:0;
-    tiles.push({ico:'📌',tit:'Temas activos',num:act.length,niv:nivel(tv||bloqYo,t7),
-      sub:[tv?plural(tv,'vencido','vencidos'):'',t7?plural(t7,'vence esta semana','vencen esta semana'):'',bloqYo?plural(bloqYo,'espera tu intervención','esperan tu intervención'):''].filter(Boolean).join(' · ')||'Todo en plazo',
-      go:t7?"navToFilter('v7')":"navTo('temas')"});
+    tiles.push({ico:'📌',tit:'Temas activos',num:act.length,niv:nivel(tv||bloqYo,t7),go:"navTo('temas')",
+      partes:[link(tv,tv===1?'vencido':'vencidos',"navToFilter('vencidos')",'var(--rd-tx)'),link(t7,t7===1?'vence en 7 días':'vencen en 7 días',"navToFilter('v7')",'var(--am-tx)'),link(bloqYo,bloqYo===1?'espera tu intervención':'esperan tu intervención',"navToFilter('mio')",'var(--rd-tx)')],
+      ok:'Todo en plazo'});
   }
   var esAdminT=currentUser.perfil==='Admin', esLegalT=!!legalUser(currentUser.ini);
   if(navOk('tickets')&&(esAdminT||esLegalT)){
-    var pend=ticketsVisibles().filter(function(t){var e=etapaTicket(t);return e==='nuevo'||e==='tomado';});
+    var vis=ticketsVisibles();
+    var pend=vis.filter(function(t){var e=etapaTicket(t);return !t.esProyecto&&(e==='nuevo'||e==='tomado');});
     var kv=pend.filter(function(t){return vencBucket(t)==='vencido';}).length;
     var kn=pend.filter(function(t){return etapaTicket(t)==='nuevo';}).length;
     var kc=pend.filter(function(t){return t.urgencia==='Crítica';}).length;
-    tiles.push({ico:'🎫',tit:'Tickets sin responder',num:pend.length,niv:nivel(kv||kc,kn),
-      sub:[kc?plural(kc,'crítico','críticos'):'',kv?plural(kv,'vencido','vencidos'):'',kn?kn+' sin tomar':''].filter(Boolean).join(' · ')||'Todo al día',
-      go:"navTo('tickets')"});
-  }
-  if(navOk('calendario')&&(navOk('poderes')||navOk('societario'))){
-    var rl=ev.filter(function(e){return e.tipo==='poder'||e.tipo==='mandato';});
-    var rv=rl.filter(function(e){var d=daysTo(e.fecha);return d!==null&&d<0&&d>=-90;}).length;
-    var r60=rl.filter(function(e){var d=daysTo(e.fecha);return d!==null&&d>=0&&d<=60;}).length;
-    tiles.push({ico:'⚖️',tit:'Poderes y mandatos',num:r60+rv,niv:nivel(rv,r60),
-      sub:[rv?plural(rv,'vencido','vencidos'):'',r60?r60+' vence'+(r60>1?'n':'')+' en 60 días':''].filter(Boolean).join(' · ')||'nada vence en 60 días',go:"navTo('calendario')"});
-  }
-  if(navOk('suelo')){
-    var vs=vSuelos().filter(function(s){return s.fin;});
-    var s30=vs.filter(function(s){var d=daysTo(s.fin);return d!==null&&d>=0&&d<=30;}).length;
-    var s90=vs.filter(function(s){var d=daysTo(s.fin);return d!==null&&d>=0&&d<=90;}).length;
-    tiles.push({ico:'🏗️',tit:'Contratos de suelo',num:s90,niv:nivel(s30,s90),
-      sub:s90?'vencen en 90 días'+(s30?' · '+s30+' en 30 días':''):'nada vence en 90 días',go:"navTo('suelo')"});
-  }
-  if(navOk('mla')){
-    var mv=ev.filter(function(e){var d=daysTo(e.fecha);return e.tipo==='mla'&&d!==null&&d>=0&&d<=180;}).length;
-    tiles.push({ico:'📡',tit:'MLAs',num:mv,niv:nivel(false,mv),sub:mv?'vencen en 6 meses':'nada vence en 6 meses',go:"navTo('mla')"});
-  }
-  if((currentUser.scope||[]).indexOf('UY')>=0&&(navOk('dd')||navOk('intoru'))){
-    var uy=ev.filter(function(e){return e.tipo==='dd'||e.tipo==='intoru';});
-    var uv=uy.filter(function(e){var d=daysTo(e.fecha);return d!==null&&d<0&&d>=-30;}).length;
-    var u15=uy.filter(function(e){var d=daysTo(e.fecha);return d!==null&&d>=0&&d<=15;}).length;
-    tiles.push({ico:'🇺🇾',tit:'Uruguay · DD e INTORU',num:u15+uv,niv:nivel(uv,u15),
-      sub:[uv?plural(uv,'plazo vencido','plazos vencidos'):'',u15?plural(u15,'plazo','plazos')+' en 15 días':''].filter(Boolean).join(' · ')||'sin plazos en 15 días',go:navOk('dd')?"navTo('dd')":"navTo('intoru')"});
+    var kp=vis.filter(function(t){return t.esProyecto&&t.estado!=='Resuelto';}).length;
+    tiles.push({ico:'🎫',tit:'Tickets sin responder',num:pend.length,niv:nivel(kv||kc,kn),go:"dashTk({})",
+      partes:[link(kc,kc===1?'crítico':'críticos',"dashTk({prio:'Crítica'})",'var(--rd-tx)'),link(kv,kv===1?'vencido':'vencidos',"dashTk({venc:'vencido'})",'var(--rd-tx)'),link(kn,'sin tomar',"dashTk({etapa:'nuevo'})",'var(--am-tx)')],
+      ok:'Todo al día',extra:kp?link(kp,kp===1?'proyecto en curso':'proyectos en curso',"dashTk({proy:true})",'var(--bl)'):''});
   }
   var COL={r:['var(--rd-bg)','var(--rd-tx)','🔴'],a:['var(--am-bg)','var(--am-tx)','🟡'],g:['var(--surf)','var(--gr-tx)','🟢']};
   var areas=document.getElementById('dash-areas');
   if(areas)areas.innerHTML=tiles.map(function(t){
-    var c=COL[t.niv];
+    var c=COL[t.niv], partes=t.partes.filter(Boolean);
     return '<div class="card dash-item" onclick="'+t.go+'" style="cursor:pointer;margin:0;background:'+c[0]+';border-left:4px solid '+c[1]+'">'
-      +'<div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:12px;font-weight:600;color:var(--tx2)">'+t.ico+' '+escHtml(t.tit)+'</div><span style="font-size:12px">'+c[2]+'</span></div>'
-      +'<div style="font-size:34px;font-weight:700;line-height:1.1;margin:8px 0 4px;color:'+(t.niv==='g'?'var(--tx)':c[1])+'">'+t.num+'</div>'
-      +'<div style="font-size:12px;color:'+(t.niv==='g'?'var(--tx3)':c[1])+'">'+escHtml(t.sub)+' ↗</div></div>';
+      +'<div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:13px;font-weight:600;color:var(--tx2)">'+t.ico+' '+escHtml(t.tit)+'</div><span style="font-size:12px">'+c[2]+'</span></div>'
+      +'<div style="font-size:40px;font-weight:700;line-height:1.1;margin:8px 0 6px;color:var(--tx)">'+t.num+'</div>'
+      +'<div style="font-size:13px;display:flex;gap:6px 14px;flex-wrap:wrap">'+(partes.length?partes.join(''):'<span style="color:var(--gr-tx)">'+t.ok+'</span>')+'</div>'
+      +(t.extra?'<div style="font-size:12px;margin-top:8px;padding-top:8px;border-top:1px solid var(--brd)">🗂 '+t.extra+'</div>':'')+'</div>';
   }).join('');
+}
+// Desde el dashboard: abre Tickets con el filtro pedido
+function dashTk(o){
+  TK_VISTA=o.proy?'proy':'dia';
+  goTo('tickets',document.getElementById('nav-tickets'));
+  setTimeout(function(){
+    filtrarTk({etapa:o.etapa||'',venc:o.venc||''});
+    if(o.prio){var p=document.getElementById('tickets-prio');if(p){p.value=o.prio;renderTickets();}}
+  },60);
 }
 
 function setDashCountry(c){dashCountry=c;renderDash();}
@@ -1959,12 +1945,16 @@ function renderTemas(){
     if(fr)list=list.filter(function(t){return t.resp===fr;});
     if(fp)list=list.filter(function(t){return t.pais===fp;});
     var fd=document.getElementById('tema-dead').value;
-    if(fd){var fdN=parseInt(fd);list=list.filter(function(t){var dt=daysTo(t.dead);return dt!==null&&dt>=0&&dt<=fdN;});}
+    if(fd==='venc')list=list.filter(function(t){var dt=daysTo(t.dead);return dt!==null&&dt<0;});
+    else if(fd==='mio')list=list.filter(function(t){return t.bloqueado&&t.bloqQuien===currentUser.ini;});
+    else if(fd){var fdN=parseInt(fd);list=list.filter(function(t){var dt=daysTo(t.dead);return dt!==null&&dt>=0&&dt<=fdN;});}
   }else{
     var q2=(document.getElementById('cerrado-q').value||'').toLowerCase();
     list=vt.filter(function(t){return t.estado==='Cerrado';});
     if(q2)list=list.filter(function(t){return t.tit.toLowerCase().indexOf(q2)>=0;});
   }
+  // El filtro de vencimiento solo se muestra cuando viene activo (p. ej. desde el dashboard), para poder sacarlo
+  var sdF=document.getElementById('tema-dead');if(sdF)sdF.style.display=sdF.value?'':'none';
   var el=document.getElementById('temas-list');
   if(!list.length){el.innerHTML='<div class="empty">'+(temaTab==='activos'?'Sin temas activos':'Sin temas cerrados')+'</div>';return;}
   el.innerHTML=list.map(function(t){
@@ -2463,6 +2453,10 @@ function navToFilter(filter){
       if(sel) sel.value=filter;
     } else if(filter==='v7'){
       if(sdead) sdead.value='7';
+    } else if(filter==='vencidos'){
+      if(sdead) sdead.value='venc';
+    } else if(filter==='mio'){
+      if(sdead) sdead.value='mio';
     } else if(filter==='v30'){
       if(sdead) sdead.value='30';
     }
