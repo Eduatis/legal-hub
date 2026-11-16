@@ -386,6 +386,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div id="dash-semana" style="margin-bottom:16px"></div>
         <div id="dash-areas" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px"></div>
         <div id="dash-mapa"></div>
+        <div id="dash-noticias"></div>
 
       </div>
 
@@ -1714,6 +1715,12 @@ function renderDash(){
   }).join('');
   var mp=document.getElementById('dash-mapa');
   if(mp)mp.innerHTML=(navOk('tickets')&&(esAdminT||esLegalT))?mapaPaisesHTML():'';
+  // Noticias: se leen una vez por sesión
+  var nw=document.getElementById('dash-noticias');
+  if(nw&&currentUser.perfil!=='Solicitante'&&!currentUser.mlaOnly){
+    pintarNoticias();
+    if(NOTICIAS===null&&!cargarNoticias._enCurso){cargarNoticias._enCurso=true;cargarNoticias().then(function(){cargarNoticias._enCurso=false;pintarNoticias();});}
+  }
 }
 // Desde el dashboard: abre Tickets con el filtro pedido
 function dashTk(o){
@@ -2519,10 +2526,12 @@ function estadoPais(k){
   var prox=ab.filter(function(t){return ['hoy','manana','semana'].indexOf(vencBucket(t))>=0;}).length;
   var hitoAtr=ab.filter(function(t){return t.esProyecto&&(t.hitos||[]).some(function(h){var d=daysTo(h.f);return !h.ok&&d!==null&&d<0;});}).length;
   var niv=(venc||crit)?'r':(prox||hitoAtr)?'a':'g';
+  // Paraguay entra a Tickets el 1/1/2027: hasta entonces, gris
+  if(k==='PY'&&todayStr()<'2027-01-01'&&!ab.length)niv='off';
   return {ab:ab.length,venc:venc,crit:crit,prox:prox,hitoAtr:hitoAtr,niv:niv};
 }
 function mapaPaisesHTML(){
-  var COLM={r:'#DC2626',a:'#F59E0B',g:'#16A34A'};
+  var COLM={r:'#DC2626',a:'#F59E0B',g:'#16A34A',off:'#9CA3AF'};
   var est={};PAISES_HUB.forEach(function(p){est[p.k]=estadoPais(p.k);});
   var sinPais=ticketsVisibles().filter(function(t){return t.estado!=='Resuelto'&&!paisTicket(t);}).length;
   var svg='<svg viewBox="0 0 336 408" role="img" aria-label="Mapa de Argentina, Uruguay y Paraguay con el estado de los tickets" style="width:100%;max-width:300px;height:auto;display:block;margin:0 auto">'
@@ -2537,11 +2546,11 @@ function mapaPaisesHTML(){
   });
   svg+='</svg>';
   var filas=PAISES_HUB.map(function(p){
-    var e=est[p.k], ic={r:'🔴',a:'🟡',g:'🟢'}[e.niv];
-    var det=[e.crit?e.crit+(e.crit===1?' crítico':' críticos'):'',e.venc?e.venc+(e.venc===1?' vencido':' vencidos'):'',e.prox?e.prox+' vence'+(e.prox===1?'':'n')+' en 7 días':'',e.hitoAtr?e.hitoAtr+' con hitos atrasados':''].filter(Boolean).join(' · ')||(e.ab?'todo en plazo':'sin tickets abiertos');
+    var e=est[p.k], ic={r:'🔴',a:'🟡',g:'🟢',off:'⚪'}[e.niv];
+    var det=[e.crit?e.crit+(e.crit===1?' crítico':' críticos'):'',e.venc?e.venc+(e.venc===1?' vencido':' vencidos'):'',e.prox?e.prox+' vence'+(e.prox===1?'':'n')+' en 7 días':'',e.hitoAtr?e.hitoAtr+' con hitos atrasados':''].filter(Boolean).join(' · ')||(e.niv==='off'?'arranca en Tickets el 1/1/2027':e.ab?'todo en plazo':'sin tickets abiertos');
     return '<div class="dash-item" onclick="dashTk({pais:\''+p.k+'\'})" style="cursor:pointer;display:flex;gap:10px;align-items:center;padding:10px 8px;border-bottom:1px solid var(--brd)">'
       +'<span style="font-size:22px">'+p.f+'</span><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">'+p.n+' <span style="font-weight:400;color:var(--tx3);font-size:12px">· '+e.ab+' abiertos</span></div>'
-      +'<div style="font-size:12px;color:'+(e.niv==='r'?'var(--rd-tx)':e.niv==='a'?'var(--am-tx)':'var(--gr-tx)')+'">'+escHtml(det)+'</div></div><span style="font-size:16px">'+ic+'</span></div>';
+      +'<div style="font-size:12px;color:'+(e.niv==='r'?'var(--rd-tx)':e.niv==='a'?'var(--am-tx)':e.niv==='off'?'var(--tx3)':'var(--gr-tx)')+'">'+escHtml(det)+'</div></div><span style="font-size:16px">'+ic+'</span></div>';
   }).join('');
   return '<div class="card" style="margin-top:12px"><div class="cardh"><div class="cardht">🗺️ Cómo viene cada país</div><div style="font-size:11px;color:var(--tx3)">tocá un país para ver sus tickets</div></div>'
     +'<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center"><div style="flex:1 1 240px;min-width:220px">'+svg+'</div>'
@@ -2549,6 +2558,45 @@ function mapaPaisesHTML(){
     +'<div style="font-size:11px;color:var(--tx3);margin-top:8px;line-height:1.5">🔴 hay vencidos o críticos · 🟡 algo vence en 7 días o un hito está atrasado · 🟢 todo en plazo'
     +(sinPais?'<br><span class="dash-link" onclick="dashTk({pais:\'sin\'})" style="cursor:pointer;text-decoration:underline;color:var(--am-tx)">'+sinPais+(sinPais===1?' ticket abierto sin país':' tickets abiertos sin país')+'</span> — asignalo en ✏️ Gestionar para que cuente en el mapa.':'')+'</div></div></div></div>';
 }
+
+// ─── NOTICIAS DEL SECTOR (dashboard) ───────────────────────────────────────
+// Las arma todos los días una tarea en la PC de Edu (Claude con búsqueda web) y las deja en
+// "Documentos compartidos/Hub Noticias/noticias.json" de LegalOps. Acá solo se leen y se muestran.
+var NOTICIAS=null; // null = sin cargar; {} = no hay archivo
+async function cargarNoticias(){
+  try{
+    var site=await getSiteId();
+    var base='https://graph.microsoft.com/v1.0/sites/'+site+'/drive/root:/Hub%20Noticias/noticias.json';
+    var r=await graphFetch(base+'?$select=id,@microsoft.graph.downloadUrl');
+    if(!r.ok){NOTICIAS={};return;}
+    var meta=await r.json(), txt=null;
+    var dl=meta['@microsoft.graph.downloadUrl'];
+    if(dl){try{var r2=await fetch(dl);if(r2.ok)txt=await r2.text();}catch(e){}}
+    if(txt==null){var r3=await graphFetch(base+':/content');if(r3.ok)txt=await r3.text();}
+    NOTICIAS=txt?JSON.parse(txt.replace(/^﻿/,'')):{};
+  }catch(e){console.warn('Noticias:',e.message);NOTICIAS={};}
+}
+function noticiasHTML(){
+  if(!NOTICIAS)return '<div class="card" style="margin-top:12px"><div class="cardh"><div class="cardht">📰 Noticias del sector</div></div><div class="empty">Cargando…</div></div>';
+  var ns=(NOTICIAS.noticias||[]);
+  if(!NOTICIAS.generado)return '';
+  var gen=new Date(NOTICIAS.generado), hoyS=todayStr(), genS=NOTICIAS.generado.split('T')[0];
+  var cuando=(genS===hoyS?'hoy':fmtDate(genS))+' '+gen.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+  var CATC={'Regulación':'#B91C1C','Mercado de torres':'#4338CA','Clientes':'#0369A1','Inversores':'#15803D','Legal':'#B45309'};
+  var BAND={AR:'🇦🇷',UY:'🇺🇾',PY:'🇵🇾',Regional:'🌎'};
+  var items=ns.length?ns.map(function(n){
+    var c=CATC[n.categoria]||'#6B7280';
+    return '<div style="padding:10px 4px;border-bottom:1px solid var(--brd)">'
+      +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:3px"><span class="badge" style="background:'+c+'1A;color:'+c+'">'+escHtml(n.categoria||'Noticia')+'</span>'+(BAND[n.pais]?'<span style="font-size:13px">'+BAND[n.pais]+'</span>':'')
+      +'<span style="font-size:11px;color:var(--tx3)">'+escHtml(n.fuente||'')+(n.fecha?' · '+fmtDate(n.fecha):'')+'</span></div>'
+      +'<a href="'+escUrl(n.url)+'" target="_blank" rel="noopener noreferrer" style="font-size:14px;font-weight:600;color:var(--tx);text-decoration:none">'+escHtml(n.titulo)+' <span style="color:var(--bl);font-size:12px">↗</span></a>'
+      +(n.que_paso?'<div style="font-size:12px;color:var(--tx2);margin-top:2px">'+escHtml(n.que_paso)+'</div>':'')
+      +(n.por_que_importa?'<div style="font-size:12px;color:var(--bl);margin-top:3px">→ '+escHtml(n.por_que_importa)+'</div>':'')+'</div>';
+  }).join(''):'<div class="empty">Sin novedades relevantes esta semana.</div>';
+  return '<div class="card" style="margin-top:12px"><div class="cardh"><div class="cardht">📰 Noticias del sector, clientes e inversores</div><div style="font-size:11px;color:var(--tx3)">actualizado '+escHtml(cuando)+'</div></div>'
+    +items+'<div style="font-size:11px;color:var(--tx3);margin-top:8px">Selección automática hecha con IA a partir de medios públicos: antes de usar un dato, verificalo en la fuente.</div></div>';
+}
+function pintarNoticias(){var el=document.getElementById('dash-noticias');if(el)el.innerHTML=noticiasHTML();}
 
 function navTo(page){var el=document.getElementById('nav-'+page);if(el)goTo(page,el);}
 
