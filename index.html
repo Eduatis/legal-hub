@@ -1060,6 +1060,14 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         </div>
       </div>
       <div id="tk-sla-hint" style="font-size:11px;color:var(--tx3);margin-top:4px"></div>
+      <div id="tkc-complejo-wrap" style="display:none;margin-top:10px;border:1px solid var(--brd);border-radius:var(--rs);padding:10px 12px">
+        <label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin:0;font-size:13px;font-weight:600;color:var(--bl)"><input type="checkbox" id="tkc-complejo" onchange="onComplejoCrearToggle()" style="width:auto"> 🧩 Ticket complejo (armar timeline con hitos)</label>
+        <div id="tkc-hitos-wrap" style="display:none;margin-top:10px">
+          <div style="font-size:11px;color:var(--tx3);margin-bottom:6px">Hitos en orden, con fecha estimada (después se pueden cambiar y marcar como cumplidos desde la tarjeta del ticket).</div>
+          <div id="tkc-hitos-lista"></div>
+          <div style="display:flex;gap:6px;margin-top:4px"><button type="button" class="btns" style="font-size:11px;padding:4px 10px" onclick="agregarHito()">+ Agregar hito</button><button type="button" class="btns" style="font-size:11px;padding:4px 10px" onclick="cargarHitosModelo()">Usar hitos modelo</button><button type="button" class="btns" style="font-size:11px;padding:4px 10px" onclick="HITOS_EDIT=[];renderHitosEditor()">Vaciar</button></div>
+        </div>
+      </div>
       <div id="tk-critica-aviso" style="display:none;margin-top:8px;padding:8px 12px;border-radius:var(--rs);background:var(--rd-bg);color:var(--rd-tx);font-size:12px;line-height:1.5">🚨 <b>Crítica — hoy</b> significa que <b>tiene que resolverse en el día</b>. Usala solo en casos excepcionales: si no es realmente impostergable, elegí Alta. El deadline queda fijado en hoy.</div>
       <div style="display:flex;gap:8px;margin-top:8px">
         <button class="btnp" style="flex:1" id="tk-submit-btn" onclick="submitTicket()">Enviar solicitud</button>
@@ -1106,11 +1114,11 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         </div>
       </details>
       <div class="field" style="border:1px solid var(--brd);border-radius:var(--rs);padding:10px 12px">
-        <label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin:0;font-size:13px;font-weight:600;color:var(--bl)"><input type="checkbox" id="tk-es-proyecto" onchange="onProyectoToggle()" style="width:auto"> 🗂 Es un proyecto (tema grande y largo, con etapas)</label>
+        <label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin:0;font-size:13px;font-weight:600;color:var(--bl)"><input type="checkbox" id="tk-es-proyecto" onchange="onProyectoToggle()" style="width:auto"> 🧩 Ticket complejo (timeline con hitos)</label>
         <div id="tk-hitos-wrap" style="display:none;margin-top:10px">
-          <div style="font-size:11px;color:var(--tx3);margin-bottom:6px">Etapas en orden. Tildá las cumplidas; la fecha es el objetivo de cada etapa.</div>
+          <div style="font-size:11px;color:var(--tx3);margin-bottom:6px">Hitos en orden. Tildá los cumplidos; la fecha es la estimada de cada hito (se puede cambiar).</div>
           <div id="tk-hitos-lista"></div>
-          <div style="display:flex;gap:6px;margin-top:4px"><button type="button" class="btns" style="font-size:11px;padding:4px 10px" onclick="agregarHito()">+ Agregar etapa</button><button type="button" class="btns" style="font-size:11px;padding:4px 10px" onclick="cargarHitosModelo()">Usar etapas modelo</button></div>
+          <div style="display:flex;gap:6px;margin-top:4px"><button type="button" class="btns" style="font-size:11px;padding:4px 10px" onclick="agregarHito()">+ Agregar hito</button><button type="button" class="btns" style="font-size:11px;padding:4px 10px" onclick="cargarHitosModelo()">Usar hitos modelo</button></div>
         </div>
       </div>
       <div class="field" style="border:1px solid var(--brd);border-radius:var(--rs);padding:10px 12px">
@@ -1247,7 +1255,7 @@ function parseUsuario(f){
     email:(f.Email||'').trim().toLowerCase(), name:f.Title||'', ini:(f.Iniciales||'').trim().toUpperCase(),
     role:f.Rol||'', greeting:f.Saludo||undefined, bg:f.ColorFondo||'#F0EFE9', tc:f.ColorTexto||'#6B6A64',
     accent:f.ColorAcento||undefined, theme:f.Tema||undefined, scope:scope.length?scope:['AR','UY','PY'],
-    perfil:perfil, mlaOnly:perfil==='SoloMLA',
+    perfil:perfil, mlaOnly:perfil==='SoloMLA', sector:(f.Sector||'').trim(),
     grupos:(f.Grupos||'').split(',').map(function(s){return s.trim();}).filter(Boolean)
   };
 }
@@ -1675,7 +1683,7 @@ function renderDash(){
   var esAdminT=currentUser.perfil==='Admin', esLegalT=!!legalUser(currentUser.ini);
   if(navOk('tickets')&&(esAdminT||esLegalT)){
     var vis=ticketsVisibles();
-    var pend=vis.filter(function(t){var e=etapaTicket(t);return !t.esProyecto&&(e==='nuevo'||e==='tomado');});
+    var pend=vis.filter(function(t){var e=etapaTicket(t);return e==='nuevo'||e==='tomado';});
     var kv=pend.filter(function(t){return vencBucket(t)==='vencido';}).length;
     var kn=pend.filter(function(t){return etapaTicket(t)==='nuevo';}).length;
     var kc=pend.filter(function(t){return t.urgencia==='Crítica';}).length;
@@ -1683,7 +1691,7 @@ function renderDash(){
     var kpm=vis.filter(function(t){return t.pm&&t.estado!=='Resuelto';}).length;
     tiles.push({ico:'🎫',tit:'Tickets sin responder',num:pend.length,niv:nivel(kv||kc,kn),go:"dashTk({})",
       partes:[link(kc,kc===1?'crítico':'críticos',"dashTk({prio:'Crítica'})",'var(--rd-tx)'),link(kv,kv===1?'vencido':'vencidos',"dashTk({venc:'vencido'})",'var(--rd-tx)'),link(kn,'sin tomar',"dashTk({etapa:'nuevo'})",'var(--am-tx)')],
-      ok:'Todo al día',extra:[kp?'🗂 '+link(kp,kp===1?'proyecto en curso':'proyectos en curso',"dashTk({proy:true})",'var(--bl)'):'',kpm?'📊 '+link(kpm,'para la reunión de management',"dashTk({pm:true})",'var(--am-tx)'):''].filter(Boolean).join(' &nbsp;·&nbsp; ')});
+      ok:'Todo al día',extra:[kp?'🧩 '+link(kp,kp===1?'ticket complejo en curso':'tickets complejos en curso',"dashTk({proy:true})",'var(--bl)'):'',kpm?'📊 '+link(kpm,'para la reunión de management',"dashTk({pm:true})",'var(--am-tx)'):''].filter(Boolean).join(' &nbsp;·&nbsp; ')});
   }
   var COL={r:['var(--rd-bg)','var(--rd-tx)','🔴'],a:['var(--am-bg)','var(--am-tx)','🟡'],g:['var(--surf)','var(--gr-tx)','🟢']};
   var areas=document.getElementById('dash-areas');
@@ -1698,7 +1706,7 @@ function renderDash(){
 }
 // Desde el dashboard: abre Tickets con el filtro pedido
 function dashTk(o){
-  TK_VISTA=o.proy?'proy':'dia';
+  TK_VISTA=o.proy?'proy':'todos';
   goTo('tickets',document.getElementById('nav-tickets'));
   setTimeout(function(){
     filtrarTk({etapa:o.etapa||'',venc:o.venc||'',extra:o.pm?'pm':''});
@@ -2203,12 +2211,12 @@ function goTo(page,el){
 }
 
 // ─── PROYECTOS (tickets grandes con pipeline de hitos) ─────────────────────
-var TK_VISTA='dia'; // 'dia' = día a día, 'proy' = proyectos
+var TK_VISTA='todos'; // 'todos' o 'proy' = solo tickets complejos
 function parseHitos(s){try{var a=JSON.parse(s||'[]');return Array.isArray(a)?a.filter(function(h){return h&&h.t;}):[];}catch(e){return [];}}
 var HITOS_MODELO=['Relevamiento y documentación','Análisis / due diligence','Borrador','Negociación con la contraparte','Aprobaciones internas','Firma','Cierre y archivo'];
 // Barra de pipeline: hechos en verde, el actual en azul, los que faltan en gris
 function pipelineHTML(hitos,grande){
-  if(!hitos.length)return '<div style="font-size:11px;color:var(--tx3);margin-top:6px">Proyecto sin etapas cargadas todavía.</div>';
+  if(!hitos.length)return '<div style="font-size:11px;color:var(--tx3);margin-top:6px">Ticket complejo sin hitos cargados todavía.</div>';
   var hechos=hitos.filter(function(h){return h.ok;}).length, actual=hitos.findIndex(function(h){return !h.ok;});
   var pct=Math.round(hechos*100/hitos.length);
   return '<div style="margin-top:8px"><div style="display:flex;gap:3px">'+hitos.map(function(h,i){
@@ -2220,7 +2228,7 @@ function pipelineHTML(hitos,grande){
 // Editor de etapas dentro de "Gestionar"
 var HITOS_EDIT=[];
 function renderHitosEditor(){
-  var el=document.getElementById('tk-hitos-lista');if(!el)return;
+  var el=document.getElementById(HITOS_TARGET);if(!el)return;
   el.innerHTML=HITOS_EDIT.length?HITOS_EDIT.map(function(h,i){
     return '<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">'
       +'<input type="checkbox" '+(h.ok?'checked':'')+' onchange="HITOS_EDIT['+i+'].ok=this.checked" style="width:auto" title="Cumplida">'
@@ -2231,10 +2239,46 @@ function renderHitosEditor(){
   }).join(''):'<div style="font-size:11px;color:var(--tx3);margin-bottom:6px">Todavía no hay etapas.</div>';
 }
 function moverHito(i,d){var j=i+d;if(j<0||j>=HITOS_EDIT.length)return;var x=HITOS_EDIT[i];HITOS_EDIT[i]=HITOS_EDIT[j];HITOS_EDIT[j]=x;renderHitosEditor();}
-function agregarHito(){HITOS_EDIT.push({t:'',ok:false,f:''});renderHitosEditor();var ins=document.querySelectorAll('#tk-hitos-lista input[type=text]');if(ins.length)ins[ins.length-1].focus();}
-function cargarHitosModelo(){if(HITOS_EDIT.length&&!confirm('¿Reemplazar las etapas actuales por las del modelo?'))return;HITOS_EDIT=HITOS_MODELO.map(function(t){return {t:t,ok:false,f:''};});renderHitosEditor();}
+function agregarHito(){HITOS_EDIT.push({t:'',ok:false,f:''});renderHitosEditor();var ins=document.querySelectorAll('#'+HITOS_TARGET+' input[type=text]');if(ins.length)ins[ins.length-1].focus();}
+// Modelo de hitos con fechas estimadas cada 7 días desde hoy (se pueden cambiar)
+function cargarHitosModelo(){if(HITOS_EDIT.length&&!confirm('¿Reemplazar los hitos actuales por los del modelo?'))return;HITOS_EDIT=HITOS_MODELO.map(function(t,i){var d=new Date();d.setDate(d.getDate()+7*(i+1));return {t:t,ok:false,f:d.toISOString().split('T')[0]};});renderHitosEditor();}
 function onProyectoToggle(){document.getElementById('tk-hitos-wrap').style.display=document.getElementById('tk-es-proyecto').checked?'block':'none';}
 function setVistaTickets(v){TK_VISTA=v;renderTickets();}
+var HITOS_TARGET='tk-hitos-lista';
+function onComplejoCrearToggle(){var on=document.getElementById('tkc-complejo').checked;document.getElementById('tkc-hitos-wrap').style.display=on?'block':'none';if(on){HITOS_TARGET='tkc-hitos-lista';if(!HITOS_EDIT.length)cargarHitosModelo();else renderHitosEditor();}}
+// Timeline de hitos en la tarjeta del ticket complejo: Legal marca cumplidos y cambia fechas desde ahí mismo
+function timelineHitosHTML(t,editable){
+  var hs=t.hitos||[];
+  if(!hs.length)return '<div style="font-size:11px;color:var(--tx3);margin-top:8px">🧩 Ticket complejo sin hitos cargados — agregalos en ✏️ Gestionar.</div>';
+  var hechos=hs.filter(function(h){return h.ok;}).length, actual=hs.findIndex(function(h){return !h.ok;});
+  var h='<div style="margin-top:10px;padding:10px 10px 6px;border:1px solid var(--brd);border-radius:var(--rs);background:var(--surf2)">'
+    +'<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tx2);margin-bottom:8px"><b>🧩 Hitos</b><span>'+hechos+'/'+hs.length+' cumplidos'+(actual<0?' ✅':'')+'</span></div>'
+    +'<div style="display:flex;overflow-x:auto;padding-bottom:4px">';
+  hs.forEach(function(x,i){
+    var d=daysTo(x.f), atrasado=!x.ok&&d!==null&&d<0;
+    var col=x.ok?'var(--gr-tx)':atrasado?'var(--rd-tx)':i===actual?'var(--bl)':'var(--tx3)';
+    var icon=x.ok?'✓':atrasado?'!':(i+1);
+    h+='<div style="flex:1;min-width:96px;position:relative;text-align:center;padding:0 4px">'
+      +(i>0?'<div style="position:absolute;top:11px;left:0;right:50%;height:2px;background:'+(hs[i-1].ok?'var(--gr-tx)':'var(--brd2)')+'"></div>':'')
+      +(i<hs.length-1?'<div style="position:absolute;top:11px;left:50%;right:0;height:2px;background:'+(x.ok?'var(--gr-tx)':'var(--brd2)')+'"></div>':'')
+      +'<div '+(editable?'data-tid="'+t.id+'" onclick="toggleHito(this.dataset.tid,'+i+')" title="'+(x.ok?'Marcar como pendiente':'Marcar como cumplido')+'" ':'')
+        +'style="position:relative;width:24px;height:24px;margin:0 auto;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;'
+        +(x.ok?'background:var(--gr-tx);color:#fff':'background:var(--surf);color:'+col+';border:2px solid '+col)+(editable?';cursor:pointer':'')+'">'+icon+'</div>'
+      +'<div style="font-size:11px;font-weight:'+(i===actual?'700':'500')+';color:'+(x.ok?'var(--tx2)':col)+';margin-top:4px;line-height:1.25">'+escHtml(x.t)+'</div>'
+      +(editable
+        ?'<input type="date" value="'+escHtml(x.f||'')+'" data-tid="'+t.id+'" onchange="fechaHito(this.dataset.tid,'+i+',this.value)" title="Fecha estimada (se puede cambiar)" style="font-size:10px;padding:1px 2px;margin-top:3px;width:100%;max-width:118px;border:1px solid transparent;background:transparent;color:'+(atrasado?'var(--rd-tx)':'var(--tx3)')+';text-align:center">'
+        :'<div style="font-size:10px;color:'+(atrasado?'var(--rd-tx)':'var(--tx3)')+';margin-top:3px">'+(x.f?fmtDate(x.f):'sin fecha')+'</div>')
+      +'</div>';
+  });
+  return h+'</div></div>';
+}
+async function guardarHitosTicket(t,hs){
+  var json=JSON.stringify(hs.map(function(h){return {t:h.t,ok:!!h.ok,f:h.f||''};}));
+  try{await updateListItem(LIST_TICKETS,t.id,{Hitos:json});t.hitos=JSON.parse(json);renderTickets();}
+  catch(e){showToast('Error al guardar el hito: '+e.message,true);}
+}
+function toggleHito(tid,i){var t=tickets.find(function(x){return x.id===tid;});if(!t||!t.hitos[i])return;var hs=t.hitos.map(function(h){return Object.assign({},h);});hs[i].ok=!hs[i].ok;guardarHitosTicket(t,hs);showToast(hs[i].ok?'✓ Hito cumplido: '+hs[i].t:'Hito pendiente: '+hs[i].t);}
+function fechaHito(tid,i,val){var t=tickets.find(function(x){return x.id===tid;});if(!t||!t.hitos[i])return;var hs=t.hitos.map(function(h){return Object.assign({},h);});hs[i].f=val;guardarHitosTicket(t,hs);}
 
 // ─── MODO REUNIÓN (management de los lunes) ────────────────────────────────
 var REU={slides:[],i:0};
@@ -2260,7 +2304,7 @@ function slideTemaHTML(t,n,total){
     +'<div style="font-size:30px;font-weight:700;line-height:1.2;color:var(--tx)">'+escHtml(t.tit)+'</div>'
     +'<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px;font-size:14px;color:var(--tx2)">'
       +'<span style="padding:4px 12px;border-radius:20px;font-weight:600;background:'+s.bg+';color:'+s.c+'">'+escHtml(s.txt)+'</span>'
-      +'<span>'+escHtml([t.esProyecto?'🗂 Proyecto':'',t.solic?'Pedido por '+t.solic:'','Resp.: '+rpNombre(t.resp),t.prio?'Prioridad '+t.prio:''].filter(Boolean).join(' · '))+'</span></div>'
+      +'<span>'+escHtml([t.esProyecto?'🧩 Complejo':'',t.solic?'Pedido por '+t.solic:'','Resp.: '+rpNombre(t.resp),t.prio?'Prioridad '+t.prio:''].filter(Boolean).join(' · '))+'</span></div>'
     +(t.esProyecto?'<div style="margin-top:12px;font-size:14px">'+pipelineHTML(t.hitos||[],true)+'</div>':'')
     +bloque('📰 Novedad',t.nov?escHtml(t.nov):'<span style="color:var(--tx3)">Sin novedades cargadas</span>')
     +bloque('➡️ Próximo paso',(t.prox?escHtml(t.prox):'<span style="color:var(--tx3)">Sin próximo paso cargado</span>')+'<div style="font-size:14px;color:var(--tx2);margin-top:4px">'+escHtml(rpNombre(t.resp))+(t.dead?' · '+fmtDate(t.dead):'')+'</div>')
@@ -2367,7 +2411,7 @@ async function renderPunteo(){
       var r=punteoDe(t.id,sem), p=punteoAnterior(t.id,sem), racha=rachaSinAvance(t.id,sem);
       var celda=function(x){if(!x)return '<span style="color:var(--tx3)">—</span>';var u=PUN_UI[x.res]||{icon:'',col:'var(--tx2)'};return '<span style="color:'+u.col+';font-weight:600">'+u.icon+' '+escHtml(x.res)+'</span>'+(x.nota?'<div style="font-size:11px;color:var(--tx2);white-space:pre-wrap">'+escHtml(x.nota.length>120?x.nota.substring(0,120)+'…':x.nota)+'</div>':'');};
       return '<tr'+(esActual?' style="cursor:pointer" onclick="abrirPunteo('+i+')"':'')+(racha>=2?' title="'+racha+' semanas seguidas sin avance"':'')+'>'
-        +'<td style="max-width:340px">'+(racha>=2?'<span style="color:var(--rd-tx);font-weight:700">🔴 </span>':'')+(t.esProyecto?'<span class="badge" style="background:var(--bl-bg);color:var(--bl)">🗂 Proyecto</span> ':'')+'<span class="mono" style="font-size:10px">'+t.num+'</span> '+t.asunto
+        +'<td style="max-width:340px">'+(racha>=2?'<span style="color:var(--rd-tx);font-weight:700">🔴 </span>':'')+(t.esProyecto?'<span class="badge" style="background:var(--bl-bg);color:var(--bl)">🧩 Complejo</span> ':'')+'<span class="mono" style="font-size:10px">'+t.num+'</span> '+t.asunto
           +(p?'':'<span class="badge" style="background:var(--bl-bg);color:var(--bl);margin-left:4px">nuevo</span>')+(t.estado==='Resuelto'?' <span class="badge">cerrado</span>':'')+'</td>'
         +'<td>'+escHtml(rpNombre(t.resp))+'</td><td style="max-width:220px">'+celda(p)+'</td><td style="max-width:220px">'+(r?celda(r):(esActual?'<span style="color:var(--tx3)">⏳ pendiente</span>':'—'))+'</td></tr>';
     }).join('')+'</tbody></table></div></div>';
@@ -2398,7 +2442,7 @@ function pintarPunteo(){
   var hechos=lista.filter(function(x){return punteoDe(x.id,PUN.sem);}).length;
   c.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:12px;color:var(--tx3)">Ticket '+(PUN.i+1)+' de '+lista.length+' · '+hechos+' punteados</div><button class="btns" style="padding:3px 10px" onclick="cerrarPunteo()">✕</button></div>'
     +'<div style="height:5px;background:var(--surf2);border-radius:4px;margin-bottom:14px;overflow:hidden"><div style="height:100%;width:'+Math.round(hechos*100/lista.length)+'%;background:var(--gr-tx)"></div></div>'
-    +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px">'+(t.esProyecto?'<span class="badge" style="background:var(--bl-bg);color:var(--bl)">🗂 Proyecto</span>':'')+'<span class="mono" style="font-size:11px">'+t.num+'</span>'+prioBadge(t)+'<span class="badge" style="background:'+et.bg+';color:'+et.tx+'">'+et.icon+' '+et.lbl+'</span><span style="font-size:12px;font-weight:600;color:'+sem.col+'">'+sem.icon+' '+sem.lbl+'</span></div>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px">'+(t.esProyecto?'<span class="badge" style="background:var(--bl-bg);color:var(--bl)">🧩 Complejo</span>':'')+'<span class="mono" style="font-size:11px">'+t.num+'</span>'+prioBadge(t)+'<span class="badge" style="background:'+et.bg+';color:'+et.tx+'">'+et.icon+' '+et.lbl+'</span><span style="font-size:12px;font-weight:600;color:'+sem.col+'">'+sem.icon+' '+sem.lbl+'</span></div>'
     +'<div style="font-size:20px;font-weight:700;line-height:1.3">'+t.asunto+'</div>'
     +'<div style="font-size:13px;color:var(--tx2);margin-top:4px">De <b>'+escHtml(nombreSolicitante(t))+'</b> → '+escHtml(rpNombre(t.resp))+(t.deadline?' · Deadline '+fmtDate(t.deadline):'')+'</div>'
     +(t.esProyecto?pipelineHTML(t.hitos||[],true):'')
@@ -4140,8 +4184,9 @@ function renderTickets(){
   var vt=document.getElementById('tk-vista');
   if(vt){vt.style.display=(puedeV||nProy)?'flex':'none';
     var btnV=function(k,lbl,n){var on=TK_VISTA===k;return '<button class="'+(on?'btnp':'btns')+'" onclick="setVistaTickets(\''+k+'\')">'+lbl+' <span style="opacity:.75">('+n+')</span></button>';};
-    vt.innerHTML=btnV('dia','📥 Día a día',nDia)+btnV('proy','🗂 Proyectos',nProy)+'<span style="font-size:11px;color:var(--tx3);align-self:center">'+(TK_VISTA==='proy'?'Temas grandes y largos, con etapas. Para pasar un ticket a proyecto: ✏️ Gestionar → “Es un proyecto”.':'')+'</span>';}
-  if(TK_EXTRA!=='pm')base=base.filter(function(t){return TK_VISTA==='proy'?t.esProyecto:!t.esProyecto;});
+    vt.style.display=nProy?'flex':'none';
+    vt.innerHTML=TK_VISTA==='proy'?'<span class="badge" style="background:var(--bl-bg);color:var(--bl);cursor:pointer;padding:4px 10px" onclick="setVistaTickets(\'todos\')">Filtro: 🧩 Solo complejos ✕</span>':'<button class="btns" style="font-size:12px" onclick="setVistaTickets(\'proy\')">🧩 Ver solo complejos ('+nProy+')</button>';}
+  if(TK_VISTA==='proy'&&TK_EXTRA!=='pm')base=base.filter(function(t){return t.esProyecto;});
   var esLegal=!!legalUser(currentUser.ini), puedeGestionar=currentUser.perfil==='Admin'||esLegal;
   llenarFiltroSolicitantes(base);
   var solEl=document.getElementById('tickets-solic');if(solEl)solEl.style.display=puedeGestionar?'':'none';
@@ -4168,7 +4213,7 @@ function renderTickets(){
     h+='<span style="font-size:12px;font-weight:600;color:'+sem.col+'">'+sem.icon+' '+sem.lbl+'</span>';
     h+='<span class="mono" style="font-size:10px">'+t.num+'</span>';
     h+='<span class="badge" style="background:'+eu.bg+';color:'+eu.tx+'">'+eu.icon+' '+eu.lbl+'</span>';
-    if(t.esProyecto)h+='<span class="badge" style="background:var(--bl-bg);color:var(--bl)">🗂 Proyecto</span>';
+    if(t.esProyecto)h+='<span class="badge" style="background:var(--bl-bg);color:var(--bl)">🧩 Complejo</span>';
     if(t.pm&&puedeGestionar)h+='<span class="badge" style="background:var(--am-bg);color:var(--am-tx)">📊 Management</span>';
     h+=prioBadge(t);
     if(cat)h+='<span class="badge" style="background:'+col+'1A;color:'+col+'">'+escHtml(cat)+'</span>';
@@ -4178,7 +4223,7 @@ function renderTickets(){
     if(t.bloq)h+='<div style="font-size:11px;margin-top:3px;color:var(--am-tx)">⚠️ Requiere: '+t.bloq+'</div>';
     if(t.cuerpo)h+='<div style="font-size:12px;color:var(--tx3);margin-top:6px;line-height:1.5">'+t.cuerpo.substring(0,140)+(t.cuerpo.length>140?'…':'')+'</div>';
     if(t.respuesta)h+='<div style="font-size:12px;margin-top:6px;padding:6px 10px;background:var(--gr-bg);color:var(--gr-tx);border-radius:var(--rs);line-height:1.5;white-space:pre-wrap">💬 '+t.respuesta+'</div>';
-    if(t.esProyecto)h+=pipelineHTML(t.hitos||[],false);
+    if(t.esProyecto)h+=timelineHitosHTML(t,puedeGestionar&&t.estado!=='Resuelto');
     h+=ticketTimeline(t,true);
     h+='</div>';
     h+='<div style="padding:12px 14px;display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0'+(critPend?';background:var(--rd-bg)':'')+'">';
@@ -4606,6 +4651,13 @@ function openFormTicket(){
   document.getElementById('tk-vista-gestionar').style.display='none';
   document.getElementById('tk-vista-mail').style.display='none';
   ['tk-sector','tk-asunto','tk-desc'].forEach(function(id){document.getElementById(id).value='';});
+  // Sector según Usuarios_Hub (Legal → Legales por defecto); se puede cambiar
+  document.getElementById('tk-sector').value=(currentUser&&(currentUser.sector||(legalUser(currentUser.ini)?'Legales':'')))||'';
+  // Ticket complejo: solo Legal/Admin lo arman al crear
+  var puedeComplejo=currentUser&&(currentUser.perfil==='Admin'||!!legalUser(currentUser.ini));
+  document.getElementById('tkc-complejo-wrap').style.display=puedeComplejo?'block':'none';
+  document.getElementById('tkc-complejo').checked=false;document.getElementById('tkc-hitos-wrap').style.display='none';
+  HITOS_EDIT=[];HITOS_TARGET='tkc-hitos-lista';
   document.getElementById('tk-resp').value='';
   document.getElementById('tk-cat').value='';
   document.getElementById('tk-sitio').value='';
@@ -4660,7 +4712,7 @@ function gestionarTicket(id){
   // Proyecto: casilla + etapas
   document.getElementById('tk-es-proyecto').checked=!!t.esProyecto;
   HITOS_EDIT=(t.hitos||[]).map(function(h){return {t:h.t,ok:!!h.ok,f:h.f||''};});
-  renderHitosEditor();onProyectoToggle();
+  HITOS_TARGET='tk-hitos-lista';renderHitosEditor();onProyectoToggle();
   // Reunión de management
   document.getElementById('tk-pm').checked=!!t.pm;
   document.getElementById('tk-nov').value=t.nov||'';document.getElementById('tk-prox').value=t.prox||'';document.getElementById('tk-dec').value=t.dec||'';
@@ -4827,6 +4879,12 @@ async function submitTicket(){
       Deadline:deadline?deadline+'T00:00:00Z':null,
       Urgencia:urgencia // columna de SharePoint "Urgencia"; en pantalla se muestra como "Prioridad"
     };
+    // Ticket complejo con timeline de hitos
+    var cx=document.getElementById('tkc-complejo');
+    if(cx&&cx.checked&&document.getElementById('tkc-complejo-wrap').style.display!=='none'){
+      fields.EsProyecto=true;
+      fields.Hitos=JSON.stringify(HITOS_EDIT.filter(function(h){return String(h.t||'').trim();}).map(function(h){return {t:String(h.t).trim(),ok:!!h.ok,f:h.f||''};}));
+    }
     // El número sale del ID de SharePoint: es único aunque se borren tickets o el usuario no vea los de otros
     var created=await createListItem(LIST_TICKETS,fields);
     var ticketNum=ticketNumFromId(created.id,new Date().toISOString());
