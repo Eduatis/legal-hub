@@ -1068,12 +1068,21 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       </div>
       <div id="tk-sla-hint" style="font-size:11px;color:var(--tx3);margin-top:4px"></div>
       <div style="margin-top:10px;border:1px solid var(--brd);border-radius:var(--rs);padding:10px 12px">
-        <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;margin:0;font-size:13px;font-weight:600;color:var(--rd-tx)"><input type="checkbox" id="tk-venc-on" onchange="document.getElementById('tk-venc-wrap').style.display=this.checked?'block':'none'" style="width:auto;margin-top:2px"> ⛔ Tiene un vencimiento real <span style="font-weight:400;color:var(--tx2)">(plazo legal, judicial, administrativo, contractual o de una oferta: lo que vence, vence)</span></label>
-        <div id="tk-venc-wrap" style="display:none;margin-top:10px">
+        <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;margin:0;font-size:13px;font-weight:600;color:var(--rd-tx)"><input type="checkbox" id="tkv-on" onchange="onVencRealToggle()" style="width:auto;margin-top:2px"> ⛔ Tiene un vencimiento real <span style="font-weight:400;color:var(--tx2)">(plazo legal, judicial, administrativo, contractual o de una oferta: lo que vence, vence)</span></label>
+        <div id="tkv-wrap" style="display:none;margin-top:10px">
           <div class="fieldrow">
-            <div class="field" style="margin:0"><label>Fecha de vencimiento</label><input type="date" id="tk-venc"></div>
-            <div class="field" style="margin:0"><label>¿Qué vence?</label><input type="text" id="tk-venc-motivo" placeholder="Ej: plazo para contestar la intimación"></div>
+            <div class="field" style="margin:0"><label>Fecha de vencimiento</label><input type="date" id="tkv-fecha"></div>
+            <div class="field" style="margin:0"><label>¿Qué vence?</label><input type="text" id="tkv-motivo" placeholder="Ej: plazo para contestar la intimación"></div>
           </div>
+          <div class="field" style="margin:10px 0 0"><label>Impacto si se vence</label>
+            <select id="tkv-impacto">
+              <option value="">— Seleccionar —</option>
+              <option value="Alto">🔴 Alto — se pierde un derecho, multa o sanción, rebeldía, rescisión o pérdida del sitio</option>
+              <option value="Medio">🟠 Medio — costos o penalidades acotadas, demora en la operación</option>
+              <option value="Bajo">🟡 Bajo — se puede renegociar o regularizar sin mayor costo</option>
+            </select>
+          </div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:6px">Con vencimiento real no hace falta fecha estimada: el seguimiento se hace contra esta fecha.</div>
         </div>
       </div>
       <div id="tkc-complejo-wrap" style="display:none;margin-top:10px;border:1px solid var(--brd);border-radius:var(--rs);padding:10px 12px">
@@ -1124,8 +1133,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
             <div class="field" style="margin:0"><label>🎯 Fecha estimada</label><input type="date" id="tk-deadline-edit"></div>
           </div>
           <div class="fieldrow" style="margin-top:10px">
-            <div class="field" style="margin:0"><label>⛔ Vencimiento real</label><input type="date" id="tka-venc"></div>
+            <div class="field" style="margin:0"><label>⛔ Vencimiento real</label><input type="date" id="tka-venc" onchange="var e=document.getElementById('tk-deadline-edit');e.disabled=!!this.value;if(this.value)e.value='';"></div>
             <div class="field" style="margin:0"><label>¿Qué vence?</label><input type="text" id="tka-vencmot"></div>
+          </div>
+          <div class="field" style="margin:10px 0 0"><label>Impacto del vencimiento</label><select id="tka-vimp"><option value="">—</option><option value="Alto">🔴 Alto</option><option value="Medio">🟠 Medio</option><option value="Bajo">🟡 Bajo</option></select>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:8px;flex-wrap:wrap">
             <span style="font-size:11px;color:var(--tx3)">Los cambios se guardan con “Guardar”.</span>
@@ -1707,7 +1718,7 @@ function renderDash(){
   if(navOk('tickets')&&(esAdminT||esLegalT)){
     var vis=ticketsVisibles();
     var pend=vis.filter(function(t){var e=etapaTicket(t);return e==='nuevo'||e==='tomado';});
-    var kv=pend.filter(function(t){return vencBucket(t)==='vencido';}).length;
+    var kv=pend.filter(function(t){var dv=t.venc?daysTo(t.venc):null;return dv!==null&&dv<=rojoDesde(t);}).length;
     var ka=pend.filter(function(t){return vencBucket(t)==='atrasado';}).length;
     var ke=pend.filter(function(t){return vencBucket(t)==='espera';}).length;
     var kn=pend.filter(function(t){return etapaTicket(t)==='nuevo';}).length;
@@ -1715,7 +1726,7 @@ function renderDash(){
     var kp=vis.filter(function(t){return t.esProyecto&&t.estado!=='Resuelto';}).length;
     var kpm=vis.filter(function(t){return t.pm&&t.estado!=='Resuelto';}).length;
     tiles.push({ico:'🎫',tit:'Tickets sin responder',num:pend.length,niv:nivel(kv||kc,kn),go:"dashTk({})",
-      partes:[link(kc,kc===1?'crítico':'críticos',"dashTk({prio:'Crítica'})",'var(--rd-tx)'),link(kv,kv===1?'vencimiento real vencido':'vencimientos reales vencidos',"dashTk({venc:'vencido'})",'var(--rd-tx)'),link(ka,ka===1?'atrasado':'atrasados',"dashTk({venc:'atrasado'})",'#C2410C'),link(kn,'sin tomar',"dashTk({etapa:'nuevo'})",'var(--am-tx)'),link(ke,'en espera',"dashTk({venc:'espera'})",'var(--tx2)')],
+      partes:[link(kc,kc===1?'crítico':'críticos',"dashTk({prio:'Crítica'})",'var(--rd-tx)'),link(kv,kv===1?'vencimiento real en zona roja':'vencimientos reales en zona roja',"dashTk({extra:'rojo'})",'var(--rd-tx)'),link(ka,ka===1?'atrasado':'atrasados',"dashTk({venc:'atrasado'})",'#C2410C'),link(kn,'sin tomar',"dashTk({etapa:'nuevo'})",'var(--am-tx)'),link(ke,'en espera',"dashTk({venc:'espera'})",'var(--tx2)')],
       ok:'Todo al día',extra:[kp?'🧩 '+link(kp,kp===1?'ticket complejo en curso':'tickets complejos en curso',"dashTk({proy:true})",'var(--bl)'):'',kpm?'📊 '+link(kpm,'para la reunión de management',"dashTk({pm:true})",'var(--am-tx)'):''].filter(Boolean).join(' &nbsp;·&nbsp; ')});
   }
   var COL={r:['var(--rd-bg)','var(--rd-tx)','🔴'],a:['var(--am-bg)','var(--am-tx)','🟡'],g:['var(--surf)','var(--gr-tx)','🟢']};
@@ -1743,7 +1754,7 @@ function dashTk(o){
   goTo('tickets',document.getElementById('nav-tickets'));
   var sp=document.getElementById('tickets-pais');if(sp)sp.value=o.pais||'';
   setTimeout(function(){
-    filtrarTk({etapa:o.etapa||'',venc:o.venc||'',extra:o.pm?'pm':''});
+    filtrarTk({etapa:o.etapa||'',venc:o.venc||'',extra:o.pm?'pm':(o.extra||'')});
     if(o.prio){var p=document.getElementById('tickets-prio');if(p){p.value=o.prio;renderTickets();}}
   },60);
 }
@@ -2536,7 +2547,7 @@ function paisTicket(t){
 }
 function estadoPais(k){
   var ab=ticketsVisibles().filter(function(t){return t.estado!=='Resuelto'&&(paisTicket(t)===k||(k!==''&&paisTicket(t)==='Regional'));});
-  var venc=ab.filter(function(t){return vencBucket(t)==='vencido'||(t.venc&&daysTo(t.venc)<=1);}).length;
+  var venc=ab.filter(function(t){var dv=t.venc?daysTo(t.venc):null;return dv!==null&&dv<=rojoDesde(t);}).length;
   var crit=ab.filter(function(t){return t.urgencia==='Crítica';}).length;
   var prox=ab.filter(function(t){return ['atrasado','hoy','manana','semana'].indexOf(vencBucket(t))>=0;}).length;
   var hitoAtr=ab.filter(function(t){return t.esProyecto&&(t.hitos||[]).some(function(h){var d=daysTo(h.f);return !h.ok&&d!==null&&d<0;});}).length;
@@ -2562,7 +2573,7 @@ function mapaPaisesHTML(){
   svg+='</svg>';
   var filas=PAISES_HUB.map(function(p){
     var e=est[p.k], ic={r:'🔴',a:'🟡',g:'🟢',off:'⚪'}[e.niv];
-    var det=[e.crit?e.crit+(e.crit===1?' crítico':' críticos'):'',e.venc?e.venc+(e.venc===1?' vencido':' vencidos'):'',e.prox?e.prox+' vence'+(e.prox===1?'':'n')+' en 7 días':'',e.hitoAtr?e.hitoAtr+' con hitos atrasados':''].filter(Boolean).join(' · ')||(e.niv==='off'?'arranca en Tickets el 1/1/2027':e.ab?'todo en plazo':'sin tickets abiertos');
+    var det=[e.crit?e.crit+(e.crit===1?' crítico':' críticos'):'',e.venc?e.venc+(e.venc===1?' vencimiento real en zona roja':' vencimientos reales en zona roja'):'',e.prox?e.prox+(e.prox===1?' por vencer o atrasado':' por vencer o atrasados'):'',e.hitoAtr?e.hitoAtr+' con hitos atrasados':''].filter(Boolean).join(' · ')||(e.niv==='off'?'arranca en Tickets el 1/1/2027':e.ab?'todo en plazo':'sin tickets abiertos');
     return '<div class="dash-item" onclick="dashTk({pais:\''+p.k+'\'})" style="cursor:pointer;display:flex;gap:10px;align-items:center;padding:10px 8px;border-bottom:1px solid var(--brd)">'
       +'<span style="font-size:22px">'+p.f+'</span><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">'+p.n+' <span style="font-weight:400;color:var(--tx3);font-size:12px">· '+e.ab+' abiertos</span></div>'
       +'<div style="font-size:12px;color:'+(e.niv==='r'?'var(--rd-tx)':e.niv==='a'?'var(--am-tx)':e.niv==='off'?'var(--tx3)':'var(--gr-tx)')+'">'+escHtml(det)+'</div></div><span style="font-size:16px">'+ic+'</span></div>';
@@ -3396,13 +3407,13 @@ function escUrl(s){s=String(s==null?'':s).trim();return (/^[a-z][a-z0-9+.\-]*:/i
 // Los campos de texto de Tickets los escribe cualquier solicitante: se guardan ya escapados para mostrar; *Raw = texto original (para mails)
 function mapTicket(item){var f=item.fields;return{id:item.id,num:escHtml(f.NumTicket||ticketNumFromId(item.id,f.FechaRecibido)),remitente:escHtml(f.Remitente),remitenteRaw:f.Remitente||'',email:(f.EmailRemitente||'').toLowerCase(),asunto:escHtml(f.Asunto),asuntoRaw:f.Asunto||'',resp:f.Responsable||'',cuerpo:escHtml(f.Cuerpo),cuerpoRaw:f.Cuerpo||'',fecha:f.FechaRecibido?f.FechaRecibido.split('T')[0]:'',estado:(f.Estado==='Resuelto'?'Resuelto':'En curso'),link:f.LinkMail||'',cat:escHtml(f.Categoria),catRaw:f.Categoria||'',sitio:escHtml(f.CodigoSitio),sitioRaw:f.CodigoSitio||'',deadline:f.Deadline?f.Deadline.split('T')[0]:'',bloq:escHtml(f.BloqQuien),bloqQuienRaw:f.BloqQuien||'',respuesta:escHtml(f.Respuesta),respuestaRaw:f.Respuesta||'',urgencia:escHtml(f.Urgencia),urgenciaRaw:f.Urgencia||'',cierre:f.FechaCierre?f.FechaCierre.split('T')[0]:'',
   // Timeline: creado → tomado por Legal → primera devolución → cerrado (fechas completas)
-  creadoTs:f.FechaRecibido||'',tomadoTs:f.FechaTomado||'',tomadoPor:escHtml(f.TomadoPor),respTs:f.FechaRespuesta||'',cierreTs:f.FechaCierre||'',esProyecto:!!f.EsProyecto,hitos:parseHitos(f.Hitos),pais:f.Pais||'',venc:f.VencimientoReal?f.VencimientoReal.split('T')[0]:'',vencMotivo:f.MotivoVencimiento||'',esperaDesde:f.EsperaDesde||'',esperaDe:f.EsperaDe||'',diasEspera:f.DiasEspera||0,pm:!!f.ParaManagement,nov:f.Novedad||'',prox:f.ProximoPaso||'',dec:f.DecisionRequerida||''};}
+  creadoTs:f.FechaRecibido||'',tomadoTs:f.FechaTomado||'',tomadoPor:escHtml(f.TomadoPor),respTs:f.FechaRespuesta||'',cierreTs:f.FechaCierre||'',esProyecto:!!f.EsProyecto,hitos:parseHitos(f.Hitos),pais:f.Pais||'',venc:f.VencimientoReal?f.VencimientoReal.split('T')[0]:'',vencMotivo:f.MotivoVencimiento||'',vencImpacto:f.ImpactoVencimiento||'',esperaDesde:f.EsperaDesde||'',esperaDe:f.EsperaDe||'',diasEspera:f.DiasEspera||0,pm:!!f.ParaManagement,nov:f.Novedad||'',prox:f.ProximoPaso||'',dec:f.DecisionRequerida||''};}
 
 // ─── TICKETS: prioridad, orden y timeline ───────────────────────────────────
 var PRIO_RANK={'Crítica':4,'Alta':3,'Media':2,'Baja':1};
 var PRIO_LABEL={'Crítica':'🚨 Crítica — hoy','Alta':'🔴 Alta','Media':'🟡 Media','Baja':'🟢 Baja'};
 function prioRank(t){return PRIO_RANK[t.urgencia]||0;}
-function dlKey(t){return t.deadline?new Date(t.deadline).getTime():Infinity;}
+function dlKey(t){var f=t.venc||t.deadline;return f?new Date(f).getTime():Infinity;}
 // deadline: el más próximo primero (sin deadline al final); empata por prioridad. prioridad: mayor primero; empata por deadline.
 function ordenarTickets(list,modo){
   return list.sort(function(a,b){
@@ -3448,10 +3459,18 @@ function prioBadge(t){
 var SLA_DIAS={'Crítica':0,'Alta':2,'Media':5,'Baja':10};
 function sumarDiasHabiles(desde,n){var d=new Date(desde);d.setHours(12,0,0,0);while(n>0){d.setDate(d.getDate()+1);var w=d.getDay();if(w!==0&&w!==6)n--;}return d.toISOString().split('T')[0];}
 function deadlinePorPrioridad(p){return sumarDiasHabiles(new Date(),SLA_DIAS[p]!=null?SLA_DIAS[p]:5);}
+// Con vencimiento real se deshabilita la fecha estimada (se sigue contra el vencimiento)
+function onVencRealToggle(){
+  var on=document.getElementById('tkv-on').checked, dl=document.getElementById('tk-deadline');
+  document.getElementById('tkv-wrap').style.display=on?'block':'none';
+  if(on){dl.value='';dl.disabled=true;dl.title='Con vencimiento real no se usa fecha estimada';var h=document.getElementById('tk-sla-hint');if(h)h.textContent='Con vencimiento real, el seguimiento se hace contra esa fecha (no hay fecha estimada).';}
+  else{dl.disabled=document.getElementById('tk-urgencia').value==='Crítica';dl.title='';onPrioridadChange();}
+}
 function onPrioridadChange(){
   var p=document.getElementById('tk-urgencia').value, crit=p==='Crítica';
   var dl=document.getElementById('tk-deadline');
   document.getElementById('tk-critica-aviso').style.display=crit?'block':'none';
+  var vOn=document.getElementById('tkv-on');if(vOn&&vOn.checked){dl.value='';dl.disabled=true;return;}
   if(crit){dl.value=todayStr();dl.disabled=true;}else{dl.disabled=false;if(dl.value===todayStr())dl.value='';}
   var h=document.getElementById('tk-sla-hint');
   if(h)h.textContent=crit?'':'La fecha estimada es el compromiso de Legal: si no ponés una, queda en '+SLA_DIAS[p]+' días hábiles ('+fmtDate(deadlinePorPrioridad(p))+'). Si además hay un plazo que no se puede mover, marcalo abajo.';
@@ -4322,27 +4341,36 @@ function etapaTicket(t){
 }
 var ETAPA_UI={nuevo:{lbl:'Nuevo',icon:'⚪',bg:'var(--surf2)',tx:'var(--tx2)'},tomado:{lbl:'Tomado',icon:'🔵',bg:'var(--bl-bg)',tx:'var(--bl)'},respondido:{lbl:'Respondido',icon:'✅',bg:'var(--gr-bg)',tx:'var(--gr-tx)'},cerrado:{lbl:'Cerrado',icon:'⬛',bg:'var(--surf2)',tx:'var(--tx3)'}};
 // Semáforo de vencimiento (pendientes); para respondidos/cerrados indica si se cumplió en plazo
-// Dos fechas por ticket:
-//  🎯 Fecha estimada (columna Deadline): compromiso de Legal, sale de la prioridad; se corre con "En espera".
-//  ⛔ Vencimiento real (columna VencimientoReal): plazo que no depende de nosotros; no se mueve nunca.
+// Dos fechas por ticket (excluyentes):
+//  ⛔ Vencimiento real (VencimientoReal + Motivo + Impacto): plazo que no depende de nosotros; no se mueve nunca.
+//  🎯 Fecha estimada (columna Deadline): solo si NO hay vencimiento real; sale de la prioridad y se corre con "En espera".
+var IMPACTO_UI={Alto:{icon:'🔴',lbl:'Impacto alto',col:'var(--rd-tx)',bg:'var(--rd-bg)'},Medio:{icon:'🟠',lbl:'Impacto medio',col:'#C2410C',bg:'#FFEDD5'},Bajo:{icon:'🟡',lbl:'Impacto bajo',col:'var(--am-tx)',bg:'var(--am-bg)'}};
+function impactoBadge(t){var u=IMPACTO_UI[t.vencImpacto];return u?'<span class="badge" style="background:'+u.bg+';color:'+u.col+'">'+u.icon+' '+u.lbl+'</span>':'';}
+// Días de anticipación con que un vencimiento real se pone en rojo, según su impacto
+function rojoDesde(t){return t.vencImpacto==='Alto'?5:t.vencImpacto==='Medio'?2:1;}
 function semaforoTicket(t){
   var dv=t.venc?daysTo(t.venc):null;
   if(t.estado==='Resuelto'||t.respTs){
     var fin=(t.respTs||t.cierreTs||'').split('T')[0];
-    if(t.venc&&fin&&fin>t.venc)return {icon:'⛔',lbl:'Cumplido después del vencimiento real',col:'var(--rd-tx)'};
+    if(t.venc)return fin&&fin>t.venc?{icon:'⛔',lbl:'Cumplido después del vencimiento real',col:'var(--rd-tx)'}:{icon:'✔️',lbl:'Cumplido antes del vencimiento',col:'var(--gr-tx)'};
     if(!t.deadline||!fin)return {icon:'✔️',lbl:'Cumplido',col:'var(--gr-tx)'};
     return fin<=t.deadline?{icon:'✔️',lbl:'Cumplido en plazo',col:'var(--gr-tx)'}:{icon:'⚠️',lbl:'Cumplido después de la fecha estimada',col:'var(--am-tx)'};
   }
-  var real=t.venc?' · ⛔ vence '+fmtDate(t.venc):'';
-  if(dv!==null&&dv<0)return {icon:'⛔',lbl:'Vencido hace '+(-dv)+(dv===-1?' día':' días')+' (vencimiento real)',col:'var(--rd-tx)'};
-  if(dv!==null&&dv<=1)return {icon:'⛔',lbl:(dv===0?'Vence HOY':'Vence MAÑANA')+' (vencimiento real)',col:'var(--rd-tx)'};
-  if(t.esperaDesde)return {icon:'⏸',lbl:'En espera de '+t.esperaDe+' desde '+fmtDate(t.esperaDesde)+real,col:dv!==null&&dv<=3?'var(--rd-tx)':'var(--am-tx)'};
+  var esp=t.esperaDesde?' · ⏸ en espera de '+t.esperaDe:'';
+  if(dv!==null){
+    if(dv<0)return {icon:'⛔',lbl:'VENCIDO hace '+(-dv)+(dv===-1?' día':' días')+esp,col:'var(--rd-tx)'};
+    var txt=dv===0?'Vence HOY':dv===1?'Vence MAÑANA':'Vence en '+dv+' días';
+    if(dv<=rojoDesde(t))return {icon:'⛔',lbl:txt+esp,col:'var(--rd-tx)'};
+    if(dv<=7)return {icon:'🟡',lbl:txt+esp,col:'var(--am-tx)'};
+    return {icon:'🟢',lbl:txt+esp,col:'var(--gr-tx)'};
+  }
+  if(t.esperaDesde)return {icon:'⏸',lbl:'En espera de '+t.esperaDe+' desde '+fmtDate(t.esperaDesde),col:'var(--am-tx)'};
   var d=daysTo(t.deadline);
-  if(d===null)return {icon:'⚪',lbl:'Sin fecha estimada'+real,col:dv!==null&&dv<=7?'var(--am-tx)':'var(--tx3)'};
-  if(d<0)return {icon:'⏰',lbl:'Atrasado '+(-d)+(d===-1?' día':' días')+' (fecha estimada)'+real,col:'#C2410C'};
-  if(d<=1)return {icon:'🟠',lbl:(d===0?'Estimado para hoy':'Estimado para mañana')+real,col:'#C2410C'};
-  if(d<=7)return {icon:'🟡',lbl:'Estimado en '+d+' días'+real,col:'var(--am-tx)'};
-  return {icon:'🟢',lbl:'Estimado en '+d+' días'+real,col:'var(--gr-tx)'};
+  if(d===null)return {icon:'⚪',lbl:'Sin fecha estimada',col:'var(--tx3)'};
+  if(d<0)return {icon:'⏰',lbl:'Atrasado '+(-d)+(d===-1?' día':' días')+' (fecha estimada)',col:'#C2410C'};
+  if(d<=1)return {icon:'🟠',lbl:d===0?'Estimado para hoy':'Estimado para mañana',col:'#C2410C'};
+  if(d<=7)return {icon:'🟡',lbl:'Estimado en '+d+' días',col:'var(--am-tx)'};
+  return {icon:'🟢',lbl:'Estimado en '+d+' días',col:'var(--gr-tx)'};
 }
 // Color fijo por categoría (barra lateral de cada ticket)
 var CAT_COLOR={LOC:'#1B4FD8',SIT:'#0369A1',MLA:'#7C3AED',NDA:'#0F766E',ADD:'#B45309',ACT:'#BE185D',CVN:'#15803D',CTR:'#4338CA',RESC:'#B91C1C',CONS:'#6B7280',OTRO:'#9CA3AF'};
@@ -4384,11 +4412,11 @@ function renderTickets(){
   var fe=val('tickets-estado'),fr=val('tickets-resp'),fp=val('tickets-prio'),fs=val('tickets-solic'),fet=val('tickets-etapa'),fv=val('tickets-venc');
   var extra=typeof TK_EXTRA!=='undefined'?TK_EXTRA:'';
   var list=base.filter(function(t){return (!fe||t.estado===fe)&&(!fr||t.resp===fr)&&(!fp||t.urgencia===fp)&&(!fs||t.email===fs)&&(!fet||etapaTicket(t)===fet)&&(!fv||vencBucket(t)===fv)
-    &&(extra!=='estancado'||esEstancado(t))&&(extra!=='vence7'||['hoy','manana','semana'].indexOf(vencBucket(t))>=0)&&(extra!=='pm'||t.pm)&&(!fpa||(fpa==='sin'?!paisTicket(t):(paisTicket(t)===fpa||paisTicket(t)==='Regional')));});
+    &&(extra!=='estancado'||esEstancado(t))&&(extra!=='vence7'||['hoy','manana','semana'].indexOf(vencBucket(t))>=0)&&(extra!=='pm'||t.pm)&&(extra!=='rojo'||(t.venc&&t.estado!=='Resuelto'&&!t.respTs&&daysTo(t.venc)<=rojoDesde(t)))&&(!fpa||(fpa==='sin'?!paisTicket(t):(paisTicket(t)===fpa||paisTicket(t)==='Regional')));});
   ordenarTickets(list,val('tickets-orden')||'deadline');
   var el=document.getElementById('tickets-list');if(!el)return;
   // Filtros especiales que vienen del tablero (no tienen selector propio)
-  var chip=extra?'<div style="margin-bottom:10px"><span class="badge" style="background:var(--bl-bg);color:var(--bl);cursor:pointer;padding:4px 10px" onclick="TK_EXTRA=\'\';renderTickets()">Filtro: '+(extra==='estancado'?'⏸ Estancados':extra==='pm'?'📊 Para management':'Vencen en los próximos 7 días')+' ✕</span></div>':'';
+  var chip=extra?'<div style="margin-bottom:10px"><span class="badge" style="background:var(--bl-bg);color:var(--bl);cursor:pointer;padding:4px 10px" onclick="TK_EXTRA=\'\';renderTickets()">Filtro: '+(extra==='estancado'?'⏸ Estancados':extra==='pm'?'📊 Para management':extra==='rojo'?'⛔ Vencimientos reales en zona roja':'Vencen en los próximos 7 días')+' ✕</span></div>':'';
   if(!list.length){el.innerHTML=chip+'<div class="card"><div class="empty">Sin tickets para este filtro</div></div>';return;}
   var respNames={};usersInGroup('Legal').forEach(function(u){respNames[u.ini]=u.name;});
   el.innerHTML=chip+list.map(function(t){
@@ -4411,7 +4439,7 @@ function renderTickets(){
     h+='</div>';
     h+='<div style="font-size:14px;font-weight:600;margin-bottom:2px">'+t.asunto+'</div>';
     h+='<div style="font-size:12px;color:var(--tx2)">De <b>'+escHtml(nombreSolicitante(t))+'</b>'+(sector?' · '+escHtml(sector):'')+' → '+escHtml(respNames[t.resp]||t.resp)+(t.deadline?' · 🎯 Estimado '+fmtDate(t.deadline):'')+' · '+(dias<=0?'creado hoy':'hace '+dias+(dias===1?' día':' días'))+'</div>';
-    if(t.venc)h+='<div style="font-size:12px;margin-top:3px;color:var(--rd-tx);font-weight:600">⛔ Vencimiento real: '+fmtDate(t.venc)+(t.vencMotivo?' — '+escHtml(t.vencMotivo):'')+'</div>';
+    if(t.venc)h+='<div style="font-size:12px;margin-top:3px;color:var(--rd-tx);font-weight:600">⛔ Vencimiento real: '+fmtDate(t.venc)+(t.vencMotivo?' — '+escHtml(t.vencMotivo):'')+' '+impactoBadge(t)+'</div>';
     if(t.esperaDesde&&t.estado!=='Resuelto')h+='<div style="font-size:12px;margin-top:3px;color:var(--am-tx)">⏸ En espera de '+escHtml(t.esperaDe)+' desde '+fmtDate(t.esperaDesde)+' — la fecha estimada no corre</div>';
     if(t.bloq)h+='<div style="font-size:11px;margin-top:3px;color:var(--am-tx)">⚠️ Requiere: '+t.bloq+'</div>';
     if(t.cuerpo)h+='<div style="font-size:12px;color:var(--tx3);margin-top:6px;line-height:1.5">'+t.cuerpo.substring(0,140)+(t.cuerpo.length>140?'…':'')+'</div>';
@@ -4464,15 +4492,11 @@ async function marcarDevolucion(id){
 // Tramo de vencimiento: solo aplica a lo que todavía no respondimos (nuevo o tomado)
 function vencBucket(t){
   var et=etapaTicket(t);if(et==='respondido'||et==='cerrado')return '';
-  // Vencimiento real primero: lo que vence, vence (aunque esté en espera)
-  var dv=t.venc?daysTo(t.venc):null;
-  if(dv!==null&&dv<0)return 'vencido';
-  if(dv!==null&&dv<=1)return dv===0?'hoy':'manana';
+  // Con vencimiento real se sigue solo contra esa fecha (lo que vence, vence, aunque esté en espera)
+  if(t.venc){var dv=daysTo(t.venc);if(dv<0)return 'vencido';if(dv===0)return 'hoy';if(dv===1)return 'manana';if(dv<=7)return 'semana';return 'mas';}
   if(t.esperaDesde)return 'espera';
   var d=daysTo(t.deadline);
-  if(d!==null&&d<0)return 'atrasado';
-  if(dv!==null&&(d===null||dv<d))d=dv;
-  if(d===null)return 'sin';if(d===0)return 'hoy';if(d===1)return 'manana';if(d<=7)return 'semana';return 'mas';
+  if(d===null)return 'sin';if(d<0)return 'atrasado';if(d===0)return 'hoy';if(d===1)return 'manana';if(d<=7)return 'semana';return 'mas';
 }
 function diasDesde(ts){return ts?Math.floor((new Date()-new Date(ts))/86400000):0;}
 function esEstancado(t){return etapaTicket(t)==='tomado'&&diasDesde(t.tomadoTs)>3;}
@@ -4729,7 +4753,7 @@ function eventosCalendario(){
   var add=function(tipo,fecha,titulo,sub,extra){if(fecha)ev.push(Object.assign({tipo:tipo,fecha:String(fecha).split('T')[0],titulo:String(titulo||'—'),sub:String(sub||'')},extra||{}));};
   vTemas().filter(function(t){return t.estado!=='Cerrado';}).forEach(function(t){add('tema',t.dead,t.tit,(rpNombre(t.resp))+(t.cli?' · '+t.cli:''),{pend:true});});
   ticketsVisibles().filter(function(t){var e=etapaTicket(t);return e==='nuevo'||e==='tomado';}).forEach(function(t){add('ticket',t.deadline,t.asuntoRaw,'Ticket '+t.num+' · '+rpNombre(t.resp),{pend:true});});
-  ticketsVisibles().filter(function(t){return t.venc&&t.estado!=='Resuelto';}).forEach(function(t){add('vreal',t.venc,'⛔ '+t.asuntoRaw,'Ticket '+t.num+(t.vencMotivo?' · '+t.vencMotivo:''),{pend:true});});
+  ticketsVisibles().filter(function(t){return t.venc&&t.estado!=='Resuelto';}).forEach(function(t){add('vreal',t.venc,'⛔ '+t.asuntoRaw,'Ticket '+t.num+(t.vencMotivo?' · '+t.vencMotivo:'')+(t.vencImpacto?' · impacto '+t.vencImpacto.toLowerCase():''),{pend:true});});
   fechas.filter(function(f){return enScope(f.pais);}).forEach(function(f){add('fecha',f.fecha,f.desc,(f.cat||'')+(f.pais?' · '+f.pais:''));});
   poderes.filter(function(p){return enScope(p.pais);}).forEach(function(p){add('poder',p.fechaVen,'Vence poder: '+p.apoderado,(p.tipo||'')+(p.pais?' · '+p.pais:''),{pend:true});});
   socAut.filter(function(a){return enScope(a.pais);}).forEach(function(a){add('mandato',fechaDeVigencia(a.vigencia),'Vence mandato: '+a.nombre,(a.cargo||'')+' · '+(a.sociedad||''),{pend:true});});
@@ -4858,7 +4882,7 @@ function openFormTicket(){
   document.getElementById('tk-sector').value=(currentUser&&(currentUser.sector||(legalUser(currentUser.ini)?'Legales':'')))||'';
   // País: si el usuario trabaja en un solo país, viene puesto
   var sc=(currentUser&&currentUser.scope)||[];document.getElementById('tk-pais').value=sc.length===1?sc[0]:'';
-  document.getElementById('tk-venc-on').checked=false;document.getElementById('tk-venc-wrap').style.display='none';document.getElementById('tk-venc').value='';document.getElementById('tk-venc-motivo').value='';
+  document.getElementById('tkv-on').checked=false;['tkv-fecha','tkv-motivo','tkv-impacto'].forEach(function(i){document.getElementById(i).value='';});onVencRealToggle();
   // Ticket complejo: solo Legal/Admin lo arman al crear
   var puedeComplejo=currentUser&&(currentUser.perfil==='Admin'||!!legalUser(currentUser.ini));
   document.getElementById('tkc-complejo-wrap').style.display=puedeComplejo?'block':'none';
@@ -4910,7 +4934,7 @@ function gestionarTicket(id){
       +(t.resp&&!legal.some(function(u){return u.ini===t.resp;})?'<option value="'+escHtml(t.resp)+'">'+escHtml(t.resp)+'</option>':'');
     document.getElementById('tka-cat').innerHTML='<option value="">— Sin categoría —</option>'+Array.prototype.slice.call(document.querySelectorAll('#tk-cat option')).filter(function(o){return o.value;}).map(function(o){return '<option value="'+escHtml(o.value)+'">'+escHtml(o.textContent)+'</option>';}).join('');
     setV('tka-asunto',t.asuntoRaw);setV('tka-cuerpo',t.cuerpoRaw!=null?t.cuerpoRaw:'');setV('tka-remitente',t.remitenteRaw);setV('tka-email',t.email);
-    setV('tka-venc',t.venc);setV('tka-vencmot',t.vencMotivo);setV('tka-resp',t.resp);setV('tka-prio',t.urgenciaRaw||'Media');setV('tka-cat',t.catRaw);setV('tka-sitio',t.sitioRaw);setV('tka-fecha',t.fecha);
+    setV('tka-venc',t.venc);setV('tka-vencmot',t.vencMotivo);setV('tka-vimp',t.vencImpacto);document.getElementById('tk-deadline-edit').disabled=!!t.venc;setV('tka-resp',t.resp);setV('tka-prio',t.urgenciaRaw||'Media');setV('tka-cat',t.catRaw);setV('tka-sitio',t.sitioRaw);setV('tka-fecha',t.fecha);
   }
   // Comentario de cierre: aparece al pasar a Resuelto
   document.getElementById('tk-cierre-coment').value='';
@@ -4969,6 +4993,8 @@ async function guardarGestionTicket(){
       var fr=gv('tka-fecha');if(fr&&fr!==t.fecha)fields.FechaRecibido=fr+'T12:00:00Z';
       var vr=gv('tka-venc');if(vr!==(t.venc||''))fields.VencimientoReal=vr?vr+'T00:00:00Z':null;
       var vm=gv('tka-vencmot');if(vm!==(t.vencMotivo||''))fields.MotivoVencimiento=vm;
+      var vi=gv('tka-vimp');if(vi!==(t.vencImpacto||''))fields.ImpactoVencimiento=vi;
+      if(vr&&t.deadline&&fields.Deadline===undefined)fields.Deadline=null; // con vencimiento real no hay fecha estimada
     }
     // Casilla "Ya le dimos la devolución"
     var devuelto=document.getElementById('tk-devuelto').checked;
@@ -5056,8 +5082,8 @@ async function submitTicket(){
   var urgencia=document.getElementById('tk-urgencia').value;
   var pais=document.getElementById('tk-pais').value;
   if(!sector||!resp||!asunto||!desc||!pais){alert('Por favor completá todos los campos (incluido el país).');return;}
-  var vencOn=document.getElementById('tk-venc-on').checked, vencReal=vencOn?document.getElementById('tk-venc').value:'', vencMot=document.getElementById('tk-venc-motivo').value.trim();
-  if(vencOn&&(!vencReal||!vencMot)){alert('Si hay un vencimiento real, completá la fecha y qué vence.');return;}
+  var vencOn=document.getElementById('tkv-on').checked, vencReal=vencOn?document.getElementById('tkv-fecha').value:'', vencMot=document.getElementById('tkv-motivo').value.trim(), vencImp=document.getElementById('tkv-impacto').value;
+  if(vencOn&&(!vencReal||!vencMot||!vencImp)){alert('Si hay un vencimiento real, completá la fecha, qué vence y el impacto.');return;}
   if(urgencia==='Crítica'&&!confirm('Vas a marcar este ticket como CRÍTICO: tiene que resolverse HOY.\n\n¿Es realmente impostergable? Si no, elegí Alta.'))return;
 
   var btn=document.getElementById('tk-submit-btn');
@@ -5076,7 +5102,8 @@ async function submitTicket(){
     var cat=document.getElementById('tk-cat').value;
     var sitio=document.getElementById('tk-sitio').value.trim();
     // Sin fecha: plazo automático según prioridad (Crítica hoy, Alta 2, Media 5, Baja 10 días hábiles)
-    var deadline=urgencia==='Crítica'?todayStr():(document.getElementById('tk-deadline').value||deadlinePorPrioridad(urgencia));
+    // Con vencimiento real no hay fecha estimada: se sigue contra el vencimiento
+    var deadline=vencReal?'':(urgencia==='Crítica'?todayStr():(document.getElementById('tk-deadline').value||deadlinePorPrioridad(urgencia)));
     var asuntoFull=(cat?cat+' — ':'')+(sitio?sitio+' — ':'')+asunto;
     var fields={
       Title:asuntoFull.substring(0,255),
@@ -5094,6 +5121,7 @@ async function submitTicket(){
       Deadline:deadline?deadline+'T00:00:00Z':null,
       VencimientoReal:vencReal?vencReal+'T00:00:00Z':null,
       MotivoVencimiento:vencReal?vencMot:'',
+      ImpactoVencimiento:vencReal?vencImp:'',
       Urgencia:urgencia // columna de SharePoint "Urgencia"; en pantalla se muestra como "Prioridad"
     };
     // Ticket complejo con timeline de hitos
