@@ -356,9 +356,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
       <!-- DASHBOARD -->
       <div class="pageview active" id="page-dashboard">
-        <div class="ctabs" id="dash-ctabs"></div>
-        <div class="metrics" id="dash-metrics"></div>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px">
           <div id="dash-greeting" style="font-size:22px;font-weight:700;color:var(--bl);padding:0 2px"></div>
           <button class="btnp" id="btn-repaso" style="display:none" onclick="abrirRepaso()">🎙 Repaso del día</button>
         </div>
@@ -384,22 +382,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
             </div>
           </div>
         </div>
-        <div class="g1" id="dash-riesgo-wrap" style="display:none"><div class="card" style="border-left:3px solid var(--rd)"><div class="cardh"><div class="cardht">⚖️ Poderes y mandatos por vencer (60 días)</div><div class="cardhl" onclick="navTo('calendario')">Ver calendario</div></div><div id="dash-riesgo"></div></div></div>
-        <div class="g1" id="dash-tickets-wrap" style="display:none">
-          <div class="card" style="border-left:3px solid var(--bl)"><div class="cardh"><div class="cardht" id="dash-tickets-title">🎫 Tickets pendientes</div><div class="cardhl" onclick="navTo('tickets')">Ver todos</div></div><div id="dash-tickets"></div></div>
-        </div>
-        <div class="g2">
-          <div class="card"><div class="cardh"><div class="cardht">Alertas — vence en 48hs</div><div class="cardhl" onclick="navTo('temas')">Ver todos</div></div><div id="dash-alerts"></div></div>
-          <div class="card"><div class="cardh"><div class="cardht">Temas · Prioridad Alta</div><div class="cardhl" onclick="navTo('temas')">Ver todos</div></div><div id="dash-tasks"></div></div>
-        </div>
-        <div class="g2" id="dash-suelo-alerts-wrap" style="display:none">
-          <div class="card"><div class="cardh"><div class="cardht">⚠️ Contratos de Suelo · Vencen en 90 días</div><div class="cardhl" onclick="navTo('suelo')">Ver todos</div></div><div id="dash-suelo-v90"></div></div>
-          <div class="card"><div class="cardh"><div class="cardht">📋 Contratos de Suelo · Vencen en el año</div><div class="cardhl" onclick="navTo('suelo')">Ver todos</div></div><div id="dash-suelo-v365"></div></div>
-        </div>
-        <div class="g1" id="dash-fechas-wrap">
-          <div class="card" style="border-left:3px solid var(--rd)"><div class="cardh"><div class="cardht">📅 Fechas Clave próximas</div><div class="cardhl" onclick="navTo('fechas')">Ver todas</div></div><div id="dash-fechas-list"></div></div>
-        </div>
-        <div class="g1"><div class="card"><div class="cardh"><div class="cardht">Últimos documentos</div><div class="cardhl" onclick="navTo('documentos')">Ver todos</div></div><div class="dwrap"><table class="dtable" id="dash-docs"></table></div></div></div>
+        <!-- Tablero high level: fechas clave de los próximos 7 días + semáforo por área (el detalle está en cada solapa) -->
+        <div id="dash-semana" style="margin-bottom:16px"></div>
+        <div id="dash-areas" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px"></div>
 
       </div>
 
@@ -1413,13 +1398,13 @@ async function initApp(account){
     document.querySelectorAll('[id^="nav-"]').forEach(function(el){if(el.id!=='nav-tickets')el.style.display='none';});
   }
   fillLegalSelects();
+  // Menús que dependen del perfil: antes de cargar, así el tablero del inicio ya los tiene en cuenta
+  if(currentUser.perfil==='Admin'||legalUser(currentUser.ini))document.getElementById('nav-semanas').style.display='flex';
+  if(currentUser.perfil!=='Solicitante'&&!currentUser.mlaOnly)document.getElementById('nav-calendario').style.display='flex';
   await syncAll();hideLoading();document.getElementById('app').style.display='block';
   if(currentUser.perfil==='Admin'){document.getElementById('setup-btn-wrap').style.display='flex';}
   // Repaso del día por voz: para quien tiene dashboard
   if(currentUser.perfil!=='Solicitante'&&!currentUser.mlaOnly)document.getElementById('btn-repaso').style.display='inline-block';
-  // Semanas: para quien gestiona tickets (Admin y Legal)
-  if(currentUser.perfil==='Admin'||legalUser(currentUser.ini))document.getElementById('nav-semanas').style.display='flex';
-  if(currentUser.perfil!=='Solicitante'&&!currentUser.mlaOnly)document.getElementById('nav-calendario').style.display='flex';
   // Register login
   registrarLogin();
   // Respaldo mensual automático (solo Admin, en segundo plano)
@@ -1586,150 +1571,92 @@ function renderAll(){renderDash();renderDocs();renderTemas();renderSuelo();rende
 
 // ─── DASHBOARD ──────────────────────────────────────────────────────────────
 function renderDash(){
-  var scope=currentUser.scope;
-  var countries=scope.length>1?['Global'].concat(scope):scope;
-  // Greeting
+  // Saludo
   var greetEl=document.getElementById('dash-greeting');
   if(greetEl){
     var hour=new Date().getHours();
     var timeGreet=hour<12?'Buenos días':hour<19?'Buenas tardes':'Buenas noches';
-    var greeting=currentUser.greeting||(timeGreet+', '+currentUser.name.split(' ')[0]);
-    greetEl.textContent=greeting;
+    greetEl.textContent=currentUser.greeting||(timeGreet+', '+currentUser.name.split(' ')[0]);
   }
-  document.getElementById('dash-ctabs').innerHTML=countries.map(function(c){
-    return '<div class="ctab'+(c===dashCountry?' active':'')+'" onclick="setDashCountry(\''+escJs(c)+'\')">'+escHtml(c)+'</div>';
+  var navOk=function(p){var el=document.getElementById('nav-'+p);return !!el&&el.style.display!=='none';};
+  var ev=(typeof eventosCalendario==='function')?eventosCalendario():[];
+
+  // 1) Fechas clave de los próximos 7 días (no temas ni tickets: solo lo "clave")
+  var CLAVE={fecha:1,poder:1,mandato:1,suelo:1,mla:1,usufructo:1,intoru:1,dd:1};
+  var ev7=ev.filter(function(e){var d=daysTo(e.fecha);return CLAVE[e.tipo]&&navOk(CAL_TIPOS[e.tipo].page)&&d!==null&&d>=0&&d<=7;}).sort(function(a,b){return a.fecha<b.fecha?-1:1;});
+  var vencClave=ev.filter(function(e){var d=daysTo(e.fecha);return CLAVE[e.tipo]&&e.pend&&navOk(CAL_TIPOS[e.tipo].page)&&d!==null&&d<0&&d>=-60;}).length;
+  var verCal=navOk('calendario')?'<div class="cardhl" onclick="navTo(\'calendario\')">Ver calendario</div>':'';
+  var semana=document.getElementById('dash-semana');
+  if(semana){
+    semana.innerHTML=ev7.length
+      ?'<div class="card" style="border-left:4px solid var(--rd)"><div class="cardh"><div class="cardht">📅 Fechas clave · próximos 7 días ('+ev7.length+')</div>'+verCal+'</div>'+ev7.slice(0,6).map(calItem).join('')
+        +(ev7.length>6?'<div style="font-size:11px;color:var(--tx3);padding:6px 4px">… y '+(ev7.length-6)+' más en el calendario</div>':'')
+        +(vencClave?'<div style="font-size:12px;color:var(--rd-tx);padding:8px 4px 0">🔴 Además hay '+vencClave+' vencido'+(vencClave>1?'s':'')+' sin resolver (últimos 60 días).</div>':'')+'</div>'
+      :'<div class="card" style="border-left:4px solid var(--gr-tx);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'
+        +'<div style="font-size:14px;font-weight:600;color:var(--gr-tx)">✓ Ninguna fecha clave vence en los próximos 7 días</div>'
+        +(vencClave?'<div style="font-size:12px;color:var(--rd-tx)">🔴 '+vencClave+' vencido'+(vencClave>1?'s':'')+' sin resolver</div>':'')+verCal+'</div>';
+  }
+
+  // 2) Semáforo por área: un número grande y una línea; el detalle está en cada solapa
+  var tiles=[];
+  var nivel=function(rojo,amarillo){return rojo?'r':amarillo?'a':'g';};
+  var plural=function(n,s,p){return n+' '+(n===1?s:p);};
+
+  if(navOk('temas')){
+    var act=vTemas().filter(function(t){return t.estado!=='Cerrado';});
+    var tv=act.filter(function(t){var d=daysTo(t.dead);return d!==null&&d<0;}).length;
+    var t7=act.filter(function(t){var d=daysTo(t.dead);return d!==null&&d>=0&&d<=7;}).length;
+    var esLegalDash=currentUser.perfil==='Admin'||!!legalUser(currentUser.ini);
+    var bloqYo=esLegalDash?act.filter(function(t){return t.bloqueado&&t.bloqQuien===currentUser.ini;}).length:0;
+    tiles.push({ico:'📌',tit:'Temas activos',num:act.length,niv:nivel(tv||bloqYo,t7),
+      sub:[tv?plural(tv,'vencido','vencidos'):'',t7?plural(t7,'vence esta semana','vencen esta semana'):'',bloqYo?plural(bloqYo,'espera tu intervención','esperan tu intervención'):''].filter(Boolean).join(' · ')||'Todo en plazo',
+      go:t7?"navToFilter('v7')":"navTo('temas')"});
+  }
+  var esAdminT=currentUser.perfil==='Admin', esLegalT=!!legalUser(currentUser.ini);
+  if(navOk('tickets')&&(esAdminT||esLegalT)){
+    var pend=ticketsVisibles().filter(function(t){var e=etapaTicket(t);return e==='nuevo'||e==='tomado';});
+    var kv=pend.filter(function(t){return vencBucket(t)==='vencido';}).length;
+    var kn=pend.filter(function(t){return etapaTicket(t)==='nuevo';}).length;
+    var kc=pend.filter(function(t){return t.urgencia==='Crítica';}).length;
+    tiles.push({ico:'🎫',tit:'Tickets sin responder',num:pend.length,niv:nivel(kv||kc,kn),
+      sub:[kc?plural(kc,'crítico','críticos'):'',kv?plural(kv,'vencido','vencidos'):'',kn?kn+' sin tomar':''].filter(Boolean).join(' · ')||'Todo al día',
+      go:"navTo('tickets')"});
+  }
+  if(navOk('calendario')&&(navOk('poderes')||navOk('societario'))){
+    var rl=ev.filter(function(e){return e.tipo==='poder'||e.tipo==='mandato';});
+    var rv=rl.filter(function(e){var d=daysTo(e.fecha);return d!==null&&d<0&&d>=-90;}).length;
+    var r60=rl.filter(function(e){var d=daysTo(e.fecha);return d!==null&&d>=0&&d<=60;}).length;
+    tiles.push({ico:'⚖️',tit:'Poderes y mandatos',num:r60+rv,niv:nivel(rv,r60),
+      sub:[rv?plural(rv,'vencido','vencidos'):'',r60?r60+' vence'+(r60>1?'n':'')+' en 60 días':''].filter(Boolean).join(' · ')||'nada vence en 60 días',go:"navTo('calendario')"});
+  }
+  if(navOk('suelo')){
+    var vs=vSuelos().filter(function(s){return s.fin;});
+    var s30=vs.filter(function(s){var d=daysTo(s.fin);return d!==null&&d>=0&&d<=30;}).length;
+    var s90=vs.filter(function(s){var d=daysTo(s.fin);return d!==null&&d>=0&&d<=90;}).length;
+    tiles.push({ico:'🏗️',tit:'Contratos de suelo',num:s90,niv:nivel(s30,s90),
+      sub:s90?'vencen en 90 días'+(s30?' · '+s30+' en 30 días':''):'nada vence en 90 días',go:"navTo('suelo')"});
+  }
+  if(navOk('mla')){
+    var mv=ev.filter(function(e){var d=daysTo(e.fecha);return e.tipo==='mla'&&d!==null&&d>=0&&d<=180;}).length;
+    tiles.push({ico:'📡',tit:'MLAs',num:mv,niv:nivel(false,mv),sub:mv?'vencen en 6 meses':'nada vence en 6 meses',go:"navTo('mla')"});
+  }
+  if((currentUser.scope||[]).indexOf('UY')>=0&&(navOk('dd')||navOk('intoru'))){
+    var uy=ev.filter(function(e){return e.tipo==='dd'||e.tipo==='intoru';});
+    var uv=uy.filter(function(e){var d=daysTo(e.fecha);return d!==null&&d<0&&d>=-30;}).length;
+    var u15=uy.filter(function(e){var d=daysTo(e.fecha);return d!==null&&d>=0&&d<=15;}).length;
+    tiles.push({ico:'🇺🇾',tit:'Uruguay · DD e INTORU',num:u15+uv,niv:nivel(uv,u15),
+      sub:[uv?plural(uv,'plazo vencido','plazos vencidos'):'',u15?plural(u15,'plazo','plazos')+' en 15 días':''].filter(Boolean).join(' · ')||'sin plazos en 15 días',go:navOk('dd')?"navTo('dd')":"navTo('intoru')"});
+  }
+  var COL={r:['var(--rd-bg)','var(--rd-tx)','🔴'],a:['var(--am-bg)','var(--am-tx)','🟡'],g:['var(--surf)','var(--gr-tx)','🟢']};
+  var areas=document.getElementById('dash-areas');
+  if(areas)areas.innerHTML=tiles.map(function(t){
+    var c=COL[t.niv];
+    return '<div class="card dash-item" onclick="'+t.go+'" style="cursor:pointer;margin:0;background:'+c[0]+';border-left:4px solid '+c[1]+'">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:12px;font-weight:600;color:var(--tx2)">'+t.ico+' '+escHtml(t.tit)+'</div><span style="font-size:12px">'+c[2]+'</span></div>'
+      +'<div style="font-size:34px;font-weight:700;line-height:1.1;margin:8px 0 4px;color:'+(t.niv==='g'?'var(--tx)':c[1])+'">'+t.num+'</div>'
+      +'<div style="font-size:12px;color:'+(t.niv==='g'?'var(--tx3)':c[1])+'">'+escHtml(t.sub)+' ↗</div></div>';
   }).join('');
-  var vt=vTemas().filter(function(t){return dashCountry==='Global'||t.pais===dashCountry||t.pais==='Global';});
-  var activos=vt.filter(function(t){return t.estado!=='Cerrado';});
-  var noInic=activos.filter(function(t){return t.estado==='No iniciado';}).length;
-  var enCurso=activos.filter(function(t){return t.estado==='En curso';}).length;
-  var v7=activos.filter(function(t){var dt=daysTo(t.dead);return dt!==null&&dt>=0&&dt<=7;}).length;
-  var v30=activos.filter(function(t){var dt=daysTo(t.dead);return dt!==null&&dt>=0&&dt<=30;}).length;
-  // Bloqueos: lo que espera MI intervención y lo que espera a un tercero externo
-  var bloqYo=activos.filter(function(t){return t.bloqueado&&t.bloqQuien===currentUser.ini;}).length;
-  var bloqTercero=activos.filter(function(t){return t.bloqueado&&!bloqEsInterno(t.bloqQuien);}).length;
-  var esLegalDash=currentUser.perfil==='Admin'||!!legalUser(currentUser.ini);
-  document.getElementById('dash-metrics').innerHTML=
-    '<div class="metric dash-item" onclick="navToFilter(\'No iniciado\')" style="cursor:pointer"><div class="metlbl">No iniciados</div><div class="metval">'+noInic+'</div><div class="metsub">Sin comenzar ↗</div></div>'+
-    '<div class="metric dash-item" onclick="navToFilter(\'En curso\')" style="cursor:pointer"><div class="metlbl">En curso</div><div class="metval" style="color:var(--bl)">'+enCurso+'</div><div class="metsub">En progreso ↗</div></div>'+
-    '<div class="metric dash-item" onclick="navToFilter(\'v7\')" style="cursor:pointer"><div class="metlbl">Vencen en 7 días</div><div class="metval" style="color:var(--am)">'+v7+'</div><div class="metsub">Atención inmediata ↗</div></div>'+
-    '<div class="metric dash-item" onclick="navToFilter(\'v30\')" style="cursor:pointer"><div class="metlbl">Vencen en 30 días</div><div class="metval" style="color:var(--tx2)">'+v30+'</div><div class="metsub">Próximos a vencer ↗</div></div>';
-  var m2=document.getElementById('dash-metrics');
-  if(esLegalDash){
-    m2.innerHTML+=
-      '<div class="metric" style="border-color:var(--rd-tx);background:var(--rd-bg);grid-column:span 1"><div class="metlbl" style="color:var(--rd-tx)">Requieren mi intervención</div><div class="metval d">'+bloqYo+'</div><div class="metsub" style="color:var(--rd-tx)">Esperan a '+escHtml(currentUser.name.split(' ')[0])+'</div></div>'+
-      '<div class="metric" style="border-color:var(--am);background:var(--am-bg);grid-column:span 1"><div class="metlbl" style="color:var(--am-tx)">Bloqueados por tercero</div><div class="metval" style="color:var(--am)">'+bloqTercero+'</div><div class="metsub" style="color:var(--am-tx)">Externos</div></div>';
-    m2.style.gridTemplateColumns='repeat(4,minmax(0,1fr))';
-  }
-  renderDashTickets();
-  // Riesgo legal: poderes y mandatos que vencen pronto o ya vencieron
-  var rl=(typeof alertasRiesgoLegal==='function')?alertasRiesgoLegal():[];
-  document.getElementById('dash-riesgo-wrap').style.display=rl.length?'block':'none';
-  if(rl.length)document.getElementById('dash-riesgo').innerHTML=rl.slice(0,6).map(calItem).join('');
-  // Alertas 48hs — Temas + DD + INTORU
-  var alertTemas=activos.filter(function(t){var dt=daysTo(t.dead);return dt!==null&&dt<=2;}).map(function(t){var dt=daysTo(t.dead);return {tipo:'TEMAS',label:t.tit,sub:fmtDate(t.dead)+(t.cli?' · '+t.cli:''),dt:dt,id:t.id,sitio:null};});
-  var alertDD=dd.filter(function(s){var dt=daysTo(s.plazoFecha);return dt!==null&&dt<=2;}).map(function(s){var dt=daysTo(s.plazoFecha);return {tipo:'DD',label:s.sitio,sub:'Plazo DD · '+fmtDate(s.plazoFecha),dt:dt,sitio:s.sitio};});
-  var alertINTORU=intoru.filter(function(s){var dt=daysTo(s.cierre);return dt!==null&&dt<=2;}).map(function(s){var dt=daysTo(s.cierre);return {tipo:'INTORU',label:s.sitio,sub:'Cierre · '+fmtDate(s.cierre),dt:dt,sitio:s.sitio};});
-  var allAlerts=alertTemas.concat(alertDD).concat(alertINTORU);
-  allAlerts.sort(function(a,b){return a.dt-b.dt;});
-  var tipColor={'TEMAS':'bdb','DD':'bda','INTORU':'bdr'};
-  document.getElementById('dash-alerts').innerHTML=allAlerts.length?allAlerts.map(function(a){
-    var r=a.dt<0;
-    var nav=a.tipo==='TEMAS'?'navToItem(\'temas\',\''+escJs(a.label.replace(/'/g,'').substring(0,20))+'\')'
-            :a.tipo==='DD'?'navToItem(\'dd\',\''+escJs(a.sitio)+'\')'
-            :'navToItem(\'intoru\',\''+escJs(a.sitio)+'\')';
-    return '<div class="aitem dash-item" onclick="'+nav+'"><div class="dot '+(r?'dotr':'dota')+'"></div><div style="flex:1"><div class="adesc">'+escHtml(a.label)+' <span class="badge '+tipColor[a.tipo]+'" style="font-size:9px;vertical-align:middle">'+a.tipo+'</span></div><div class="ameta">'+escHtml(a.sub)+'</div></div><span class="badge '+(r?'bdr':'bda')+'" style="margin-left:8px">'+(a.dt<0?'Vencido':a.dt===0?'Hoy':a.dt+' día'+(a.dt>1?'s':''))+'</span></div>';
-  }).join(''):'<div class="empty">Sin alertas próximas</div>';
-
-  // INTORU: sitios con cierre en próximos 15 días
-  var intoru15=intoru.filter(function(s){var dt=daysTo(s.cierre);return dt!==null&&dt>=0&&dt<=15;});
-  if(intoru15.length>0){
-    var intoruAlert='<div style="background:var(--rd-bg);border:1px solid var(--rd-tx);border-radius:var(--rs);padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--rd-tx)">'+
-      '📋 <strong>INTORU:</strong> '+intoru15.length+' sitio'+(intoru15.length>1?'s con cierre':' con cierre')+' en los próximos 15 días — '+intoru15.map(function(s){return escHtml(s.sitio)+' ('+fmtDate(s.cierre)+')';}).join(', ')+'</div>';
-    document.getElementById('dash-alerts').innerHTML=intoruAlert+document.getElementById('dash-alerts').innerHTML;
-  }
-  // Alta prioridad
-  var alta=activos.filter(function(t){return t.prio==='Alta';});
-  alta.sort(function(a,b){return new Date(a.dead)-new Date(b.dead);});
-  document.getElementById('dash-tasks').innerHTML=alta.length?alta.slice(0,6).map(function(t){
-    var dt=daysTo(t.dead);var dcolor=dt!==null&&dt<=7?'color:var(--rd)':dt!==null&&dt<=30?'color:var(--am)':'';
-    var eb=t.estado==='En curso'?'bdb':'bdg';
-    var bloqTag=t.bloqueado?'<span class="badge '+(bloqEsInterno(t.bloqQuien)?'bdr':'bda')+'" style="margin-left:4px">'+(bloqEsInterno(t.bloqQuien)?'🔴 '+escHtml(bloqLabelDe(t.bloqQuien)):'🟡 Tercero')+'</span>':'';
-    var tid=t.id;
-    return '<div class="aitem dash-item" data-tid="'+tid+'" onclick="navToItem(&quot;temas&quot;,null,this.dataset.tid)"><div class="dot dotr"></div><div style="flex:1"><div class="adesc">'+escHtml(t.tit)+bloqTag+'</div><div class="ameta" style="'+dcolor+'">'+fmtDate(t.dead)+(t.cli?' · '+escHtml(t.cli):'')+'</div></div><span class="badge '+eb+'" style="margin-left:8px">'+escHtml(t.estado)+'</span></div>';
-  }).join(''):'<div class="empty">Sin temas de alta prioridad</div>';
-  // Fechas Clave
-  var _scope=currentUser&&currentUser.scope?currentUser.scope:['AR','UY','PY'];
-  // Fechas Clave: siempre del scope completo del usuario, sin filtrar por tab de pais del dash
-  var proxFechas=fechas.filter(function(f){
-    return (_scope.indexOf(f.pais)>=0||f.pais==='Global'||!f.pais) && daysTo(f.fecha)!==null && daysTo(f.fecha)<=180;
-  }).sort(function(a,b){return new Date(a.fecha)-new Date(b.fecha);}).slice(0,5);
-  var fechasWrap=document.getElementById('dash-fechas-wrap');
-  if(proxFechas.length>0){
-    fechasWrap.style.display='block'; // always show regardless of dashCountry
-    document.getElementById('dash-fechas-list').innerHTML=proxFechas.map(function(f,i){
-      var dt=daysTo(f.fecha);
-      var vencida=dt<0;
-      var urgente=dt>=0&&dt<=7;
-      var proximo=dt>7&&dt<=30;
-      var col=vencida?'var(--rd)':urgente?'#F97316':proximo?'var(--am)':'var(--bl)';
-      var dtTxt=vencida?'Vencida':dt===0?'HOY':dt===1?'Mañana':(dt+' días');
-      var cols=CAT_COLORS[f.cat]?CAT_COLORS[f.cat].split(':'):['#F0EFE9','#6B6A64'];
-      var fid=f.id;
-      return '<div class="tl-item" data-fid="'+fid+'" onclick="openFechaDetail(this.dataset.fid)" style="cursor:pointer">'+
-        '<div class="tl-spine">'+
-          '<div class="tl-dot" style="background:'+col+'"></div>'+
-          (i<proxFechas.length-1?'<div class="tl-line"></div>':'')+
-        '</div>'+
-        '<div class="tl-body" style="border-left:3px solid '+col+';padding-left:10px;padding:10px 10px 10px 12px;border-radius:8px;background:var(--surf);margin-bottom:6px;border:1px solid '+col+'30">'+
-          '<div style="display:flex;justify-content:space-between;align-items:center">'+
-            '<div>'+
-              '<span style="background:'+cols[0]+';color:'+cols[1]+';font-size:10px;padding:1px 6px;border-radius:20px">'+escHtml(f.cat)+'</span>'+
-              '<div style="font-size:13px;font-weight:600;margin-top:3px">'+escHtml(f.desc)+'</div>'+
-              (f.ref?'<div style="font-size:11px;color:var(--tx3)">'+escHtml(f.ref)+'</div>':'')+
-            '</div>'+
-            '<div style="text-align:right;min-width:70px">'+
-              '<div style="font-size:13px;font-weight:700;color:'+col+'">'+dtTxt+'</div>'+
-              '<div style="font-size:10px;color:var(--tx3)">'+fmtDate(f.fecha)+'</div>'+
-            '</div>'+
-          '</div>'+
-        '</div>'+
-      '</div>';
-    }).join('');
-  } else {
-    fechasWrap.style.display='none'; // hide only if no upcoming fechas within scope
-  }
-
-  // Últimos docs
-  document.getElementById('dash-docs').innerHTML=docTableHTML(vDocs().slice(0,5),false);
-
-  // Contratos de suelo próximos a vencer
-  var vs = vSuelos().filter(function(s){return s.fin;});
-  var v90  = vs.filter(function(s){var dt=daysTo(s.fin);return dt!==null&&dt>=0&&dt<=90;});
-  var v365 = vs.filter(function(s){var dt=daysTo(s.fin);return dt!==null&&dt>90&&dt<=365;});
-  var wrap = document.getElementById('dash-suelo-alerts-wrap');
-  if(v90.length>0||v365.length>0){
-    wrap.style.display='grid';
-    var renderSueloList = function(list, elId){
-      var el = document.getElementById(elId);
-      if(!list.length){el.innerHTML='<div class="empty">Sin vencimientos</div>';return;}
-      el.innerHTML = list.sort(function(a,b){return new Date(a.fin)-new Date(b.fin);}).slice(0,5).map(function(s){
-        var dt=daysTo(s.fin);
-        var col=dt<=30?'var(--rd)':dt<=90?'var(--am)':'var(--tx2)';
-        var ssitio=s.sitio;
-        return '<div class="aitem dash-item" data-ss="'+escHtml(ssitio)+'" onclick="navToItem(&quot;suelo&quot;,this.dataset.ss)"><div class="dot" style="background:'+col+';margin-top:5px"></div>'+
-          '<div style="flex:1"><div style="font-size:12px;font-weight:500"><span class="mono">'+escHtml(s.sitio)+'</span> · '+escHtml(s.cp)+'</div>'+
-          '<div style="font-size:11px;color:var(--tx3);margin-top:2px">'+escHtml(s.pais)+' · Vence: '+fmtDate(s.fin)+'</div></div>'+
-          '<span class="badge" style="background:var(--am-bg);color:var(--am-tx)">'+dt+' días</span></div>';
-      }).join('');
-    };
-    renderSueloList(v90,'dash-suelo-v90');
-    renderSueloList(v365,'dash-suelo-v365');
-  } else {
-    wrap.style.display='none';
-  }
 }
-
 
 function setDashCountry(c){dashCountry=c;renderDash();}
 
@@ -1898,7 +1825,7 @@ function repasoMicToggle(){
 }
 
 function renderDashTickets(){
-  var wrap=document.getElementById('dash-tickets-wrap');if(!wrap)return;
+  var wrap=document.getElementById('dash-tickets-wrap');if(!wrap){if(currentUser)renderDash();return;}
   var esAdmin=currentUser.perfil==='Admin', esLegal=!!legalUser(currentUser.ini);
   if(!esAdmin&&!esLegal){wrap.style.display='none';return;}
   var pend=tickets.filter(function(t){return t.estado!=='Resuelto'&&(esAdmin||t.resp===currentUser.ini);});
