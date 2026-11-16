@@ -1064,12 +1064,43 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;margin:0;color:var(--gr-tx);font-size:13px;font-weight:600"><input type="checkbox" id="tk-devuelto" style="width:auto;margin-top:2px"> 📤 Ya le dimos la devolución al solicitante (cumplido)</label>
         <div style="font-size:11px;color:var(--tx2);margin:4px 0 0 24px">Marcalo cuando ya le respondiste o le entregaste lo que pidió, aunque el ticket siga abierto. Queda registrada la fecha en el timeline. También se marca solo si escribís una respuesta abajo.</div>
       </div>
-      <div class="field" id="tk-deadline-edit-wrap" style="display:none"><label>Deadline <span style="color:var(--tx3);font-weight:400">(solo Admin)</span></label><input type="date" id="tk-deadline-edit"></div>
+      <details class="field" id="tk-deadline-edit-wrap" style="display:none;border:1px dashed var(--brd2);border-radius:var(--rs);padding:8px 12px">
+        <summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--bl)">✏️ Editar datos del ticket <span style="color:var(--tx3);font-weight:400">(solo Admin)</span></summary>
+        <div style="margin-top:10px">
+          <div class="field"><label>Asunto</label><input type="text" id="tka-asunto"></div>
+          <div class="field"><label>Descripción</label><textarea id="tka-cuerpo" style="min-height:80px"></textarea></div>
+          <div class="fieldrow">
+            <div class="field" style="margin:0"><label>Solicitante (nombre y sector)</label><input type="text" id="tka-remitente"></div>
+            <div class="field" style="margin:0"><label>Mail del solicitante</label><input type="email" id="tka-email"></div>
+          </div>
+          <div class="fieldrow" style="margin-top:10px">
+            <div class="field" style="margin:0"><label>Responsable</label><select id="tka-resp"></select></div>
+            <div class="field" style="margin:0"><label>Prioridad</label><select id="tka-prio"><option value="Crítica">🚨 Crítica</option><option value="Alta">🔴 Alta</option><option value="Media">🟡 Media</option><option value="Baja">🟢 Baja</option></select></div>
+          </div>
+          <div class="fieldrow" style="margin-top:10px">
+            <div class="field" style="margin:0"><label>Categoría</label><select id="tka-cat"></select></div>
+            <div class="field" style="margin:0"><label>Código de sitio</label><input type="text" id="tka-sitio" oninput="this.value=this.value.toUpperCase()"></div>
+          </div>
+          <div class="fieldrow" style="margin-top:10px">
+            <div class="field" style="margin:0"><label>Fecha de creación</label><input type="date" id="tka-fecha"></div>
+            <div class="field" style="margin:0"><label>Deadline</label><input type="date" id="tk-deadline-edit"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:8px;flex-wrap:wrap">
+            <span style="font-size:11px;color:var(--tx3)">Los cambios se guardan con “Guardar”.</span>
+            <button type="button" class="btns" style="font-size:11px;padding:4px 10px;color:var(--rd-tx);border-color:var(--rd-tx)" onclick="eliminarTicketAdmin()">🗑 Eliminar ticket</button>
+          </div>
+        </div>
+      </details>
       <div class="field"><label>Estado</label>
-        <select id="tk-estado-edit">
+        <select id="tk-estado-edit" onchange="onEstadoTicketChange()">
           <option value="En curso">🟡 En curso (pendiente)</option>
           <option value="Resuelto">✅ Resuelto (cerrado)</option>
         </select>
+      </div>
+      <div class="field" id="tk-cierre-wrap" style="display:none;background:var(--bl-bg);border-radius:var(--rs);padding:10px 12px">
+        <label style="color:var(--bl)">💬 Comentario de cierre <span style="color:var(--tx3);font-weight:400">(opcional)</span></label>
+        <textarea id="tk-cierre-coment" placeholder="Ej: Se firmó la adenda el 14/11; queda archivada en SharePoint. Cualquier cosa, abrí un nuevo ticket." style="min-height:70px"></textarea>
+        <div style="font-size:11px;color:var(--tx2);margin-top:4px">Queda en el historial del ticket (lo ve el solicitante) y va en el mail de cierre.</div>
       </div>
       <div class="field"><label>¿Requiere intervención de otro sector?</label>
         <select id="tk-bloq-quien">
@@ -2865,7 +2896,7 @@ function escJs(s){return escHtml(String(s==null?'':s).replace(/\\/g,'\\\\').repl
 // Para href: escapa y bloquea esquemas peligrosos (javascript:, data:, etc.); deja http(s), mailto y rutas relativas
 function escUrl(s){s=String(s==null?'':s).trim();return (/^[a-z][a-z0-9+.\-]*:/i.test(s)&&!/^(https?|mailto):/i.test(s))?'#':escHtml(s);}
 // Los campos de texto de Tickets los escribe cualquier solicitante: se guardan ya escapados para mostrar; *Raw = texto original (para mails)
-function mapTicket(item){var f=item.fields;return{id:item.id,num:escHtml(f.NumTicket||ticketNumFromId(item.id,f.FechaRecibido)),remitente:escHtml(f.Remitente),remitenteRaw:f.Remitente||'',email:(f.EmailRemitente||'').toLowerCase(),asunto:escHtml(f.Asunto),asuntoRaw:f.Asunto||'',resp:f.Responsable||'',cuerpo:escHtml(f.Cuerpo),fecha:f.FechaRecibido?f.FechaRecibido.split('T')[0]:'',estado:(f.Estado==='Resuelto'?'Resuelto':'En curso'),link:f.LinkMail||'',cat:escHtml(f.Categoria),catRaw:f.Categoria||'',sitio:escHtml(f.CodigoSitio),deadline:f.Deadline?f.Deadline.split('T')[0]:'',bloq:escHtml(f.BloqQuien),respuesta:escHtml(f.Respuesta),respuestaRaw:f.Respuesta||'',urgencia:escHtml(f.Urgencia),cierre:f.FechaCierre?f.FechaCierre.split('T')[0]:'',
+function mapTicket(item){var f=item.fields;return{id:item.id,num:escHtml(f.NumTicket||ticketNumFromId(item.id,f.FechaRecibido)),remitente:escHtml(f.Remitente),remitenteRaw:f.Remitente||'',email:(f.EmailRemitente||'').toLowerCase(),asunto:escHtml(f.Asunto),asuntoRaw:f.Asunto||'',resp:f.Responsable||'',cuerpo:escHtml(f.Cuerpo),cuerpoRaw:f.Cuerpo||'',fecha:f.FechaRecibido?f.FechaRecibido.split('T')[0]:'',estado:(f.Estado==='Resuelto'?'Resuelto':'En curso'),link:f.LinkMail||'',cat:escHtml(f.Categoria),catRaw:f.Categoria||'',sitio:escHtml(f.CodigoSitio),sitioRaw:f.CodigoSitio||'',deadline:f.Deadline?f.Deadline.split('T')[0]:'',bloq:escHtml(f.BloqQuien),respuesta:escHtml(f.Respuesta),respuestaRaw:f.Respuesta||'',urgencia:escHtml(f.Urgencia),urgenciaRaw:f.Urgencia||'',cierre:f.FechaCierre?f.FechaCierre.split('T')[0]:'',
   // Timeline: creado → tomado por Legal → primera devolución → cerrado (fechas completas)
   creadoTs:f.FechaRecibido||'',tomadoTs:f.FechaTomado||'',tomadoPor:escHtml(f.TomadoPor),respTs:f.FechaRespuesta||'',cierreTs:f.FechaCierre||''};}
 
@@ -4329,6 +4360,20 @@ function gestionarTicket(id){
   // Deadline editable solo para Admin
   document.getElementById('tk-deadline-edit-wrap').style.display=esAdmin?'block':'none';
   document.getElementById('tk-deadline-edit').value=t.deadline||'';
+  document.getElementById('tk-deadline-edit-wrap').open=false;
+  if(esAdmin){
+    // Edición completa (solo Admin): se cargan los valores actuales
+    var setV=function(i,v){document.getElementById(i).value=v||'';};
+    var legal=usersInGroup('Legal');
+    document.getElementById('tka-resp').innerHTML=legal.map(function(u){return '<option value="'+escHtml(u.ini)+'">'+escHtml(u.name)+'</option>';}).join('')
+      +(t.resp&&!legal.some(function(u){return u.ini===t.resp;})?'<option value="'+escHtml(t.resp)+'">'+escHtml(t.resp)+'</option>':'');
+    document.getElementById('tka-cat').innerHTML='<option value="">— Sin categoría —</option>'+Array.prototype.slice.call(document.querySelectorAll('#tk-cat option')).filter(function(o){return o.value;}).map(function(o){return '<option value="'+escHtml(o.value)+'">'+escHtml(o.textContent)+'</option>';}).join('');
+    setV('tka-asunto',t.asuntoRaw);setV('tka-cuerpo',t.cuerpoRaw!=null?t.cuerpoRaw:'');setV('tka-remitente',t.remitenteRaw);setV('tka-email',t.email);
+    setV('tka-resp',t.resp);setV('tka-prio',t.urgenciaRaw||'Media');setV('tka-cat',t.catRaw);setV('tka-sitio',t.sitioRaw);setV('tka-fecha',t.fecha);
+  }
+  // Comentario de cierre: aparece al pasar a Resuelto
+  document.getElementById('tk-cierre-coment').value='';
+  onEstadoTicketChange();
   // Historial de respuestas: Admin lo puede editar/borrar; el resto lo ve
   document.getElementById('tk-hist-wrap').style.display=(t.respuestaRaw||esAdmin)?'block':'none';
   document.getElementById('tk-hist-ro').style.display=esAdmin?'none':'block';
@@ -4356,7 +4401,22 @@ async function guardarGestionTicket(){
       hist=(hist?hist+'\n\n':'')+sello+' '+respuesta;
       if(!t.respTs)fields.FechaRespuesta=ahora;
     }
+    // Comentario de cierre: al pasar a Resuelto se agrega al historial
+    var cierreCom=(estado==='Resuelto'&&t.estado!=='Resuelto')?document.getElementById('tk-cierre-coment').value.trim():'';
+    if(cierreCom){
+      hist=(hist?hist+'\n\n':'')+'['+new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})+' · '+currentUser.ini+'] Cierre: '+cierreCom;
+    }
     if(hist!==(t.respuestaRaw||''))fields.Respuesta=hist;
+    // Edición completa de datos (solo Admin)
+    if(esAdmin){
+      var gv=function(i){return document.getElementById(i).value.trim();};
+      var cambios={Asunto:[gv('tka-asunto'),t.asuntoRaw],Cuerpo:[gv('tka-cuerpo'),t.cuerpoRaw||''],Remitente:[gv('tka-remitente'),t.remitenteRaw],
+        EmailRemitente:[gv('tka-email').toLowerCase(),t.email],Responsable:[gv('tka-resp'),t.resp],Urgencia:[gv('tka-prio'),t.urgenciaRaw||'Media'],
+        Categoria:[gv('tka-cat'),t.catRaw],CodigoSitio:[gv('tka-sitio'),t.sitioRaw]};
+      Object.keys(cambios).forEach(function(k){if(cambios[k][0]!==(cambios[k][1]||''))fields[k]=cambios[k][0];});
+      if(fields.Asunto!==undefined){if(!fields.Asunto){throw new Error('El asunto no puede quedar vacío.');}fields.Title=fields.Asunto.substring(0,255);}
+      var fr=gv('tka-fecha');if(fr&&fr!==t.fecha)fields.FechaRecibido=fr+'T12:00:00Z';
+    }
     // Casilla "Ya le dimos la devolución"
     var devuelto=document.getElementById('tk-devuelto').checked;
     if(devuelto&&!t.respTs&&!fields.FechaRespuesta)fields.FechaRespuesta=ahora;
@@ -4370,14 +4430,17 @@ async function guardarGestionTicket(){
     if(esAdmin){var dl=document.getElementById('tk-deadline-edit').value;if(dl!==(t.deadline||''))fields.Deadline=dl?dl+'T00:00:00Z':null;}
     await updateListItem(LIST_TICKETS,editingTicketId,fields);
     await syncAll();
-    if(t&&t.email&&respuesta){
+    var mailTo=fields.EmailRemitente!==undefined?fields.EmailRemitente:(t&&t.email);
+    if(t&&mailTo&&(respuesta||cierreCom)){
       var estadoTxt=estado==='Resuelto'?'RESUELTO':'EN CURSO';
-      var c='Hola,\n\nTu solicitud '+t.num+' ha sido actualizada.\n\nEstado: '+estadoTxt+'\n';
+      var c='Hola,\n\nTu solicitud '+t.num+(cierreCom?' quedó cerrada.':' ha sido actualizada.')+'\n\nEstado: '+estadoTxt+'\n';
       if(bloq)c+='Requiere intervencion de: '+bloq+'\n';
-      c+='\nRespuesta del equipo legal:\n'+recortarParaMail(respuesta)+'\n\nSaludos,\nATIS Legal Team';
+      if(respuesta)c+='\nRespuesta del equipo legal:\n'+recortarParaMail(respuesta)+'\n';
+      if(cierreCom)c+='\nComentario de cierre:\n'+recortarParaMail(cierreCom)+'\n';
+      c+='\nSaludos,\nATIS Legal Team';
       // Mail al solicitante con botones (abrirlo solo lo bloquea el navegador)
       showMailStep('✅ Ticket actualizado: '+estado,'Avisale al solicitante por mail. Podés adjuntar documentos antes de enviarlo.',
-        t.email,'['+t.num+'] Actualización — '+t.asuntoRaw,c);
+        mailTo,'['+t.num+'] '+(cierreCom?'Cerrado':'Actualización')+' — '+(fields.Asunto||t.asuntoRaw),c);
     } else {
       closeFormTicket();
       showToast('Ticket actualizado: '+estado);
@@ -4386,6 +4449,20 @@ async function guardarGestionTicket(){
   btn.disabled=false;btn.textContent='Guardar y enviar mail';
 }
 function closeFormTicket(){document.getElementById('form-ticket').classList.remove('open');}
+// Muestra el comentario de cierre solo cuando se está cerrando un ticket abierto
+function onEstadoTicketChange(){
+  var t=tickets.find(function(x){return x.id===editingTicketId;});
+  var cerrando=document.getElementById('tk-estado-edit').value==='Resuelto'&&t&&t.estado!=='Resuelto';
+  document.getElementById('tk-cierre-wrap').style.display=cerrando?'block':'none';
+}
+// Solo Admin: borrar un ticket cargado por error (pide confirmación)
+async function eliminarTicketAdmin(){
+  if(currentUser.perfil!=='Admin')return;
+  var t=tickets.find(function(x){return x.id===editingTicketId;});if(!t)return;
+  if(!confirm('¿Eliminar el ticket '+t.num+' — '+t.asuntoRaw+'?\n\nNo se puede deshacer desde el Hub.'))return;
+  try{await deleteListItem(LIST_TICKETS,t.id);closeFormTicket();await syncAll();showToast('Ticket '+t.num+' eliminado');}
+  catch(e){showToast('Error: '+e.message,true);}
+}
 
 // Los mailto muy largos fallan en algunos clientes: se recorta y se remite al Hub
 function recortarParaMail(s){s=s||'';return s.length>1200?s.substring(0,1200)+'… (ver el detalle completo en el Legal Hub)':s;}
