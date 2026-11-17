@@ -2316,7 +2316,8 @@ function goTo(page,el){
   var A={tickets:'<button class="btnp" onclick="openFormTicket()">+ Nueva solicitud</button>',fechas:'<button class="btnp" onclick="openFormFecha()">+ Nueva fecha clave</button>',mla:'<button class="btnp" onclick="openFormMLA()">+ Nuevo MLA</button>',inm:'<button class="btnp" onclick="openFormInm()">+ Nuevo inmueble</button>',poderes:'<button class="btns" onclick="exportCSV(\'poderes\')" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormPoder()">+ Nuevo poder</button>',societario:socTab==="autoridades"?'<button class="btnp" onclick="openFormSocAut()">+ Nueva autoridad</button>':'<button class="btnp" onclick="openFormSocAcc()">+ Nuevo accionista</button>',temas:'<button class="btns" onclick="abrirReunion()" style="font-size:12px">📊 Modo reunión</button><button class="btns" onclick="exportCSV(\"temas\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormTema()">+ Nuevo tema</button>',documentos:'<button class="btns" onclick="exportCSV(\"documentos\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDoc()">+ Nuevo documento</button>',suelo:'<button class="btns" onclick="exportCSV(\"suelo\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormSuelo()">+ Nuevo contrato</button>',intoru:'<button class="btns" onclick="exportCSV(\"intoru\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormINTORU()">+ Nuevo sitio</button>',dd:'<button class="btns" onclick="exportCSV(\"dd\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDD()">+ Nuevo sitio</button>'};
   document.getElementById('tb-act').innerHTML=A[page]||'';
   if(page==='tickets'&&esSolicitanteTk()){document.getElementById('tb-title').textContent='Mis pedidos a Legal';document.getElementById('tb-sub').textContent='Cargá un pedido y seguí en qué está';}
-  if(page==='tickets'&&currentUser&&(currentUser.perfil==='Admin'||legalUser(currentUser.ini)))document.getElementById('tb-act').insertAdjacentHTML('afterbegin','<button class="btns" onclick="abrirReunion()" style="font-size:12px">📊 Modo reunión</button>');
+  if(page==='tickets'&&currentUser&&!VER_COMO&&currentUser.perfil==='Admin')document.getElementById('tb-act').insertAdjacentHTML('afterbegin','<button class="btns" onclick="abrirVerComo()" style="font-size:12px" title="Ver el Hub como lo ve un solicitante">👁 Ver como…</button>');
+  if(page==='tickets'&&currentUser&&!VER_COMO&&(currentUser.perfil==='Admin'||legalUser(currentUser.ini)))document.getElementById('tb-act').insertAdjacentHTML('afterbegin','<button class="btns" onclick="abrirReunion()" style="font-size:12px">📊 Modo reunión</button>');
   var EXTRA_T={semanas:['Punteo semanal','Repaso de tickets uno por uno — reunión de los lunes con el equipo'],calendario:['Calendario','Todos los vencimientos en un solo lugar']};
   if(EXTRA_T[page]){document.getElementById('tb-title').textContent=EXTRA_T[page][0];document.getElementById('tb-sub').textContent=EXTRA_T[page][1];}
   if(page==='semanas')setTimeout(function(){renderPunteo();renderSemanas();},50);
@@ -2425,7 +2426,44 @@ function onCategoriaTicketChange(){
 }
 
 // ─── VISTA DEL SOLICITANTE: "Mis pedidos" ────────────────────────────────────
-function esSolicitanteTk(){return !!currentUser&&currentUser.perfil!=='Admin'&&!legalUser(currentUser.ini);}
+function esSolicitanteTk(){return !!currentUser&&(!!VER_COMO||(currentUser.perfil!=='Admin'&&!legalUser(currentUser.ini)));}
+// ─── VISTA PREVIA "VER COMO…" (solo Admin): muestra el Hub como lo ve un solicitante, sin poder enviar nada ───
+var VER_COMO=null, VER_COMO_NAV=null;
+function personaTk(){return VER_COMO||currentUser;}
+function abrirVerComo(){
+  if(!currentUser||currentUser.perfil!=='Admin')return;
+  var lista=USERS_LIST.filter(function(u){return u.email&&!legalUser(u.ini)&&u.perfil!=='Admin'&&(u.grupos.indexOf('Tickets')>=0||u.perfil==='Solicitante');});
+  lista.sort(function(a,b){return a.name.localeCompare(b.name);});
+  var h='<div style="font-size:13px;color:var(--tx2);margin-bottom:12px;line-height:1.5">Elegí a quién querés “ponerte en sus zapatos”. Vas a ver el Hub exactamente como lo ve esa persona, con <b>sus</b> pedidos. Es solo vista previa: <b>no se envía nada en su nombre</b>.</div>';
+  h+=lista.map(function(u){var n=tickets.filter(function(t){return t.email===u.email;}).length;
+    return '<button class="btns" style="width:100%;text-align:left;margin-bottom:6px;padding:10px 12px;display:flex;justify-content:space-between" data-em="'+escHtml(u.email)+'" onclick="entrarVerComo(this.dataset.em)"><span><b>'+escHtml(u.name)+'</b>'+(u.sector?' · '+escHtml(u.sector):'')+'</span><span style="color:var(--tx3)">'+n+(n===1?' pedido':' pedidos')+'</span></button>';}).join('')||'<div class="empty">No hay solicitantes cargados en Usuarios_Hub.</div>';
+  h+='<button class="btns" style="width:100%;margin-top:8px" onclick="closeFormTicket()">Cancelar</button>';
+  ['tk-vista-crear','tk-vista-gestionar','tk-vista-mail'].forEach(function(i){document.getElementById(i).style.display='none';});
+  var v=document.getElementById('tk-vista-ver');v.innerHTML=h;v.style.display='block';
+  document.getElementById('form-ticket-title').textContent='👁 Ver el Hub como…';
+  document.getElementById('form-ticket').classList.add('open');
+}
+function entrarVerComo(email){
+  var u=USERS_LIST.filter(function(x){return x.email===email;})[0];if(!u)return;
+  VER_COMO={email:u.email,name:u.name,sector:u.sector||'',scope:u.scope||['AR','UY','PY']};
+  closeFormTicket();
+  // Menú: solo Tickets, como lo ve el solicitante
+  VER_COMO_NAV={};document.querySelectorAll('[id^="nav-"]').forEach(function(el){VER_COMO_NAV[el.id]=el.style.display;if(el.id!=='nav-tickets')el.style.display='none';});
+  document.getElementById('sb-name').textContent=u.name;document.getElementById('sb-role').textContent='Solicitante'+(u.sector?' · '+u.sector:'');
+  var b=document.getElementById('ver-como-bar');
+  if(!b){b=document.createElement('div');b.id='ver-como-bar';b.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:600;background:#7C3AED;color:#fff;padding:8px 14px;border-radius:10px;max-width:calc(100vw - 32px);font-size:12px;box-shadow:0 2px 10px rgba(0,0,0,.2);display:flex;gap:10px;align-items:center';document.body.appendChild(b);}
+  b.innerHTML='👁 Estás viendo el Hub como <b>'+escHtml(u.name)+'</b> (vista previa, no se envía nada) <button onclick="salirVerComo()" style="background:#fff;color:#7C3AED;border:none;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:600;cursor:pointer">Salir</button>';
+  ['tickets-estado'].forEach(function(i){document.getElementById(i).value='En curso';});
+  goTo('tickets',document.getElementById('nav-tickets'));renderTickets();
+}
+function salirVerComo(){
+  VER_COMO=null;
+  if(VER_COMO_NAV)Object.keys(VER_COMO_NAV).forEach(function(id){var el=document.getElementById(id);if(el)el.style.display=VER_COMO_NAV[id];});
+  VER_COMO_NAV=null;
+  document.getElementById('sb-name').textContent=currentUser.name;document.getElementById('sb-role').textContent=currentUser.role;
+  var b=document.getElementById('ver-como-bar');if(b)b.remove();
+  closeFormTicket();goTo('tickets',document.getElementById('nav-tickets'));renderTickets();
+}
 function fechaCorta(ts){return ts?fmtDate(String(ts).split('T')[0]):'';}
 // Estado en palabras simples (sin jerga interna)
 function estadoAmigable(t){
@@ -2467,7 +2505,7 @@ function renderSolicHead(base,esSol){
   el.style.display='block';
   el.innerHTML='<div class="card" style="padding:16px 18px;margin-bottom:12px">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">'
-    +'<div><div style="font-size:17px;font-weight:600">'+saludo+', '+escHtml(String(currentUser.name).split(' ')[0])+' 👋</div>'
+    +'<div><div style="font-size:17px;font-weight:600">'+saludo+', '+escHtml(String(personaTk().name).split(' ')[0])+' 👋</div>'
     +'<div style="font-size:12px;color:var(--tx2);margin-top:2px">Acá cargás tus pedidos a Legal y ves en qué está cada uno. Tocá un pedido para ver el detalle y las respuestas.</div></div>'
     +'<button class="btnp" style="padding:10px 18px;font-size:14px" onclick="openFormTicket()">+ Nuevo pedido a Legal</button></div>'
     +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">'
@@ -4613,6 +4651,7 @@ function catDeTicket(t){return t.catRaw||(String(t.asuntoRaw||'').split(' — ')
 function nombreSolicitante(t){return String(t.remitenteRaw||'').replace(/\s*\([^)]*\)\s*$/,'').trim()||t.email;}
 function sectorSolicitante(t){var m=String(t.remitenteRaw||'').match(/\(([^)]*)\)\s*$/);return m?m[1]:'';}
 function ticketsVisibles(){
+  if(VER_COMO)return tickets.filter(function(t){return t.email===VER_COMO.email;});
   var miEmail=(currentUser.email||'').toLowerCase(), esLegal=!!legalUser(currentUser.ini);
   if(currentUser.perfil==='Admin')return tickets.slice();
   return tickets.filter(function(t){return (esLegal&&t.resp===currentUser.ini)||(miEmail&&t.email===miEmail);});
@@ -4630,7 +4669,7 @@ function llenarFiltroSolicitantes(base){
 function renderTickets(){
   var val=function(id){var e=document.getElementById(id);return e?e.value:'';};
   var base=ticketsVisibles();
-  var esLegalV=!!legalUser(currentUser.ini), puedeV=currentUser.perfil==='Admin'||esLegalV;
+  var esLegalV=!!legalUser(currentUser.ini), puedeV=(currentUser.perfil==='Admin'||esLegalV)&&!VER_COMO;
   var nProy=base.filter(function(t){return t.esProyecto&&t.estado!=='Resuelto';}).length, nDia=base.filter(function(t){return !t.esProyecto&&t.estado!=='Resuelto';}).length;
   var vt=document.getElementById('tk-vista');
   if(vt){vt.style.display=(puedeV||nProy)?'flex':'none';
@@ -4638,7 +4677,7 @@ function renderTickets(){
     vt.style.display=nProy?'flex':'none';
     vt.innerHTML=TK_VISTA==='proy'?'<span class="badge" style="background:var(--bl-bg);color:var(--bl);cursor:pointer;padding:4px 10px" onclick="setVistaTickets(\'todos\')">Filtro: 🧩 Solo complejos ✕</span>':'<button class="btns" style="font-size:12px" onclick="setVistaTickets(\'proy\')">🧩 Ver solo complejos ('+nProy+')</button>';}
   if(TK_VISTA==='proy'&&TK_EXTRA!=='pm')base=base.filter(function(t){return t.esProyecto;});
-  var esLegal=!!legalUser(currentUser.ini), puedeGestionar=currentUser.perfil==='Admin'||esLegal;
+  var esLegal=!!legalUser(currentUser.ini), puedeGestionar=(currentUser.perfil==='Admin'||esLegal)&&!VER_COMO;
   // Solicitantes: vista simple (sin filtros internos de Legal)
   var esSol=!puedeGestionar;
   ['tickets-etapa','tickets-resp','tickets-pais','tickets-venc','tickets-prio','tickets-orden'].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display=esSol?'none':'';});
@@ -5129,12 +5168,12 @@ function openFormTicket(){
   TK_TIPO_NUEVO='simple';TK_RESP_MANUAL=false;
   ['tk-sector','tk-asunto','tk-desc'].forEach(function(id){document.getElementById(id).value='';});
   // Sector según Usuarios_Hub (Legal → Legales por defecto): si ya se conoce, no se pregunta
-  var sec=(currentUser&&(currentUser.sector||(legalUser(currentUser.ini)?'Legales':'')))||'';
+  var yo=personaTk(), sec=(yo&&(yo.sector||(!VER_COMO&&legalUser(currentUser.ini)?'Legales':'')))||'';
   document.getElementById('tk-sector').value=sec;
   document.getElementById('tk-sector-wrap').style.display=sec?'none':'';
   var rs=document.getElementById('tk-sector-resumen');
   rs.style.display=sec?'block':'none';
-  rs.innerHTML=sec?'Pedido de <b>'+escHtml(currentUser.name)+'</b> · '+escHtml(sec)+' <a href="#" style="font-size:11px;margin-left:4px" onclick="document.getElementById(\'tk-sector-wrap\').style.display=\'\';this.parentNode.style.display=\'none\';return false">cambiar sector</a>':'';
+  rs.innerHTML=sec?'Pedido de <b>'+escHtml(yo.name)+'</b> · '+escHtml(sec)+' <a href="#" style="font-size:11px;margin-left:4px" onclick="document.getElementById(\'tk-sector-wrap\').style.display=\'\';this.parentNode.style.display=\'none\';return false">cambiar sector</a>':'';
   // País: si el usuario trabaja en un solo país, viene puesto (y con él, a quién va)
   var sc=(currentUser&&currentUser.scope)||[];document.getElementById('tk-pais').value=sc.length===1?sc[0]:'';
   document.getElementById('tkv-on').checked=false;['tkv-fecha','tkv-motivo','tkv-impacto'].forEach(function(i){document.getElementById(i).value='';});onVencRealToggle();
@@ -5337,6 +5376,7 @@ async function submitTicket(){
   var desc=document.getElementById('tk-desc').value.trim();
   var urgencia=document.getElementById('tk-urgencia').value;
   var pais=document.getElementById('tk-pais').value;
+  if(VER_COMO){alert('Estás en vista previa como '+VER_COMO.name+': el pedido no se envía.\n\nSalí de la vista previa (barra de arriba) para cargar pedidos reales.');return;}
   var falta=[];if(!sector)falta.push('tu sector');if(!pais)falta.push('el país');if(!resp)falta.push('a quién va dirigido');if(!asunto)falta.push('el asunto');
   if(falta.length){alert('Falta completar: '+falta.join(', ')+'.');if(!sector)document.getElementById('tk-sector-wrap').style.display='';return;}
   var vencOn=document.getElementById('tkv-on').checked, vencReal=vencOn?document.getElementById('tkv-fecha').value:'', vencMot=document.getElementById('tkv-motivo').value.trim(), vencImp=document.getElementById('tkv-impacto').value;
