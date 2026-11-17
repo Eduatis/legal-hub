@@ -2492,7 +2492,10 @@ function tarjetaSolicitante(t){
   var e=estadoAmigable(t), cat=catDeTicket(t), col=CAT_COLOR[cat]||'#9CA3AF', fx=fechasAmigables(t);
   var h='<div class="card tk-mio" data-tid="'+t.id+'" onclick="verTicket(this.dataset.tid)" style="margin-bottom:10px;padding:0;overflow:hidden;display:flex'+(t.estado==='Resuelto'?';opacity:.8':'')+'">';
   h+='<div style="width:6px;flex-shrink:0;background:'+col+'"></div><div style="flex:1;padding:12px 16px;min-width:0">';
-  h+='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px"><span class="badge" style="background:'+e.bg+';color:'+e.col+';font-weight:600">'+e.icon+' '+escHtml(e.lbl)+'</span><span class="mono" style="font-size:10px">'+t.num+'</span>'+(t.esProyecto?'<span class="badge" style="background:var(--bl-bg);color:var(--bl)">🧩 Complejo</span>':'')+'</div>';
+  var sem=t.estado!=='Resuelto'?semaforoTicket(t):null, pz=paisTicket(t);
+  h+='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">'+(noVisto(t,leerVistos())?'<span class="badge" style="background:var(--bl);color:#fff;font-weight:600">🔔 Nuevo</span>':'')+'<span class="badge" style="background:'+e.bg+';color:'+e.col+';font-weight:600">'+e.icon+' '+escHtml(e.lbl)+'</span>'
+    +(sem?'<span style="font-size:12px;font-weight:600;color:'+sem.col+'">'+sem.icon+' '+escHtml(sem.lbl.replace(/ · ⏸.*$/,''))+'</span>':'')
+    +'<span class="mono" style="font-size:10px">'+t.num+'</span>'+(pz?'<span class="badge">'+(PAIS_UI[pz]||escHtml(pz))+'</span>':'')+(t.esProyecto?'<span class="badge" style="background:var(--bl-bg);color:var(--bl)">🧩 Complejo</span>':'')+'</div>';
   h+='<div style="font-size:14px;font-weight:600;margin-bottom:2px">'+t.asunto+'</div>';
   h+='<div style="font-size:12px;color:var(--tx2)">'+(cat?escHtml(nombreCategoria(cat))+' · ':'')+'cargado el '+fmtDate(t.fecha)+(fx?' · '+fx:'')+'</div>';
   if(t.esProyecto&&(t.hitos||[]).length)h+=pipelineHTML(t.hitos,false);
@@ -2503,7 +2506,7 @@ function tarjetaSolicitante(t){
 // Encabezado: saludo, botón grande y contadores que filtran
 function renderSolicHead(base,esSol){
   var el=document.getElementById('tk-solic-head');if(!el)return;
-  if(!esSol){el.style.display='none';return;}
+  if(!esSol){el.style.display='none';actualizarBadgeNovedades(0);return;}
   var abiertos=base.filter(function(t){return t.estado!=='Resuelto';});
   var espera=abiertos.filter(function(t){return t.esperaDesde;}).length;
   var resp=abiertos.filter(function(t){return (t.respTs||t.respuestaRaw)&&!t.esperaDesde;}).length;
@@ -2522,11 +2525,95 @@ function renderSolicHead(base,esSol){
     +cont('',base.length,'Todos','')
     +'</div>'
     +(espera?'<div style="margin-top:12px;padding:8px 12px;border-radius:var(--rs);background:var(--am-bg);color:var(--am-tx);font-size:12px">⏸ En <b>'+espera+'</b> '+(espera===1?'pedido':'pedidos')+' Legal está esperando información. Abrilos para ver qué falta.</div>':'')
+    +'</div>'
+    +bloqueNovedadesSol(base)+bloquePaisesSol(base)+bloqueVencenSol(base);
+}
+// ── Inicio del solicitante: novedades sin ver, países con semáforo y lo que vence pronto ──
+var TK_SOL_PAIS='';
+var PAIS_UI={AR:'🇦🇷 Argentina',UY:'🇺🇾 Uruguay',PY:'🇵🇾 Paraguay',Regional:'🌎 Regional',sin:'📍 Sin país'};
+// "Visto": se guarda en este navegador (solo números de pedido y una marca de la última novedad, nada del contenido)
+function claveVisto(){return 'tkVisto:'+String((personaTk()||{}).email||'').toLowerCase();}
+function leerVistos(){try{return JSON.parse(localStorage.getItem(claveVisto())||'null');}catch(e){return null;}}
+function marcaNovedad(t){return [t.respTs||'',String(t.respuestaRaw||'').length,t.cierreTs||'',t.esperaDesde||''].join('|');}
+function tieneNovedad(t){return !!(t.respTs||t.respuestaRaw||t.cierreTs||t.esperaDesde);}
+function noVisto(t,vistos){
+  if(!tieneNovedad(t))return false;
+  if(!vistos){var ts=t.respTs||t.cierreTs||t.esperaDesde||'';return !!ts&&(Date.now()-new Date(ts))<14*864e5;}
+  return vistos[t.id]!==marcaNovedad(t);
+}
+function marcarVisto(t){
+  if(VER_COMO)return;// la vista previa del Admin no toca lo que ve el solicitante
+  try{var v=leerVistos()||{};v[t.id]=marcaNovedad(t);localStorage.setItem(claveVisto(),JSON.stringify(v));}catch(e){}
+}
+function novedadTxt(t){
+  if(t.estado==='Resuelto')return 'Legal lo dio por resuelto';
+  if(t.esperaDesde)return 'Legal necesita información'+(t.esperaDe?' de '+t.esperaDe:'');
+  return 'Tenés una respuesta de Legal';
+}
+function bloqueNovedadesSol(base){
+  var vistos=leerVistos();
+  // Primera vez en este navegador: lo de hace más de 14 días se da por visto (así no aparece todo como nuevo)
+  if(!vistos&&!VER_COMO&&base.length){
+    var ini={};base.forEach(function(t){if(tieneNovedad(t)&&!noVisto(t,null))ini[t.id]=marcaNovedad(t);});
+    try{localStorage.setItem(claveVisto(),JSON.stringify(ini));vistos=ini;}catch(e){}
+  }
+  var nov=base.filter(function(t){return noVisto(t,vistos);});
+  actualizarBadgeNovedades(nov.length);
+  if(!nov.length)return '';
+  return '<div class="card" style="margin-bottom:12px;border-left:4px solid var(--bl);padding:12px 16px">'
+    +'<div style="font-weight:600;font-size:14px;margin-bottom:6px">🔔 '+(nov.length===1?'Tenés 1 novedad que todavía no viste':'Tenés '+nov.length+' novedades que todavía no viste')+'</div>'
+    +nov.slice(0,6).map(function(t){return '<div class="tk-mio" data-tid="'+t.id+'" onclick="verTicket(this.dataset.tid)" style="display:flex;gap:8px;align-items:center;padding:6px 8px;border-radius:var(--rs);cursor:pointer;font-size:13px"><span>💬</span><span style="flex:1;min-width:0"><b>'+t.asunto+'</b> <span style="color:var(--tx2)">— '+escHtml(novedadTxt(t))+'</span></span><span style="color:var(--bl);font-size:12px;font-weight:600">Ver ›</span></div>';}).join('')
+    +'</div>';
+}
+function actualizarBadgeNovedades(n){
+  var nav=document.getElementById('nav-tickets');if(!nav)return;
+  var b=nav.querySelector('.sbadge-nov');
+  if(!n){if(b)b.remove();return;}
+  if(!b){b=document.createElement('span');b.className='sbadge sbadge-nov';b.style.background='var(--bl)';b.style.color='#fff';nav.appendChild(b);}
+  b.textContent=n;b.title=n+' novedades sin ver';
+}
+function grupoSemaforo(t){
+  var s=semaforoTicket(t),i=s.icon;
+  if(t.respTs)return 'ok';if(i==='⛔'||i==='⏰')return 'r';if(i==='🟠'||i==='🟡')return 'a';if(i==='🟢')return 'v';return 'n';
+}
+function bloquePaisesSol(base){
+  var abiertos=base.filter(function(t){return t.estado!=='Resuelto';});
+  var paises={};base.forEach(function(t){var p=paisTicket(t)||'sin';if(!paises[p])paises[p]={tot:0,ab:0,r:0,a:0,v:0,n:0,ok:0};paises[p].tot++;});
+  abiertos.forEach(function(t){var p=paisTicket(t)||'sin';paises[p].ab++;paises[p][grupoSemaforo(t)]++;});
+  var ks=['AR','UY','PY','Regional','sin'].filter(function(k){return paises[k];}).concat(Object.keys(paises).filter(function(k){return !PAIS_UI[k];}));
+  if(!ks.length)return '';
+  if(TK_SOL_PAIS&&!paises[TK_SOL_PAIS])TK_SOL_PAIS='';
+  var chip=function(k,lbl,p){
+    var on=TK_SOL_PAIS===k;
+    var sem=p?[p.r?'<span title="Vencidos o atrasados">🔴 '+p.r+'</span>':'',p.a?'<span title="Vencen en los próximos días">🟡 '+p.a+'</span>':'',p.v?'<span title="En plazo">🟢 '+p.v+'</span>':'',p.n?'<span title="En espera o sin fecha">⚪ '+p.n+'</span>':'',p.ok?'<span title="Legal ya respondió">💬 '+p.ok+'</span>':''].filter(Boolean).join(' '):'';
+    return '<div class="tk-cont'+(on?' on':'')+'" style="min-width:120px" onclick="TK_SOL_PAIS=\''+k+'\';renderTickets()"><div style="font-size:13px;font-weight:600">'+lbl+'</div>'
+      +'<div style="font-size:11px;color:var(--tx2);margin-top:2px">'+(p?p.ab+' en curso · '+p.tot+' en total':base.length+' pedidos')+'</div>'
+      +(sem?'<div style="font-size:11px;margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">'+sem+'</div>':'')+'</div>';
+  };
+  return '<div class="card" style="margin-bottom:12px;padding:12px 16px"><div style="font-size:13px;font-weight:600;margin-bottom:8px">🌎 Tus pedidos por país <span style="font-weight:400;color:var(--tx3);font-size:11px">— tocá un país para ver solo esos</span></div>'
+    +'<div style="display:flex;gap:10px;flex-wrap:wrap">'+chip('','Todos',null)+ks.map(function(k){return chip(k,PAIS_UI[k]||escHtml(k),paises[k]);}).join('')+'</div></div>';
+}
+function bloqueVencenSol(base){
+  var arr=base.filter(function(t){
+    if(t.estado==='Resuelto'||t.respTs||(!t.venc&&!t.deadline)||(t.esperaDesde&&!t.venc))return false;
+    if(TK_SOL_PAIS&&(paisTicket(t)||'sin')!==TK_SOL_PAIS)return false;
+    var d=daysTo(t.venc||t.deadline);return d!==null&&d<=7;
+  }).sort(function(a,b){return daysTo(a.venc||a.deadline)-daysTo(b.venc||b.deadline);});
+  if(!arr.length)return '';
+  return '<div class="card" style="margin-bottom:12px;padding:12px 16px"><div style="font-size:13px;font-weight:600;margin-bottom:6px">⏰ Lo que vence pronto'+(TK_SOL_PAIS?' — '+(PAIS_UI[TK_SOL_PAIS]||escHtml(TK_SOL_PAIS)):'')+'</div>'
+    +arr.slice(0,6).map(function(t){var s=semaforoTicket(t);
+      return '<div class="tk-mio" data-tid="'+t.id+'" onclick="verTicket(this.dataset.tid)" style="display:flex;gap:8px;align-items:center;padding:6px 8px;border-radius:var(--rs);cursor:pointer;font-size:13px">'
+        +'<span style="font-weight:600;color:'+s.col+';white-space:nowrap">'+s.icon+' '+escHtml(s.lbl.replace(/ · ⏸.*$/,''))+'</span>'
+        +'<span style="flex:1;min-width:0">'+t.asunto+(t.venc&&t.vencMotivo?' <span style="color:var(--tx3)">— '+escHtml(t.vencMotivo)+'</span>':'')+'</span>'
+        +'<span style="color:var(--bl);font-size:12px;font-weight:600">Ver ›</span></div>';}).join('')
+    +(arr.length>6?'<div style="font-size:11px;color:var(--tx3);margin-top:4px">y '+(arr.length-6)+' más en la lista de abajo</div>':'')
     +'</div>';
 }
 // Detalle de un pedido (solo lectura) con acceso directo a escribirle a Legal
 function verTicket(id){
   var t=tickets.find(function(x){return x.id===id;});if(!t)return;
+  var eraNuevo=noVisto(t,leerVistos());
+  if(eraNuevo){marcarVisto(t);setTimeout(renderTickets,0);}
   var e=estadoAmigable(t), r=legalUser(t.resp)||{}, fx=fechasAmigables(t);
   var sec=function(tit,body,bg){return '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:4px">'+tit+'</div><div style="font-size:13px;line-height:1.5;white-space:pre-wrap;padding:10px 12px;border-radius:var(--rs);background:'+(bg||'var(--surf2)')+'">'+body+'</div></div>';};
   var h='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"><span class="badge" style="background:'+e.bg+';color:'+e.col+';font-weight:600">'+e.icon+' '+escHtml(e.lbl)+'</span>'+prioBadge(t)+(t.esProyecto?'<span class="badge" style="background:var(--bl-bg);color:var(--bl)">🧩 Complejo</span>':'')+'</div>';
@@ -4704,6 +4791,9 @@ function renderTickets(){
   ordenarTickets(list,esSol?'recientes':(val('tickets-orden')||'deadline'));
   var el=document.getElementById('tickets-list');if(!el)return;
   if(esSol){
+    if(TK_SOL_PAIS)list=list.filter(function(t){return (paisTicket(t)||'sin')===TK_SOL_PAIS;});
+    // Primero lo que tiene novedades sin ver
+    var vis=leerVistos();list.sort(function(a,b){return (noVisto(b,vis)?1:0)-(noVisto(a,vis)?1:0);});
     el.innerHTML=list.length?list.map(tarjetaSolicitante).join(''):'<div class="card"><div class="empty">'+(base.length?'No hay pedidos para este filtro.':'Todavía no cargaste pedidos. Tocá <b>+ Nuevo pedido a Legal</b> para empezar.')+'</div></div>';
     return;
   }
