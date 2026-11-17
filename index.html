@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ATIS Legal Hub</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://alcdn.msauth.net https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src https://graph.microsoft.com https://login.microsoftonline.com https://*.sharepoint.com; frame-src https://login.microsoftonline.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://alcdn.msauth.net https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src https://graph.microsoft.com https://login.microsoftonline.com https://*.sharepoint.com; frame-src 'self' https://login.microsoftonline.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://alcdn.msauth.net/browser/2.38.2/js/msal-browser.min.js" integrity="sha384-hhkHFODse2T75wPL7oJ0RZ+0CgRa74LNPhgx6wO6DMNEhU3/fSbTZdVzxsgyUelp" crossorigin="anonymous"></script>
@@ -1354,7 +1354,37 @@ async function doLogin(){
 }
 async function getToken(){
   const accounts=msalInstance.getAllAccounts();if(!accounts.length)throw new Error('No hay sesión activa');
-  const result=await msalInstance.acquireTokenSilent({scopes:SCOPES,account:accounts[0]});return result.accessToken;
+  try{const result=await msalInstance.acquireTokenSilent({scopes:SCOPES,account:accounts[0]});ocultarReconectar();return result.accessToken;}
+  catch(e){
+    console.warn('Token:',e.errorCode||e.message);
+    mostrarReconectar();
+    throw new Error('Se venció la sesión con Microsoft. Tocá “🔄 Reconectar” (arriba) y volvé a guardar: lo que escribiste no se perdió.');
+  }
+}
+// Si la renovación silenciosa falla, se ofrece reconectar con una ventanita (sin recargar la página ni perder lo escrito)
+function mostrarReconectar(){
+  var b=document.getElementById('reconectar-bar');
+  if(!b){b=document.createElement('div');b.id='reconectar-bar';
+    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:900;background:var(--am-bg);color:var(--am-tx);border-bottom:1px solid var(--am);padding:8px 16px;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;font-size:13px';
+    b.innerHTML='<span>⚠️ Se venció la sesión con Microsoft. Lo que estabas escribiendo sigue acá.</span><button class="btnp" style="padding:4px 14px" onclick="reconectarSesion()">🔄 Reconectar</button>';
+    document.body.appendChild(b);}
+  b.style.display='flex';
+}
+function ocultarReconectar(){var b=document.getElementById('reconectar-bar');if(b)b.style.display='none';}
+async function reconectarSesion(){
+  var acc=msalInstance.getAllAccounts()[0];
+  try{await msalInstance.acquireTokenPopup({scopes:SCOPES,account:acc,loginHint:acc&&acc.username});ocultarReconectar();showToast('✅ Reconectado: ya podés volver a guardar');}
+  catch(e){
+    if(/popup_window_error|empty_window_error|popup/i.test((e.errorCode||'')+e.message)){
+      alert('El navegador bloqueó la ventanita de Microsoft. Permití las ventanas emergentes para este sitio (ícono en la barra de direcciones) y volvé a tocar “Reconectar”.');
+    } else showToast('No se pudo reconectar: '+(e.errorCode||e.message),true);
+  }
+}
+// Mantiene la sesión fresca: renueva en segundo plano cada 20 minutos y al volver a la pestaña
+function mantenerSesion(){
+  var renovar=function(){if(msalInstance.getAllAccounts().length)getToken().catch(function(){});};
+  setInterval(renovar,20*60*1000);
+  document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')renovar();});
 }
 function createToDoTask(titulo, deadline, notas){
   // Use To Do deep link — no API permissions needed
@@ -1509,7 +1539,7 @@ async function initApp(account){
   // Repaso del día por voz: para quien tiene dashboard
   if(currentUser.perfil!=='Solicitante'&&!currentUser.mlaOnly)document.getElementById('btn-repaso').style.display='inline-block';
   // Register login
-  registrarLogin();
+  registrarLogin();mantenerSesion();
   // Respaldo mensual automático (solo Admin, en segundo plano)
   setTimeout(respaldoAutomatico,4000);
   // Show pending popup after short delay
