@@ -1579,7 +1579,8 @@ async function initApp(account){
   fillLegalSelects();
   // Menús que dependen del perfil: antes de cargar, así el tablero del inicio ya los tiene en cuenta
   if(currentUser.perfil==='Admin'||legalUser(currentUser.ini))document.getElementById('nav-semanas').style.display='flex';
-  if(currentUser.perfil==='Admin')document.getElementById('nav-mails').style.display='flex';
+  // Mails importantes: desactivado por ahora (Edu, 2026-11-17). Para reactivar, poner MAILS_ACTIVO=true.
+  if(typeof MAILS_ACTIVO!=='undefined'&&MAILS_ACTIVO&&currentUser.perfil==='Admin')document.getElementById('nav-mails').style.display='flex';
   if(currentUser.perfil!=='Solicitante'&&!currentUser.mlaOnly)document.getElementById('nav-calendario').style.display='flex';
   await syncAll();hideLoading();document.getElementById('app').style.display='block';
   if(currentUser.perfil==='Admin'){document.getElementById('setup-btn-wrap').style.display='flex';}
@@ -5602,8 +5603,9 @@ try{if(/[?&]revision=1/.test(location.search))sessionStorage.setItem('hubRevisio
 // El contenido de los mails NO se guarda en ningún lado (ni SharePoint, ni el navegador, ni el repo):
 // solo vive en memoria mientras la pestaña está abierta. Lo único que se guarda son los criterios (lista Criterios_Mails).
 const LIST_CRIT_MAILS='Criterios_Mails';
+var MAILS_ACTIVO=false;
 var MAILS=null, MAILS_CRIT=[], MAILS_DIAS=7, MAILS_CARGANDO=false, MAILS_FILTRO='prioridad', MAILS_ERR='', MAILS_LEIDOS=0;
-function puedeMails(){return !!(currentUser&&currentUser.perfil==='Admin'&&!VER_COMO);}
+function puedeMails(){return !!(MAILS_ACTIVO&&currentUser&&currentUser.perfil==='Admin'&&!VER_COMO);}
 function normTx(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
 // Criterios base (genéricos, sin datos sensibles). Los propios se suman desde la lista Criterios_Mails.
 var MAIL_KW_URG=[['intimac','intimación'],['carta documento','carta documento'],['demanda','demanda'],['mediacion','mediación'],['cedula','cédula'],['oficio\\b','oficio'],['embargo','embargo'],['audiencia','audiencia'],['apercib','apercibimiento'],['rescis','rescisión'],['clausur','clausura'],['multa','multa'],['sancion','sanción'],['notificac','notificación'],['venc\\w* (hoy|manana)','vence hoy/mañana'],['urgen','urgente'],['plazo','plazo'],['vencimiento','vencimiento'],['juicio','juicio'],['juzgado','juzgado'],['tribunal','tribunal'],['denuncia','denuncia'],['inspeccion','inspección'],['desalojo','desalojo'],['usurpac','usurpación'],['corte de (luz|energia|servicio)','corte de servicio']];
