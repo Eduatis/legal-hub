@@ -311,6 +311,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div class="navi" id="nav-semanas" style="display:none" onclick="goTo('semanas',this)">
           <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1.5" y="2.5" width="11" height="10" rx="1.5" stroke="currentColor"/><path d="M1.5 5.5h11M4.5 1v3M9.5 1v3M4 8h2M8 8h2M4 10.5h2" stroke="currentColor" stroke-linecap="round"/></svg>Punteo semanal
         </div>
+        <div class="navi" id="nav-mails" style="display:none" onclick="goTo('mails',this)">
+          <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1" y="2.5" width="12" height="9" rx="1.5" stroke="currentColor"/><path d="M1.5 3.5L7 8l5.5-4.5" stroke="currentColor" stroke-linejoin="round"/></svg>Mails importantes
+        </div>
         <div class="navi" id="nav-fechas" onclick="goTo('fechas',this)">
           <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="1" y="2" width="12" height="11" rx="1.5" stroke="currentColor"/><path d="M4 1v2M10 1v2M1 5h12" stroke="currentColor" stroke-linecap="round"/><circle cx="4.5" cy="8.5" r="1" fill="currentColor"/><circle cx="7" cy="8.5" r="1" fill="var(--rd)"/><circle cx="9.5" cy="8.5" r="1" fill="currentColor"/></svg>Fechas Clave
         </div>
@@ -541,6 +544,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <div class="card" style="margin:10px 0 14px"><div class="cardh"><div class="cardht">Track record semanal</div></div><div id="sem-track"><div class="empty">Cargando…</div></div></div>
           <div id="sem-detalle"></div>
         </details>
+      </div>
+      <div class="pageview" id="page-mails">
+        <div id="mails-cont"></div>
       </div>
       <div class="pageview" id="page-calendario">
         <div id="cal-filtros" style="margin-bottom:8px"></div>
@@ -1573,6 +1579,7 @@ async function initApp(account){
   fillLegalSelects();
   // Menús que dependen del perfil: antes de cargar, así el tablero del inicio ya los tiene en cuenta
   if(currentUser.perfil==='Admin'||legalUser(currentUser.ini))document.getElementById('nav-semanas').style.display='flex';
+  if(currentUser.perfil==='Admin')document.getElementById('nav-mails').style.display='flex';
   if(currentUser.perfil!=='Solicitante'&&!currentUser.mlaOnly)document.getElementById('nav-calendario').style.display='flex';
   await syncAll();hideLoading();document.getElementById('app').style.display='block';
   if(currentUser.perfil==='Admin'){document.getElementById('setup-btn-wrap').style.display='flex';}
@@ -2318,9 +2325,10 @@ function goTo(page,el){
   if(page==='tickets'&&esSolicitanteTk()){document.getElementById('tb-title').textContent='Mis pedidos a Legal';document.getElementById('tb-sub').textContent='Cargá un pedido y seguí en qué está';}
   if(page==='tickets'&&currentUser&&!VER_COMO&&currentUser.perfil==='Admin')document.getElementById('tb-act').insertAdjacentHTML('afterbegin','<button class="btns" onclick="abrirVerComo()" style="font-size:12px" title="Ver el Hub como lo ve un solicitante">👁 Ver como…</button>');
   if(page==='tickets'&&currentUser&&!VER_COMO&&(currentUser.perfil==='Admin'||legalUser(currentUser.ini)))document.getElementById('tb-act').insertAdjacentHTML('afterbegin','<button class="btns" onclick="abrirReunion()" style="font-size:12px">📊 Modo reunión</button>');
-  var EXTRA_T={semanas:['Punteo semanal','Repaso de tickets uno por uno — reunión de los lunes con el equipo'],calendario:['Calendario','Todos los vencimientos en un solo lugar']};
+  var EXTRA_T={mails:['Mails importantes','Resumen de tu bandeja — se lee en vivo, no se guarda nada'],semanas:['Punteo semanal','Repaso de tickets uno por uno — reunión de los lunes con el equipo'],calendario:['Calendario','Todos los vencimientos en un solo lugar']};
   if(EXTRA_T[page]){document.getElementById('tb-title').textContent=EXTRA_T[page][0];document.getElementById('tb-sub').textContent=EXTRA_T[page][1];}
   if(page==='semanas')setTimeout(function(){renderPunteo();renderSemanas();},50);
+  if(page==='mails')setTimeout(function(){if(!MAILS&&!MAILS_CARGANDO&&MAILS_ERR!=='consent')cargarMails(false);else renderMails();},50);
   if(page==='calendario'&&typeof renderCalendario==='function')setTimeout(renderCalendario,50);
   if(page==='analytics')setTimeout(renderAnalytics,100);
   if(page==='fechas')setTimeout(renderFechas,50);
@@ -5485,6 +5493,330 @@ try{if(/[?&]revision=1/.test(location.search))sessionStorage.setItem('hubRevisio
     console.error('MSAL init error:', e);
   }
 })();
+
+// ─── MAILS IMPORTANTES (solo Admin) ─────────────────────────────────────────
+// Se leen en vivo desde Outlook con el permiso Mail.Read del propio usuario.
+// El contenido de los mails NO se guarda en ningún lado (ni SharePoint, ni el navegador, ni el repo):
+// solo vive en memoria mientras la pestaña está abierta. Lo único que se guarda son los criterios (lista Criterios_Mails).
+const LIST_CRIT_MAILS='Criterios_Mails';
+var MAILS=null, MAILS_CRIT=[], MAILS_DIAS=7, MAILS_CARGANDO=false, MAILS_FILTRO='prioridad', MAILS_ERR='', MAILS_LEIDOS=0;
+function puedeMails(){return !!(currentUser&&currentUser.perfil==='Admin'&&!VER_COMO);}
+function normTx(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
+// Criterios base (genéricos, sin datos sensibles). Los propios se suman desde la lista Criterios_Mails.
+var MAIL_KW_URG=[['intimac','intimación'],['carta documento','carta documento'],['demanda','demanda'],['mediacion','mediación'],['cedula','cédula'],['oficio\\b','oficio'],['embargo','embargo'],['audiencia','audiencia'],['apercib','apercibimiento'],['rescis','rescisión'],['clausur','clausura'],['multa','multa'],['sancion','sanción'],['notificac','notificación'],['venc\\w* (hoy|manana)','vence hoy/mañana'],['urgen','urgente'],['plazo','plazo'],['vencimiento','vencimiento'],['juicio','juicio'],['juzgado','juzgado'],['tribunal','tribunal'],['denuncia','denuncia'],['inspeccion','inspección'],['desalojo','desalojo'],['usurpac','usurpación'],['corte de (luz|energia|servicio)','corte de servicio']];
+var MAIL_KW_IMP=[['contrato','contrato'],['adenda','adenda'],['firma','firma'],['poder(es)?\\b','poder'],['acta\\b','acta'],['asamblea','asamblea'],['directorio','directorio'],['due diligence','due diligence'],['mla\\b','MLA'],['locacion','locación'],['arrendamiento','arrendamiento'],['oferta','oferta'],['negociac','negociación'],['aprobac','aprobación'],['aprob(a|ar|es)\\b','aprobar'],['revis','revisión'],['comentarios','comentarios'],['borrador','borrador'],['escritura','escritura'],['habilitac','habilitación'],['permiso','permiso'],['tasa','tasa'],['municipal','municipal'],['cesion','cesión'],['garantia','garantía'],['factura','factura'],['deuda','deuda'],['reclamo','reclamo'],['propietari','propietario'],['servidumbre','servidumbre']];
+var MAIL_KW_PEDIDO=['necesito','necesitamos','podrias','podes\\b','podra[ns]?\\b','por favor','te pido','les pido','solicito','solicitamos','me confirm','confirmame','confirmanos','aguardo','quedo atent','quedamos atent','a la espera','cuando puedas','me avisas','avisame','necesitaria','te paso para','para tu revision','para revision','para firma','\\?'];
+var MAIL_RUIDO=['no-?reply','donotreply','do-not-reply','notification','newsletter','mailer','marketing','news@','digest','noticias','webinar','promo','unsubscribe','desuscrib'];
+var MESES_ES={enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,setiembre:9,octubre:10,noviembre:11,diciembre:12};
+function reKw(lista){return lista.map(function(k){var src=Array.isArray(k)?k[0]:k;return {re:new RegExp((src==='\\?'?'':'\\b')+'('+src+')','i'),lbl:Array.isArray(k)?k[1]:k};});}
+var RE_URG=reKw(MAIL_KW_URG), RE_IMP=reKw(MAIL_KW_IMP), RE_PED=reKw(MAIL_KW_PEDIDO), RE_RUIDO=reKw(MAIL_RUIDO);
+function hits(res,tx){var o=[];res.forEach(function(r){if(r.re.test(tx)&&o.indexOf(r.lbl)<0)o.push(r.lbl);});return o;}
+
+async function getMailToken(interactivo){
+  var acc=msalInstance.getAllAccounts()[0];if(!acc)throw new Error('No hay sesión activa');
+  try{return (await msalInstance.acquireTokenSilent({scopes:['Mail.Read'],account:acc})).accessToken;}
+  catch(e){
+    if(!interactivo){var err=new Error('consent');err.consent=true;throw err;}
+    return (await msalInstance.acquireTokenPopup({scopes:['Mail.Read'],account:acc,loginHint:acc.username})).accessToken;
+  }
+}
+async function mailGet(url,token,texto){
+  var h={'Authorization':'Bearer '+token};if(texto)h['Prefer']='outlook.body-content-type="text"';
+  var r=await fetch(url,{headers:h});
+  if(!r.ok){var m='status '+r.status;try{var d=await r.json();if(d.error&&d.error.message)m=d.error.message;}catch(e){}throw new Error(m);}
+  return r.json();
+}
+async function cargarCriteriosMails(){
+  try{MAILS_CRIT=(await getListItems(LIST_CRIT_MAILS)).map(function(it){var f=it.fields||{};return {id:it.id,valor:(f.Title||'').trim(),tipo:(f.Tipo||'palabra').toLowerCase(),nota:f.Nota||'',peso:(f.Peso!=null&&f.Peso!=='')?Number(f.Peso):null};}).filter(function(c){return c.valor;});}
+  catch(e){console.warn('Criterios_Mails',e);MAILS_CRIT=[];}
+}
+function pesoCrit(c){if(c.peso!=null&&!isNaN(c.peso))return c.peso;return c.tipo==='ignorar'?-100:c.tipo==='remitente'?30:c.tipo==='dominio'?20:20;}
+
+async function cargarMails(interactivo){
+  if(MAILS_CARGANDO)return;MAILS_CARGANDO=true;MAILS_ERR='';renderMails();
+  try{
+    var token=await getMailToken(interactivo);
+    await cargarCriteriosMails();
+    var desde=new Date(Date.now()-MAILS_DIAS*864e5).toISOString();
+    var sel='id,subject,from,toRecipients,ccRecipients,receivedDateTime,importance,isRead,flag,hasAttachments,bodyPreview,conversationId,webLink,inferenceClassification';
+    var url='https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=100&$select='+sel+'&$filter=receivedDateTime ge '+desde+'&$orderby=receivedDateTime desc';
+    var msgs=[],pag=0;
+    while(url&&pag<6){var d=await mailGet(url,token);msgs=msgs.concat(d.value||[]);url=d['@odata.nextLink']||null;pag++;}
+    // Enviados: para saber qué conversaciones ya respondiste
+    var env={};
+    try{
+      var u2='https://graph.microsoft.com/v1.0/me/mailFolders/sentitems/messages?$top=100&$select=conversationId,sentDateTime&$filter=sentDateTime ge '+desde+'&$orderby=sentDateTime desc',p2=0;
+      while(u2&&p2<4){var d2=await mailGet(u2,token);(d2.value||[]).forEach(function(m){if(!env[m.conversationId]||m.sentDateTime>env[m.conversationId])env[m.conversationId]=m.sentDateTime;});u2=d2['@odata.nextLink']||null;p2++;}
+    }catch(e){console.warn('sentitems',e);}
+    MAILS_LEIDOS=msgs.length;
+    // Una tarjeta por conversación (el último mail recibido)
+    var porConv={};
+    msgs.forEach(function(m){var k=m.conversationId||m.id;if(!porConv[k])porConv[k]={m:m,n:0,noLeidos:0};porConv[k].n++;if(!m.isRead)porConv[k].noLeidos++;});
+    var lista=Object.keys(porConv).map(function(k){var c=porConv[k];return analizarMail(c.m,c.n,c.noLeidos,env[k]);});
+    lista.sort(function(a,b){return b.score-a.score;});
+    // Para los más relevantes se lee el texto nuevo del mail (sin el historial citado) y se resume
+    var top=lista.filter(function(x){return x.score>=15;}).slice(0,35);
+    for(var i=0;i<top.length;i+=6){
+      await Promise.all(top.slice(i,i+6).map(async function(x){
+        try{var b=await mailGet('https://graph.microsoft.com/v1.0/me/messages/'+encodeURIComponent(x.id)+'?$select=uniqueBody,body',token,true);
+          var tx=(b.uniqueBody&&b.uniqueBody.content)||(b.body&&b.body.content)||'';
+          Object.assign(x,analizarMail(x.raw,x.n,x.noLeidos,x.respondidoTs,limpiarCuerpo(tx)));}catch(e){console.warn('body',e);}
+      }));
+    }
+    lista.sort(function(a,b){return b.score-a.score||(b.fecha>a.fecha?1:-1);});
+    MAILS=lista;
+  }catch(e){
+    if(e.consent)MAILS_ERR='consent';
+    else if(/consent|AADSTS65001|AADSTS90094|admin/i.test(e.message||e.errorCode||''))MAILS_ERR='Microsoft pide la aprobación de un administrador de TI para el permiso de lectura de mails. ('+(e.errorCode||e.message)+')';
+    else if(/popup/i.test((e.errorCode||'')+e.message))MAILS_ERR='El navegador bloqueó la ventanita de Microsoft. Permití las ventanas emergentes para este sitio y volvé a tocar “Conectar Outlook”.';
+    else MAILS_ERR=e.message||String(e);
+    console.error(e);
+  }
+  MAILS_CARGANDO=false;renderMails();
+}
+
+// Saca historial citado, firmas y avisos legales: queda solo lo que la persona escribió
+function limpiarCuerpo(tx){
+  tx=String(tx||'').replace(/\r/g,'');
+  var cortes=[/\n\s*(De|From|Enviado el|Sent|Para|To)\s*:.*\n/i,/\n.{0,80}(escribió|wrote):\s*\n/i,/\n-{2,}\s*(Original Message|Mensaje original)/i,/\n_{8,}/,/\n\s*--\s*\n/];
+  cortes.forEach(function(re){var m=tx.match(re);if(m&&m.index>20)tx=tx.slice(0,m.index);});
+  var firmas=/\n\s*(saludos|saludo|atentamente|cordialmente|slds|abrazo|abz|gracias[.!,]?\s*$|best regards|regards|kind regards)\b/i;
+  var mf=tx.match(firmas);if(mf&&mf.index>40)tx=tx.slice(0,mf.index);
+  tx=tx.split('\n').filter(function(l){return !/^\s*>/.test(l)&&!/(este (mensaje|correo|e-?mail)|this (e-?mail|message)) (es|is|y|and|puede|may|contiene|contains)|confidencial|confidential|antes de imprimir|before printing/i.test(l);}).join('\n');
+  return tx.replace(/[ \t]+/g,' ').replace(/\n{2,}/g,'\n').trim();
+}
+function fechasEnTexto(tx){
+  var hoy=new Date();hoy.setHours(0,0,0,0);var out=[];
+  var re=/\b(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?\b/g,m;
+  while((m=re.exec(tx))){var d=+m[1],mo=+m[2],y=m[3]?+m[3]:hoy.getFullYear();if(y<100)y+=2000;if(d<1||d>31||mo<1||mo>12)continue;if(!m[3]&&/\d[.,]$/.test(tx.slice(Math.max(0,m.index-2),m.index)))continue;pushF(new Date(y,mo-1,d),m[0]);}
+  var re2=/\b(\d{1,2}) de (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)(?: de (\d{4}))?/g;
+  var n=normTx(tx);while((m=re2.exec(n))){pushF(new Date(m[3]?+m[3]:hoy.getFullYear(),MESES_ES[m[2]]-1,+m[1]),m[0]);}
+  // "antes del jueves", "para el lunes", "hasta el viernes": el próximo día con ese nombre
+  var re3=/\b(antes del?|para el|hasta el|el proximo|este|el) (lunes|martes|miercoles|jueves|viernes|sabado|domingo)\b/g,DS={domingo:0,lunes:1,martes:2,miercoles:3,jueves:4,viernes:5,sabado:6};
+  while((m=re3.exec(n))){var dd3=(DS[m[2]]-hoy.getDay()+7)%7||7;var t3=new Date(hoy);t3.setDate(t3.getDate()+dd3);pushF(t3,m[2]);}
+  if(/\bhoy\b/.test(n)&&/\b(vence|plazo|antes|hasta|limite|necesito|urgente)\b/.test(n))pushF(new Date(hoy),'hoy');
+  if(/\bmanana\b/.test(n)&&/\b(vence|plazo|antes|hasta|limite|necesito|urgente|reunion|firma)\b/.test(n)){var t=new Date(hoy);t.setDate(t.getDate()+1);pushF(t,'mañana');}
+  function pushF(dt,txt){if(isNaN(dt))return;var dd=Math.round((dt-hoy)/864e5);if(dd<-1||dd>60)return;if(!out.some(function(o){return o.dias===dd;}))out.push({dias:dd,fecha:dt,txt:txt});}
+  out.sort(function(a,b){return a.dias-b.dias;});return out;
+}
+function oraciones(tx){
+  return String(tx||'').split(/(?<=[.!?])\s+|\n+/).map(function(s){return s.trim();}).filter(function(s){
+    if(s.length<18||s.length>500)return false;
+    return !/^(hola|buen(os|as)? (dia|tarde|noche)s?|estimad[oa]s?|querid[oa]s?|hi|hello|dear|gracias|muchas gracias|saludos)\b[^.?!]{0,40}[,.!]?$/i.test(normTx(s));
+  });
+}
+function analizarMail(m,n,noLeidos,respondidoTs,cuerpo){
+  var yo=(currentUser.email||'').toLowerCase(), dominio=yo.split('@')[1]||'';
+  var nombreYo=normTx((currentUser.name||'').split(' ')[0]);
+  var de=(m.from&&m.from.emailAddress)||{}, deMail=(de.address||'').toLowerCase(), deNom=de.name||deMail;
+  var to=(m.toRecipients||[]).map(function(r){return (r.emailAddress.address||'').toLowerCase();});
+  var cc=(m.ccRecipients||[]).map(function(r){return (r.emailAddress.address||'').toLowerCase();});
+  var asunto=m.subject||'(sin asunto)';
+  var base=cuerpo!=null?cuerpo:(m.bodyPreview||'');
+  var tAs=normTx(asunto), tBo=normTx(base), tTodo=tAs+' \n '+tBo;
+  var score=0, motivos=[];
+  function mot(icon,txt,cls){motivos.push({icon:icon,txt:txt,cls:cls||'bdg'});}
+  // Palabras clave (el asunto pesa el doble)
+  var uA=hits(RE_URG,tAs), uB=hits(RE_URG,tBo).filter(function(x){return uA.indexOf(x)<0;});
+  score+=Math.min(uA.length*30+uB.length*15,60);
+  if(uA.length||uB.length)mot('⚖️',uA.concat(uB).slice(0,3).join(', '),'bdr');
+  var iA=hits(RE_IMP,tAs), iB=hits(RE_IMP,tBo).filter(function(x){return iA.indexOf(x)<0;});
+  score+=Math.min(iA.length*12+iB.length*5,25);
+  if(iA.length||iB.length)mot('📄',iA.concat(iB).slice(0,3).join(', '),'bdb');
+  // Señales de Outlook
+  if(m.importance==='high'){score+=20;mot('❗','Marcado importante','bdr');}
+  if(m.flag&&m.flag.flagStatus==='flagged'){score+=15;mot('🚩','Con marca','bda');}
+  if(m.inferenceClassification==='other')score-=10;
+  // ¿Va dirigido a mí?
+  var directo=to.indexOf(yo)>=0, soloCC=!directo&&cc.indexOf(yo)>=0, tot=to.length+cc.length;
+  if(directo&&to.length<=3){score+=12;mot('👤','Dirigido a vos');}else if(directo)score+=6;
+  if(soloCC){score-=10;mot('📋','Estás en copia');}
+  if(tot>12)score-=10;
+  if(deMail===yo)score-=30;
+  // Remitente
+  var interno=dominio&&deMail.split('@')[1]===dominio;
+  var hubU=(typeof USERS_LIST!=='undefined'?USERS_LIST:[]).filter(function(u){return (u.email||'').toLowerCase()===deMail;})[0];
+  if(hubU&&legalUser(hubU.ini))score+=5;
+  if(!interno&&deMail){score+=5;}
+  var ruido=hits(RE_RUIDO,normTx(deMail+' '+deNom)+' '+tAs).length>0||(cuerpo!=null&&/unsubscribe|desuscrib|darte de baja|darse de baja/.test(tBo));
+  if(ruido){score-=35;mot('📰','Automático / newsletter');}
+  // Pedidos y preguntas
+  var ped=hits(RE_PED,tBo);
+  var meNombran=nombreYo&&nombreYo.length>2&&new RegExp('\\b'+nombreYo+'\\b').test(tBo);
+  if(ped.length&&(directo||meNombran)){score+=12;}
+  if(meNombran){score+=6;}
+  // Fechas mencionadas
+  var fechas=fechasEnTexto(asunto+'\n'+base).filter(function(f){return f.dias>=0;});
+  var prox=fechas[0];
+  if(prox){if(prox.dias<=2)score+=25;else if(prox.dias<=7)score+=15;else if(prox.dias<=21)score+=5;}
+  // ¿Ya respondiste?
+  var respondido=respondidoTs&&respondidoTs>m.receivedDateTime;
+  var horas=(Date.now()-new Date(m.receivedDateTime))/36e5;
+  var espera=!respondido&&directo&&!ruido&&(ped.length>0||meNombran)&&horas>20;
+  if(respondido){score-=20;mot('✔️','Ya respondiste','bdgr');}
+  if(espera){score+=15;mot('⏳','Espera tu respuesta hace '+(horas<48?Math.round(horas)+' h':Math.round(horas/24)+' días'),'bda');}
+  if(n>=4){score+=5;mot('💬',n+' mensajes en el hilo');}
+  if(!m.isRead||noLeidos)score+=3;
+  // Criterios propios (lista Criterios_Mails)
+  var ign=false;
+  MAILS_CRIT.forEach(function(c){
+    var v=normTx(c.valor),ok=false;
+    if(c.tipo==='remitente')ok=deMail===v||normTx(deNom).indexOf(v)>=0;
+    else if(c.tipo==='dominio')ok=deMail.split('@')[1]===v.replace(/^@/,'')||deMail.endsWith('.'+v.replace(/^@/,''));
+    else if(c.tipo==='ignorar')ok=deMail===v||deMail.split('@')[1]===v.replace(/^@/,'')||tAs.indexOf(v)>=0;
+    else ok=new RegExp('\\b'+v.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).test(tTodo);
+    if(ok){var p=pesoCrit(c);score+=p;if(c.tipo==='ignorar')ign=true;else mot('⭐',(c.nota||c.valor),p>=0?'bdb':'bdg');}
+  });
+  // Resumen con criterio: las oraciones que más dicen (pedido, fecha, tema legal, te nombran)
+  var resumen=[], tePiden='';
+  if(cuerpo!=null){
+    var ors=oraciones(cuerpo);
+    var pts=ors.map(function(s,i){var t=normTx(s),p=0;
+      if(hits(RE_URG,t).length)p+=3;if(hits(RE_PED,t).length)p+=2.5;if(fechasEnTexto(s).length)p+=2;if(hits(RE_IMP,t).length)p+=1;
+      if(meNombran&&nombreYo&&t.indexOf(nombreYo)>=0)p+=1;if(i===0)p+=1.5;if(i===1)p+=.5;if(/\d/.test(t))p+=.3;return {s:s,i:i,p:p};});
+    var pd=pts.filter(function(x){var t=normTx(x.s);return hits(RE_PED,t).length&&!/^\s*(gracias|saludos)/.test(t);}).sort(function(a,b){return b.p-a.p;})[0];
+    if(pd&&(directo||meNombran))tePiden=pd.s.length>200?pd.s.slice(0,197)+'…':pd.s;else pd=null;
+    // El resumen no repite lo que ya aparece en "Te piden"
+    resumen=pts.filter(function(x){return !pd||x.i!==pd.i;}).sort(function(a,b){return b.p-a.p;}).slice(0,3).sort(function(a,b){return a.i-b.i;}).map(function(x){return x.s.length>240?x.s.slice(0,237)+'…':x.s;});
+  }
+  if(!resumen.length&&m.bodyPreview)resumen=[m.bodyPreview.replace(/\s+/g,' ').slice(0,220)+(m.bodyPreview.length>220?'…':'')];
+  if(ign)score=Math.min(score,-50);
+  // Urgente: puntaje alto Y una señal de urgencia real (tema legal urgente, fecha en ≤3 días, marcado importante o criterio propio)
+  var senalUrg=uA.length||uB.length||(prox&&prox.dias<=3)||m.importance==='high'||motivos.some(function(x){return x.icon==='⭐';});
+  var nivel=ign?'ign':(score>=55&&senalUrg)||score>=90?'urg':score>=25?'imp':'resto';
+  return {id:m.id,raw:m,n:n,noLeidos:noLeidos,respondidoTs:respondidoTs,asunto:asunto,deNom:deNom,deMail:deMail,fecha:m.receivedDateTime,link:m.webLink||'',adj:!!m.hasAttachments,
+    _cuerpo:cuerpo,score:score,nivel:nivel,motivos:motivos,resumen:resumen,tePiden:tePiden,fechaProx:prox||null,espera:espera,respondido:!!respondido,ruido:ruido,leido:cuerpo!=null};
+}
+
+function fechaMail(iso){
+  var d=new Date(iso),h=new Date();var hh=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+  var dif=Math.floor((new Date(h.getFullYear(),h.getMonth(),h.getDate())-new Date(d.getFullYear(),d.getMonth(),d.getDate()))/864e5);
+  if(dif===0)return 'hoy '+hh;if(dif===1)return 'ayer '+hh;
+  return ['dom','lun','mar','mié','jue','vie','sáb'][d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1);
+}
+function txtDias(d){return d===0?'hoy':d===1?'mañana':'en '+d+' días';}
+function renderMails(){
+  var el=document.getElementById('mails-cont');if(!el)return;
+  if(!puedeMails()){el.innerHTML='<div class="empty">Esta sección es solo para el administrador.</div>';return;}
+  var h='';
+  // Barra superior
+  h+='<div class="filters" style="align-items:center">';
+  h+='<select class="fsel" id="mails-dias" onchange="MAILS_DIAS=+this.value;cargarMails(false)">'+[3,7,14,30].map(function(d){return '<option value="'+d+'"'+(d===MAILS_DIAS?' selected':'')+'>Últimos '+d+' días</option>';}).join('')+'</select>';
+  h+='<input class="fsel" id="mails-q" type="search" placeholder="🔎 Buscar (asunto, remitente…)" oninput="renderMailsLista()" style="min-width:200px">';
+  h+='<button class="btns" style="font-size:12px" onclick="cargarMails(true)">'+(MAILS_CARGANDO?'⏳ Leyendo…':'↻ Volver a leer')+'</button>';
+  h+='<button class="btns" style="font-size:12px" onclick="toggleCriteriosMails()">⚙️ Criterios</button>';
+  h+='</div>';
+  h+='<div id="mails-crit" style="display:none"></div>';
+  if(MAILS_CARGANDO&&!MAILS){h+='<div class="card"><div class="empty">⏳ Leyendo tu bandeja de entrada y armando el resumen…</div></div>';el.innerHTML=h;return;}
+  if(MAILS_ERR==='consent'||(!MAILS&&!MAILS_ERR)){
+    h+='<div class="card" style="text-align:center;padding:28px 20px"><div style="font-size:32px">📬</div><div style="font-weight:600;font-size:15px;margin:6px 0">Conectá tu Outlook para ver el resumen</div>'+
+      '<div style="font-size:12px;color:var(--tx2);max-width:520px;margin:0 auto 14px;line-height:1.5">El Hub lee tus mails en vivo, en tu navegador y con tu sesión. <b>No se guardan en ningún lado</b>: ni en SharePoint, ni en GitHub, ni en esta computadora. La primera vez Microsoft te pide aceptar el permiso “Leer correo de usuario”.</div>'+
+      '<button class="btnp" onclick="cargarMails(true)">Conectar Outlook</button></div>';
+    el.innerHTML=h;return;
+  }
+  if(MAILS_ERR){h+='<div class="card" style="border-color:var(--rd)"><div style="color:var(--rd-tx);font-size:13px">⚠️ No se pudieron leer los mails: '+escHtml(MAILS_ERR)+'</div><button class="btns" style="margin-top:10px;font-size:12px" onclick="cargarMails(true)">Reintentar</button></div>';el.innerHTML=h;return;}
+  // Resumen ejecutivo
+  var urg=MAILS.filter(function(x){return x.nivel==='urg';}), imp=MAILS.filter(function(x){return x.nivel==='imp';});
+  var esp=MAILS.filter(function(x){return x.espera&&x.nivel!=='ign';}), conF=MAILS.filter(function(x){return x.fechaProx&&x.fechaProx.dias<=7&&(x.nivel==='urg'||x.nivel==='imp');});
+  var resto=MAILS.filter(function(x){return x.nivel==='resto'||x.nivel==='ign';});
+  h+='<div class="metrics">'+
+    kpiMail('🔴','Urgentes',urg.length,'urg')+kpiMail('🟠','Importantes',imp.length,'imp')+kpiMail('⏳','Esperan tu respuesta',esp.length,'espera')+kpiMail('📅','Con fecha ≤ 7 días',conF.length,'fecha')+'</div>';
+  var foco=MAILS.filter(function(x){return x.nivel==='urg'||x.nivel==='imp';}).slice(0,3);
+  h+='<div class="card" style="margin-bottom:12px"><div class="cardh"><div class="cardht">🧭 Lo primero que miraría</div><div style="font-size:11px;color:var(--tx3)">'+MAILS_LEIDOS+' mails leídos · '+MAILS.length+' conversaciones · '+resto.length+' sin prioridad</div></div>';
+  h+=foco.length?'<ol style="margin:0;padding-left:20px;font-size:13px;line-height:1.7">'+foco.map(function(x){
+    var por=x.tePiden?'te piden algo':x.fechaProx?'menciona una fecha '+txtDias(x.fechaProx.dias):x.motivos[0]?x.motivos[0].txt.toLowerCase():'';
+    return '<li><a href="#" onclick="verMail(\''+escHtml(x.id)+'\');return false"><b>'+escHtml(x.asunto)+'</b></a> <span style="color:var(--tx2)">— '+escHtml(x.deNom)+(por?' · '+escHtml(por):'')+'</span></li>';}).join('')+'</ol>':'<div class="empty" style="padding:8px">Nada urgente ni importante en este período 🎉</div>';
+  h+='</div>';
+  h+='<div class="ctabs" id="mails-tabs" style="margin-bottom:10px"></div><div id="mails-lista"></div>';
+  el.innerHTML=h;renderMailsLista();
+}
+function kpiMail(ic,lbl,n,f){return '<div class="metric" style="cursor:pointer'+(MAILS_FILTRO===f?';outline:2px solid var(--bl)':'')+'" onclick="MAILS_FILTRO=\''+f+'\';renderMails()"><div class="metlbl">'+ic+' '+lbl+'</div><div class="metval">'+n+'</div></div>';}
+function renderMailsLista(){
+  var el=document.getElementById('mails-lista');if(!el||!MAILS)return;
+  var F={prioridad:['🔴🟠 Urgentes e importantes',function(x){return x.nivel==='urg'||x.nivel==='imp';}],urg:['🔴 Urgentes',function(x){return x.nivel==='urg';}],imp:['🟠 Importantes',function(x){return x.nivel==='imp';}],espera:['⏳ Esperan respuesta',function(x){return x.espera&&x.nivel!=='ign';}],fecha:['📅 Con fecha',function(x){return x.fechaProx&&x.fechaProx.dias<=7&&(x.nivel==='urg'||x.nivel==='imp');}],resto:['⚪ Resto',function(x){return x.nivel==='resto'||x.nivel==='ign';}]};
+  if(!F[MAILS_FILTRO])MAILS_FILTRO='prioridad';
+  var tabs=document.getElementById('mails-tabs');
+  if(tabs)tabs.innerHTML=Object.keys(F).map(function(k){return '<div class="ctab'+(k===MAILS_FILTRO?' active':'')+'" onclick="MAILS_FILTRO=\''+k+'\';renderMails()">'+F[k][0]+' ('+MAILS.filter(F[k][1]).length+')</div>';}).join('');
+  var q=normTx((document.getElementById('mails-q')||{}).value||'');
+  var arr=MAILS.filter(F[MAILS_FILTRO][1]).filter(function(x){return !q||normTx(x.asunto+' '+x.deNom+' '+x.deMail+' '+x.resumen.join(' ')).indexOf(q)>=0;});
+  if(MAILS_FILTRO==='espera'||MAILS_FILTRO==='fecha')arr.sort(function(a,b){return MAILS_FILTRO==='fecha'?a.fechaProx.dias-b.fechaProx.dias:(a.fecha>b.fecha?1:-1);});
+  el.innerHTML=arr.length?arr.map(tarjetaMail).join(''):'<div class="card"><div class="empty">No hay mails en este grupo.</div></div>';
+}
+function tarjetaMail(x){
+  var col=x.nivel==='urg'?'var(--rd)':x.nivel==='imp'?'var(--am)':'var(--brd2)';
+  var ic=x.nivel==='urg'?'🔴':x.nivel==='imp'?'🟠':x.nivel==='ign'?'🔕':'⚪';
+  var id=escHtml(x.id);
+  var h='<div class="card" id="mail-'+id+'" style="border-left:4px solid '+col+';margin-bottom:10px;padding:12px 14px">';
+  h+='<div style="display:flex;gap:10px;align-items:flex-start;justify-content:space-between"><div style="min-width:0"><div style="font-weight:600;font-size:14px">'+ic+' '+escHtml(x.asunto)+(x.noLeidos?' <span class="badge bdb">'+x.noLeidos+' sin leer</span>':'')+'</div>';
+  h+='<div style="font-size:12px;color:var(--tx2);margin-top:2px">'+escHtml(x.deNom)+' <span style="color:var(--tx3)">&lt;'+escHtml(x.deMail)+'&gt;</span>'+(x.adj?' · 📎':'')+'</div></div>';
+  h+='<div style="font-size:11px;color:var(--tx3);white-space:nowrap">'+fechaMail(x.fecha)+'</div></div>';
+  if(x.motivos.length)h+='<div style="display:flex;gap:4px;flex-wrap:wrap;margin:8px 0 4px">'+x.motivos.map(function(m){return '<span class="badge '+m.cls+'">'+m.icon+' '+escHtml(m.txt)+'</span>';}).join('')+'</div>';
+  if(x.tePiden)h+='<div style="font-size:13px;margin:8px 0 4px;padding:6px 10px;background:var(--am-bg);border-radius:var(--rs);color:var(--am-tx)">👉 <b>Te piden:</b> '+escHtml(x.tePiden)+'</div>';
+  if(x.fechaProx)h+='<div style="font-size:12px;margin:4px 0;color:'+(x.fechaProx.dias<=2?'var(--rd-tx)':'var(--tx2)')+'">📅 Menciona <b>'+escHtml(x.fechaProx.txt)+'</b> ('+txtDias(x.fechaProx.dias)+')</div>';
+  if(x.resumen.length)h+='<ul style="margin:6px 0 0;padding-left:18px;font-size:12.5px;color:var(--tx);line-height:1.55">'+x.resumen.map(function(s){return '<li>'+escHtml(s)+'</li>';}).join('')+'</ul>'+(x.leido?'':'<div style="font-size:11px;color:var(--tx3);margin-top:2px">(vista previa)</div>');
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">';
+  if(/^https:\/\/outlook\.(office365|office|live)\.com\//.test(x.link))h+='<a class="btns" style="font-size:11px;padding:4px 10px;text-decoration:none" href="'+escHtml(x.link)+'" target="_blank" rel="noopener">✉️ Abrir en Outlook</a>';
+  h+='<button class="btns" style="font-size:11px;padding:4px 10px" onclick="mailATicket(\''+id+'\')">🎫 Crear ticket</button>';
+  h+='<button class="btns" style="font-size:11px;padding:4px 10px" onclick="criterioDesdeMail(\''+id+'\',\'remitente\')" title="Sus mails van a aparecer más arriba">⭐ Remitente importante</button>';
+  h+='<button class="btns" style="font-size:11px;padding:4px 10px" onclick="criterioDesdeMail(\''+id+'\',\'ignorar\')" title="Sus mails van a ir al final">🔕 Ignorar remitente</button>';
+  h+='</div></div>';
+  return h;
+}
+function mailPorId(id){return (MAILS||[]).filter(function(x){return x.id===id;})[0];}
+function verMail(id){
+  var x=mailPorId(id);if(!x)return;
+  if(!document.getElementById('mail-'+id)){MAILS_FILTRO=x.nivel==='urg'?'urg':x.nivel==='imp'?'imp':'resto';renderMails();}
+  var c=document.getElementById('mail-'+id);if(c){c.scrollIntoView({behavior:'smooth',block:'center'});c.style.boxShadow='0 0 0 3px var(--bl-bg)';setTimeout(function(){c.style.boxShadow='';},1800);}
+}
+function mailATicket(id){
+  var x=mailPorId(id);if(!x)return;
+  openFormTicket();elegirTipoTicket('simple');
+  document.getElementById('tk-asunto').value=x.asunto.replace(/^((re|rv|fw|fwd)\s*:\s*)+/i,'').slice(0,200);
+  document.getElementById('tk-desc').value='Mail de '+x.deNom+' <'+x.deMail+'> del '+fechaMail(x.fecha)+'.\n'+(x.tePiden?'Pedido: '+x.tePiden+'\n':'')+(x.resumen.length?'Resumen:\n- '+x.resumen.join('\n- '):'');
+  showToast('Revisá los datos del ticket antes de enviarlo');
+}
+async function criterioDesdeMail(id,tipo){
+  var x=mailPorId(id);if(!x)return;
+  var valor=x.deMail;
+  if(tipo==='ignorar'&&!confirm('¿Ignorar los mails de '+x.deNom+' <'+x.deMail+'>?\nVan a quedar al final, en “Resto”. Lo podés deshacer desde ⚙️ Criterios.'))return;
+  await agregarCriterioMail(tipo,valor,tipo==='remitente'?x.deNom:'');
+}
+async function agregarCriterioMail(tipo,valor,nota){
+  valor=String(valor||'').trim();if(!valor)return;
+  try{await createListItem(LIST_CRIT_MAILS,{Title:valor,Tipo:tipo,Nota:nota||''});showToast('✅ Criterio guardado: se aplica al instante');
+    await cargarCriteriosMails();recalcularMails();}
+  catch(e){showToast('No se pudo guardar el criterio: '+e.message,true);}
+}
+async function borrarCriterioMail(id){
+  var c=MAILS_CRIT.filter(function(x){return x.id===id;})[0];if(!c)return;
+  if(!confirm('¿Quitar el criterio “'+c.valor+'”?'))return;
+  try{await deleteListItem(LIST_CRIT_MAILS,id);await cargarCriteriosMails();recalcularMails();showToast('Criterio quitado');}
+  catch(e){showToast('No se pudo quitar: '+e.message,true);}
+}
+function recalcularMails(){
+  if(!MAILS)return renderCriteriosMails();
+  MAILS=MAILS.map(function(x){return analizarMail(x.raw,x.n,x.noLeidos,x.respondidoTs,x._cuerpo);});
+  MAILS.sort(function(a,b){return b.score-a.score;});
+  var abierto=document.getElementById('mails-crit')&&document.getElementById('mails-crit').style.display!=='none';
+  renderMails();if(abierto)toggleCriteriosMails(true);
+}
+function toggleCriteriosMails(forzar){
+  var el=document.getElementById('mails-crit');if(!el)return;
+  var ver=forzar===true||el.style.display==='none';el.style.display=ver?'block':'none';if(ver)renderCriteriosMails();
+}
+function renderCriteriosMails(){
+  var el=document.getElementById('mails-crit');if(!el)return;
+  var T={remitente:'⭐ Remitente importante',dominio:'🏢 Dominio importante',palabra:'🔑 Palabra clave',ignorar:'🔕 Ignorar'};
+  var h='<div class="card" style="margin-bottom:12px"><div class="cardh"><div class="cardht">⚙️ Cómo se clasifican</div></div>';
+  h+='<div style="font-size:12px;color:var(--tx2);line-height:1.6"><b>Suben</b>: palabras legales urgentes (intimación, carta documento, demanda, plazo, vencimiento, audiencia, multa, clausura…), temas legales (contrato, adenda, firma, poder, MLA, oferta, tasa…), marcado importante o con bandera, dirigido a vos, te nombran o te piden algo, fechas próximas en el texto, y si espera tu respuesta hace más de un día. '+
+    '<b>Bajan</b>: newsletters y mails automáticos, estar solo en copia, envíos masivos, hilos que ya respondiste. <br>🔴 Urgente: 55 puntos o más con una señal de urgencia (tema legal urgente, fecha en 3 días, marcado importante o un criterio tuyo) · 🟠 Importante: desde 25 puntos.</div>';
+  h+='<div style="font-weight:600;font-size:12px;margin:12px 0 6px">Tus criterios</div>';
+  h+=MAILS_CRIT.length?'<div style="display:flex;flex-direction:column;gap:4px">'+MAILS_CRIT.map(function(c){return '<div style="display:flex;gap:8px;align-items:center;font-size:12px"><span class="badge bdg">'+(T[c.tipo]||c.tipo)+'</span><b>'+escHtml(c.valor)+'</b>'+(c.nota?'<span style="color:var(--tx3)">'+escHtml(c.nota)+'</span>':'')+'<span style="color:var(--tx3)">('+(pesoCrit(c)>0?'+':'')+pesoCrit(c)+')</span><button class="btns" style="font-size:10px;padding:2px 8px;margin-left:auto" onclick="borrarCriterioMail(\''+c.id+'\')">✕</button></div>';}).join('')+'</div>':'<div style="font-size:12px;color:var(--tx3)">Todavía no cargaste ninguno. Usá los botones ⭐ / 🔕 de cada mail o agregalos acá.</div>';
+  h+='<div class="filters" style="margin:10px 0 0"><select class="fsel" id="mc-tipo">'+Object.keys(T).map(function(k){return '<option value="'+k+'">'+T[k]+'</option>';}).join('')+'</select>'+
+    '<input class="fsel" id="mc-valor" placeholder="mail, dominio (ej: estudio.com) o palabra" style="min-width:230px"><input class="fsel" id="mc-nota" placeholder="Nota (opcional)">'+
+    '<button class="btnp" style="font-size:12px;padding:6px 12px" onclick="agregarCriterioMail(document.getElementById(\'mc-tipo\').value,document.getElementById(\'mc-valor\').value,document.getElementById(\'mc-nota\').value)">Agregar</button></div>';
+  h+='</div>';el.innerHTML=h;
+}
 </script>
 </body>
 </html>
