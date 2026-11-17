@@ -1153,7 +1153,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         </div>
       </div>
       <div class="field" style="border:1px solid var(--brd);border-radius:var(--rs);padding:10px 12px">
-        <label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin:0;font-size:13px;font-weight:600;color:var(--am-tx)"><input type="checkbox" id="tk-pm" onchange="document.getElementById('tk-pm-fields').style.display=this.checked?'block':'none'" style="width:auto"> 📊 Para la reunión de management</label>
+        <label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin:0;font-size:13px;font-weight:600;color:var(--am-tx)"><input type="checkbox" id="tk-pm" onchange="document.getElementById('tk-pm-fields').style.display=this.checked?'block':'none'" style="width:auto"> 📊 Para la reunión de management <span style="font-weight:400;color:var(--tx3)">(vale para la reunión del próximo lunes; después se desmarca sola, aunque el ticket esté resuelto)</span></label>
         <div id="tk-pm-fields" style="display:none;margin-top:10px">
           <div class="field"><label>Novedad de la semana</label><textarea id="tk-nov" style="min-height:52px" placeholder="Qué cambió desde la última reunión (1-2 líneas)"></textarea></div>
           <div class="field"><label>Próximo paso</label><textarea id="tk-prox" style="min-height:52px" placeholder="Qué sigue (el responsable y el deadline salen del ticket)"></textarea></div>
@@ -1539,7 +1539,7 @@ async function initApp(account){
   // Repaso del día por voz: para quien tiene dashboard
   if(currentUser.perfil!=='Solicitante'&&!currentUser.mlaOnly)document.getElementById('btn-repaso').style.display='inline-block';
   // Register login
-  registrarLogin();mantenerSesion();
+  registrarLogin();mantenerSesion();setTimeout(limpiarMarcasManagement,6000);
   // Respaldo mensual automático (solo Admin, en segundo plano)
   setTimeout(respaldoAutomatico,4000);
   // Show pending popup after short delay
@@ -1754,7 +1754,7 @@ function renderDash(){
     var kn=pend.filter(function(t){return etapaTicket(t)==='nuevo';}).length;
     var kc=pend.filter(function(t){return t.urgencia==='Crítica';}).length;
     var kp=vis.filter(function(t){return t.esProyecto&&t.estado!=='Resuelto';}).length;
-    var kpm=vis.filter(function(t){return t.pm&&t.estado!=='Resuelto';}).length;
+    var kpm=vis.filter(function(t){return t.pm;}).length;
     tiles.push({ico:'🎫',tit:'Tickets sin responder',num:pend.length,niv:nivel(kv||kc,kn),go:"dashTk({})",
       partes:[link(kc,kc===1?'crítico':'críticos',"dashTk({prio:'Crítica'})",'var(--rd-tx)'),link(kv,kv===1?'vencimiento real en zona roja':'vencimientos reales en zona roja',"dashTk({extra:'rojo'})",'var(--rd-tx)'),link(ka,ka===1?'atrasado':'atrasados',"dashTk({venc:'atrasado'})",'#C2410C'),link(kn,'sin tomar',"dashTk({etapa:'nuevo'})",'var(--am-tx)'),link(ke,'en espera',"dashTk({venc:'espera'})",'var(--tx2)')],
       ok:'Todo al día',extra:[kp?'🧩 '+link(kp,kp===1?'ticket complejo en curso':'tickets complejos en curso',"dashTk({proy:true})",'var(--bl)'):'',kpm?'📊 '+link(kpm,'para la reunión de management',"dashTk({pm:true})",'var(--am-tx)'):''].filter(Boolean).join(' &nbsp;·&nbsp; ')});
@@ -1786,6 +1786,7 @@ function dashTk(o){
   setTimeout(function(){
     filtrarTk({etapa:o.etapa||'',venc:o.venc||'',extra:o.pm?'pm':(o.extra||'')});
     if(o.prio){var p=document.getElementById('tickets-prio');if(p){p.value=o.prio;renderTickets();}}
+    if(o.pm){var se=document.getElementById('tickets-estado');if(se){se.value='';renderTickets();}}
   },60);
 }
 
@@ -2360,13 +2361,15 @@ var REU={slides:[],i:0};
 // Tickets abiertos marcados "Para la reunión de management", en el formato de las pantallas
 function temasManagement(){
   var rank={'Crítica':0,Alta:1,Media:2,Baja:3};
-  return ticketsVisibles().filter(function(t){return t.pm&&t.estado!=='Resuelto';}).map(function(t){
+  // Marcados para la próxima reunión, aunque ya estén resueltos (en management importa comunicar)
+  return ticketsVisibles().filter(function(t){return t.pm;}).map(function(t){
     return {tit:t.asuntoRaw,num:t.num,resp:t.resp,prio:t.urgenciaRaw||'',dead:t.deadline,bloqueado:!!t.bloqQuienRaw,bloqTxt:t.bloqQuienRaw||'',
-      nov:t.nov,prox:t.prox,dec:t.dec,esProyecto:t.esProyecto,hitos:t.hitos||[],solic:nombreSolicitante(t)};
+      nov:t.nov,prox:t.prox,dec:t.dec,esProyecto:t.esProyecto,hitos:t.hitos||[],solic:nombreSolicitante(t),resuelto:t.estado==='Resuelto',cierre:t.cierre};
   }).sort(function(a,b){return ((rank[a.prio]!=null?rank[a.prio]:2)-(rank[b.prio]!=null?rank[b.prio]:2))||((a.dead||'9999')<(b.dead||'9999')?-1:1);});
 }
 function semaforoTema(t){
   var d=daysTo(t.dead);
+  if(t.resuelto)return {c:'var(--gr-tx)',bg:'var(--gr-bg)',txt:'✅ Resuelto'+(t.cierre?' el '+fmtDate(t.cierre):'')};
   if(t.bloqueado)return {c:'var(--am-tx)',bg:'var(--am-bg)',txt:'⏸ Requiere intervención'+(t.bloqTxt?' de '+t.bloqTxt:'')};
   if(d!==null&&d<0)return {c:'var(--rd-tx)',bg:'var(--rd-bg)',txt:'🔴 Vencido hace '+(-d)+(d===-1?' día':' días')};
   if(d!==null&&d<=7)return {c:'var(--am-tx)',bg:'var(--am-bg)',txt:'🟡 Vence '+(d===0?'hoy':d===1?'mañana':'en '+d+' días')};
@@ -2388,7 +2391,7 @@ function slideTemaHTML(t,n,total){
 }
 function armarReunion(){
   var ts=temasManagement();
-  var riesgo=ts.filter(function(t){var d=daysTo(t.dead);return t.bloqueado||(d!==null&&d<=7);}).length;
+  var riesgo=ts.filter(function(t){var d=daysTo(t.dead);return !t.resuelto&&(t.bloqueado||(d!==null&&d<=7));}).length;
   var decs=ts.filter(function(t){return t.dec;});
   var hoy=new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   var portada='<div style="font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3)">Legal · Reunión de management</div>'
@@ -2709,6 +2712,24 @@ async function retomarTicket(tid){
   if(nuevo&&nuevo!==t.deadline)f.Deadline=nuevo+'T00:00:00Z';
   try{await updateListItem(LIST_TICKETS,t.id,f);await syncAll();showToast('▶ Retomado'+(f.Deadline?' — nueva fecha estimada '+fmtDate(nuevo):''));}
   catch(e){showToast('Error: '+e.message,true);}
+}
+
+// La marca "Para la reunión de management" vale para la próxima reunión de los lunes y después se limpia sola.
+// Marcado un lunes antes de las 13 h → esa misma reunión; si no, el lunes siguiente. Vence al terminar ese lunes.
+function lunesDeReunion(fechaISO){
+  var d=new Date(fechaISO);if(isNaN(d))return null;
+  var dia=d.getDay(), suma=(dia===1&&d.getHours()<13)?0:((8-dia)%7||7);
+  var l=new Date(d);l.setDate(l.getDate()+suma);l.setHours(23,59,59,999);return l;
+}
+function pmVigente(raw,fechaISO){
+  if(!raw)return false;if(!fechaISO)return true;
+  var l=lunesDeReunion(fechaISO);return !l||new Date()<=l;
+}
+// Limpia en SharePoint las marcas de reuniones que ya pasaron (lo hace Legal/Admin al entrar, en segundo plano)
+async function limpiarMarcasManagement(){
+  if(!(currentUser&&(currentUser.perfil==='Admin'||legalUser(currentUser.ini))))return;
+  var viejos=tickets.filter(function(t){return t.pmRaw&&!t.pm;});
+  for(var i=0;i<viejos.length;i++){try{await updateListItem(LIST_TICKETS,viejos[i].id,{ParaManagement:false});viejos[i].pmRaw=false;}catch(e){console.warn('Limpieza management:',e.message);}}
 }
 
 function navTo(page){var el=document.getElementById('nav-'+page);if(el)goTo(page,el);}
@@ -3437,7 +3458,7 @@ function escUrl(s){s=String(s==null?'':s).trim();return (/^[a-z][a-z0-9+.\-]*:/i
 // Los campos de texto de Tickets los escribe cualquier solicitante: se guardan ya escapados para mostrar; *Raw = texto original (para mails)
 function mapTicket(item){var f=item.fields;return{id:item.id,num:escHtml(f.NumTicket||ticketNumFromId(item.id,f.FechaRecibido)),remitente:escHtml(f.Remitente),remitenteRaw:f.Remitente||'',email:(f.EmailRemitente||'').toLowerCase(),asunto:escHtml(f.Asunto),asuntoRaw:f.Asunto||'',resp:f.Responsable||'',cuerpo:escHtml(f.Cuerpo),cuerpoRaw:f.Cuerpo||'',fecha:f.FechaRecibido?f.FechaRecibido.split('T')[0]:'',estado:(f.Estado==='Resuelto'?'Resuelto':'En curso'),link:f.LinkMail||'',cat:escHtml(f.Categoria),catRaw:f.Categoria||'',sitio:escHtml(f.CodigoSitio),sitioRaw:f.CodigoSitio||'',deadline:f.Deadline?f.Deadline.split('T')[0]:'',bloq:escHtml(f.BloqQuien),bloqQuienRaw:f.BloqQuien||'',respuesta:escHtml(f.Respuesta),respuestaRaw:f.Respuesta||'',urgencia:escHtml(f.Urgencia),urgenciaRaw:f.Urgencia||'',cierre:f.FechaCierre?f.FechaCierre.split('T')[0]:'',
   // Timeline: creado → tomado por Legal → primera devolución → cerrado (fechas completas)
-  creadoTs:f.FechaRecibido||'',tomadoTs:f.FechaTomado||'',tomadoPor:escHtml(f.TomadoPor),respTs:f.FechaRespuesta||'',cierreTs:f.FechaCierre||'',esProyecto:!!f.EsProyecto,hitos:parseHitos(f.Hitos),pais:f.Pais||'',venc:f.VencimientoReal?f.VencimientoReal.split('T')[0]:'',vencMotivo:f.MotivoVencimiento||'',vencImpacto:f.ImpactoVencimiento||'',esperaDesde:f.EsperaDesde||'',esperaDe:f.EsperaDe||'',diasEspera:f.DiasEspera||0,pm:!!f.ParaManagement,nov:f.Novedad||'',prox:f.ProximoPaso||'',dec:f.DecisionRequerida||''};}
+  creadoTs:f.FechaRecibido||'',tomadoTs:f.FechaTomado||'',tomadoPor:escHtml(f.TomadoPor),respTs:f.FechaRespuesta||'',cierreTs:f.FechaCierre||'',esProyecto:!!f.EsProyecto,hitos:parseHitos(f.Hitos),pais:f.Pais||'',venc:f.VencimientoReal?f.VencimientoReal.split('T')[0]:'',vencMotivo:f.MotivoVencimiento||'',vencImpacto:f.ImpactoVencimiento||'',esperaDesde:f.EsperaDesde||'',esperaDe:f.EsperaDe||'',diasEspera:f.DiasEspera||0,pmRaw:!!f.ParaManagement,pmFecha:f.ParaManagementFecha||'',pm:pmVigente(!!f.ParaManagement,f.ParaManagementFecha),nov:f.Novedad||'',prox:f.ProximoPaso||'',dec:f.DecisionRequerida||''};}
 
 // ─── TICKETS: prioridad, orden y timeline ───────────────────────────────────
 var PRIO_RANK={'Crítica':4,'Alta':3,'Media':2,'Baja':1};
@@ -5044,7 +5065,9 @@ async function guardarGestionTicket(){
     if(hitosNuevos!==JSON.stringify((t.hitos||[]).map(function(h){return {t:h.t,ok:!!h.ok,f:h.f||''};})))fields.Hitos=hitosNuevos;
     var paisN=document.getElementById('tk-pais-edit').value;if(paisN!==(t.pais||''))fields.Pais=paisN;
     // Reunión de management
-    var pm=document.getElementById('tk-pm').checked;if(pm!==!!t.pm)fields.ParaManagement=pm;
+    var pm=document.getElementById('tk-pm').checked;
+    if(pm&&!t.pm){fields.ParaManagement=true;fields.ParaManagementFecha=new Date().toISOString();}
+    if(!pm&&t.pmRaw)fields.ParaManagement=false;
     [['tk-nov','Novedad','nov'],['tk-prox','ProximoPaso','prox'],['tk-dec','DecisionRequerida','dec']].forEach(function(x){var v=document.getElementById(x[0]).value.trim();if(v!==(t[x[2]]||''))fields[x[1]]=v;});
     await updateListItem(LIST_TICKETS,editingTicketId,fields);
     await syncAll();
