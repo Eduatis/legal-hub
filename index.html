@@ -6231,7 +6231,7 @@ function armarSlidesPant(){
 }
 
 // ─── AVISOS AUTOMÁTICOS POR MAIL / TEAMS ────────────────────────────────────
-// El Hub deja el aviso armado en columnas del ticket (AvisoPara, AvisoAsunto, AvisoCuerpo, AvisoTeams) y el flujo de
+// El Hub deja el aviso armado en columnas del ticket (AvisoPara, AvisoAsunto, AvisoCuerpo, AvisoTeams; AvisoCC = "responder a") y el flujo de
 // Power Automate "Hub - Avisos de tickets" lo envía como notificación de Microsoft y limpia las columnas.
 // "{ID}" en el texto lo reemplaza el flujo por el ID del ticket (sirve cuando el ticket recién se crea).
 var HUB_URL='https://eduatis.github.io/legal-hub/';
@@ -6245,7 +6245,7 @@ function mailHTML(titulo,lineas,boton,link,pie){
     +'<div style="font-size:18px;font-weight:700;margin-bottom:12px">'+esc(titulo)+'</div>'
     +lineas.map(function(l){return l&&l.html?l.html:'<p style="margin:0 0 10px;line-height:1.5">'+esc(l)+'</p>';}).join('')
     +(link?'<p style="margin:16px 0"><a href="'+link+'" style="background:#1B4FD8;color:#fff;padding:9px 16px;border-radius:6px;text-decoration:none;font-weight:600">'+esc(boton||'Abrir en el Legal Hub')+'</a></p>':'')
-    +'<p style="font-size:11px;color:#A09F98;margin-top:18px">'+esc(pie||'Aviso automático del Legal Hub: no respondas a este mail.')+'</p></div>';
+    +'<p style="font-size:11px;color:#A09F98;margin-top:18px">'+esc(pie||'Aviso automático del Legal Hub.')+'</p></div>';
 }
 function citaHTML(txt){return {html:'<div style="border-left:3px solid #1B4FD8;background:#EEF2FF;padding:8px 12px;margin:0 0 12px;white-space:pre-wrap;line-height:1.5">'+escHtml(txt)+'</div>'};}
 function camposAviso(tipo,para,asunto,cuerpo,teams,cc){return {AvisoTipo:tipo,AvisoPara:para||'',AvisoCC:cc||'',AvisoAsunto:String(asunto).slice(0,250),AvisoCuerpo:cuerpo,AvisoTeams:teams||''};}
@@ -6269,7 +6269,8 @@ function avisoSolicitante(t,tipo,comentario,cierreAuto){
     else lineas.push('La respuesta te llegó por mail o Teams; en el Hub ves el detalle y el historial.');
     if(cierreAuto)lineas.push('Si no necesitás nada más, no hace falta que hagas nada: el pedido se cierra solo el '+fmtDate(cierreAuto.split('T')[0])+'. Si necesitás seguir, escribile a '+primerNombre(quien)+' desde el pedido en el Hub.');
   }
-  return camposAviso(tipo,t.email,(tipo==='cierre'?'✅ ':'💬 ')+titulo+' — '+t.asuntoRaw,mailHTML(titulo,lineas,'Ver mi pedido',linkTicket(t.id)));
+  var yo=legalUser(currentUser.ini)||{};
+  return camposAviso(tipo,t.email,(tipo==='cierre'?'✅ ':'💬 ')+titulo+' — '+t.asuntoRaw,mailHTML(titulo,lineas,'Ver mi pedido',linkTicket(t.id),yo.email?'Aviso automático del Legal Hub. Si respondés este mail, le llega a '+primerNombre(yo.name)+'.':''),'',yo.email||'');
 }
 // Aviso a Legal: ticket crítico (mail + Teams al responsable y al Admin)
 function avisoCritico(datos){
