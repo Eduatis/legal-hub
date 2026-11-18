@@ -3797,7 +3797,7 @@ function escUrl(s){s=String(s==null?'':s).trim();return (/^[a-z][a-z0-9+.\-]*:/i
 // Los campos de texto de Tickets los escribe cualquier solicitante: se guardan ya escapados para mostrar; *Raw = texto original (para mails)
 function mapTicket(item){var f=item.fields;return{id:item.id,num:escHtml(f.NumTicket||ticketNumFromId(item.id,f.FechaRecibido)),remitente:escHtml(f.Remitente),remitenteRaw:f.Remitente||'',email:(f.EmailRemitente||'').toLowerCase(),asunto:escHtml(f.Asunto),asuntoRaw:f.Asunto||'',resp:f.Responsable||'',cuerpo:escHtml(f.Cuerpo),cuerpoRaw:f.Cuerpo||'',fecha:f.FechaRecibido?f.FechaRecibido.split('T')[0]:'',estado:(f.Estado==='Resuelto'?'Resuelto':'En curso'),link:f.LinkMail||'',cat:escHtml(f.Categoria),catRaw:f.Categoria||'',sitio:escHtml(f.CodigoSitio),sitioRaw:f.CodigoSitio||'',deadline:f.Deadline?f.Deadline.split('T')[0]:'',bloq:escHtml(f.BloqQuien),bloqQuienRaw:f.BloqQuien||'',respuesta:escHtml(f.Respuesta),respuestaRaw:f.Respuesta||'',urgencia:escHtml(f.Urgencia),urgenciaRaw:f.Urgencia||'',cierre:f.FechaCierre?f.FechaCierre.split('T')[0]:'',
   // Timeline: creado → tomado por Legal → primera devolución → cerrado (fechas completas)
-  creadoTs:f.FechaRecibido||'',tomadoTs:f.FechaTomado||'',tomadoPor:escHtml(f.TomadoPor),respTs:f.FechaRespuesta||'',cierreTs:f.FechaCierre||'',esProyecto:!!f.EsProyecto,hitos:parseHitos(f.Hitos),pais:f.Pais||'',venc:f.VencimientoReal?f.VencimientoReal.split('T')[0]:'',vencMotivo:f.MotivoVencimiento||'',vencImpacto:f.ImpactoVencimiento||'',esperaDesde:f.EsperaDesde||'',esperaDe:f.EsperaDe||'',diasEspera:f.DiasEspera||0,pmRaw:!!f.ParaManagement,pmFecha:f.ParaManagementFecha||'',pm:pmVigente(!!f.ParaManagement,f.ParaManagementFecha),nov:f.Novedad||'',prox:f.ProximoPaso||'',dec:f.DecisionRequerida||'',esperaTipo:f.EsperaTipo||'',cierreAuto:f.CierreAuto||'',reabiertoTs:f.FechaReapertura||''};}
+  creadoTs:f.FechaRecibido||'',tomadoTs:f.FechaTomado||'',tomadoPor:escHtml(f.TomadoPor),respTs:f.FechaRespuesta||'',cierreTs:f.FechaCierre||'',esProyecto:!!f.EsProyecto,hitos:parseHitos(f.Hitos),pais:f.Pais||'',venc:f.VencimientoReal?f.VencimientoReal.split('T')[0]:'',vencMotivo:f.MotivoVencimiento||'',vencImpacto:f.ImpactoVencimiento||'',esperaDesde:f.EsperaDesde||'',esperaDe:f.EsperaDe||'',diasEspera:f.DiasEspera||0,pmRaw:!!f.ParaManagement,pmFecha:f.ParaManagementFecha||'',pm:pmVigente(!!f.ParaManagement,f.ParaManagementFecha),nov:f.Novedad||'',prox:f.ProximoPaso||'',dec:f.DecisionRequerida||'',esperaTipo:f.EsperaTipo||'',cierreAuto:f.CierreAuto||'',reabiertoTs:f.FechaReapertura||'',cierreSolPor:f.CierreSolicitadoPor||'',cierreSolTs:f.CierreSolicitadoTs||'',cierreSolCom:f.CierreSolicitadoComent||''};}
 
 // ─── TICKETS: prioridad, orden y timeline ───────────────────────────────────
 var PRIO_RANK={'Crítica':4,'Alta':3,'Media':2,'Baja':1};
@@ -4839,6 +4839,7 @@ function renderTickets(){
     h+='<span class="mono" style="font-size:10px">'+t.num+'</span>';
     h+='<span class="badge" style="background:'+eu.bg+';color:'+eu.tx+'">'+eu.icon+' '+eu.lbl+'</span>';
     if(t.esProyecto)h+='<span class="badge" style="background:var(--bl-bg);color:var(--bl)">🧩 Complejo</span>';
+    if(t.cierreSolPor&&t.estado!=='Resuelto')h+='<span class="badge" style="background:var(--bl-bg);color:var(--bl)">🔒 Cierre pendiente de OK</span>';
     if(t.reabiertoTs&&t.estado!=='Resuelto'&&!t.respTs)h+='<span class="badge" style="background:var(--am-bg);color:var(--am-tx)" title="Reabierto por el solicitante el '+fechaCorta(t.reabiertoTs)+'">🔄 Reabierto</span>';
     if(t.cierreAuto&&t.estado!=='Resuelto'&&t.respTs&&!t.esperaDesde)h+='<span class="badge" title="Se cierra automáticamente si el solicitante no escribe">🗓 Cierre auto '+fmtDate(String(t.cierreAuto).split('T')[0])+'</span>';
     if(t.pm&&puedeGestionar)h+='<span class="badge" style="background:var(--am-bg);color:var(--am-tx)">📊 Management</span>';
@@ -5340,6 +5341,7 @@ function gestionarTicket(id){
     +'<div style="font-size:11px;color:var(--tx2)">De: '+t.remitente+(t.deadline?' · 🎯 Estimado: '+fmtDate(t.deadline):'')+(t.venc?' · <b style="color:var(--rd-tx)">⛔ Vence: '+fmtDate(t.venc)+'</b>':'')+'</div>'
     +(t.cuerpo?'<div style="font-size:11px;color:var(--tx3);margin-top:4px;white-space:pre-wrap">'+t.cuerpo+'</div>':'');
   // Timeline + botón "Tomar ticket" si Legal todavía no lo tomó
+  header.insertAdjacentHTML('beforeend',bannerPedidoCierre(t));
   document.getElementById('tk-timeline').innerHTML=ticketTimeline(t,false)
     +(!t.tomadoTs&&t.estado!=='Resuelto'?'<button type="button" class="btnp" style="width:100%;margin-top:10px" data-tid="'+t.id+'" onclick="tomarTicket(this.dataset.tid)">🙋 Tomar ticket</button>':'');
   // Devolución: se marca a mano o sola al responder; desmarcarla solo lo puede el Admin
@@ -5401,9 +5403,20 @@ async function guardarGestionTicket(){
     }
     // Comentario de cierre: al pasar a Resuelto se agrega al historial
     var cierreCom=(estado==='Resuelto'&&t.estado!=='Resuelto')?document.getElementById('tk-cierre-coment').value.trim():'';
-    if(cierreCom){
-      hist=(hist?hist+'\n\n':'')+'['+new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})+' · '+currentUser.ini+'] Cierre: '+cierreCom;
+    var selloC='['+new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})+' '+new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false})+' · '+currentUser.ini+']';
+    // Cierre: siempre queda en el historial quién y cuándo. Críticos o con vencimiento real: si no es el Admin, se pide su OK
+    var pidioCierre=false;
+    if(estado==='Resuelto'&&t.estado!=='Resuelto'){
+      if(requiereOKCierre(t)){
+        pidioCierre=true;estado=t.estado;fields.Estado=t.estado;
+        fields.CierreSolicitadoPor=currentUser.ini;fields.CierreSolicitadoTs=ahora;fields.CierreSolicitadoComent=cierreCom;
+        hist=(hist?hist+'\n\n':'')+selloC+' 🔒 Pidió cerrar el ticket (requiere OK de '+primerNombre((legalUser(adminIni())||{}).name||'Eduardo')+')'+(cierreCom?': '+cierreCom:'');
+      }else{
+        hist=(hist?hist+'\n\n':'')+selloC+' ✅ Cerrado'+(cierreCom?': '+cierreCom:'');
+        if(t.cierreSolPor){fields.CierreSolicitadoPor='';fields.CierreSolicitadoTs=null;fields.CierreSolicitadoComent='';}
+      }
     }
+    if(estado!=='Resuelto'&&t.estado==='Resuelto')hist=(hist?hist+'\n\n':'')+selloC+' ↩️ Reabierto por Legal';
     if(hist!==(t.respuestaRaw||''))fields.Respuesta=hist;
     // Edición completa de datos (solo Admin)
     if(esAdmin){
@@ -5447,7 +5460,8 @@ async function guardarGestionTicket(){
     var cerrando=estado==='Resuelto'&&t.estado!=='Resuelto';
     var devolucionNueva=!!fields.FechaRespuesta||(respuesta&&estado!=='Resuelto');
     var aviso='';
-    if(cerrando){fields.CierreAuto=null;Object.assign(fields,avisoSolicitante(tAv,'cierre',cierreCom||respuesta));aviso='cierre';}
+    if(pidioCierre){Object.assign(fields,avisoPedidoCierre(tAv,cierreCom));aviso='pedido';}
+    else if(cerrando){fields.CierreAuto=null;Object.assign(fields,avisoSolicitante(tAv,'cierre',cierreCom||respuesta));aviso='cierre';}
     else if(estado!=='Resuelto'&&devolucionNueva&&!t.esperaDesde){fields.CierreAuto=fechaCierreAuto(tAv,urgN);Object.assign(fields,avisoSolicitante(tAv,'respuesta',respuesta,fields.CierreAuto));aviso='respuesta';}
     else if(estado!=='Resuelto'&&t.cierreAuto&&!elegibleCierreAuto(tAv,urgN))fields.CierreAuto=null;
     if(estado!=='Resuelto'&&t.estado==='Resuelto')fields.CierreAuto=null;
@@ -5457,6 +5471,7 @@ async function guardarGestionTicket(){
     await updateListItem(LIST_TICKETS,editingTicketId,fields);
     await syncAll();
     closeFormTicket();
+    if(aviso==='pedido'){showToast('🔒 Es crítico o tiene vencimiento real: le pedimos el OK a '+primerNombre((legalUser(adminIni())||{}).name||'Eduardo')+' para cerrarlo',false,5500);}else
     showToast('Ticket actualizado: '+estado+(aviso==='cierre'||aviso==='respuesta'?(tAv.email?' — le avisamos a '+primerNombre(nombreSolicitante(t))+' por mail':''):aviso==='critico'?' — aviso de crítico enviado':''),false,4500);
   }catch(e){showToast('Error: '+e.message,true);}
   btn.disabled=false;btn.textContent='Guardar';
@@ -5467,6 +5482,10 @@ function onEstadoTicketChange(){
   var t=tickets.find(function(x){return x.id===editingTicketId;});
   var cerrando=document.getElementById('tk-estado-edit').value==='Resuelto'&&t&&t.estado!=='Resuelto';
   document.getElementById('tk-cierre-wrap').style.display=cerrando?'block':'none';
+  // Críticos o con vencimiento real: si no es el Admin, se pide su OK en lugar de cerrar
+  var w=document.getElementById('tk-cierre-wrap'), n=document.getElementById('tk-cierre-ok');
+  if(!n){n=document.createElement('div');n.id='tk-cierre-ok';n.style.cssText='margin-top:6px;font-size:11px;color:var(--am-tx)';w.appendChild(n);}
+  n.textContent=cerrando&&requiereOKCierre(t)?'🔒 Es '+(t.urgenciaRaw==='Crítica'?'crítico':'un ticket con vencimiento real')+': al guardar le pedimos el OK a '+primerNombre((legalUser(adminIni())||{}).name||'Eduardo')+' para cerrarlo.':'';
 }
 // Solo Admin: borrar un ticket cargado por error (pide confirmación)
 async function eliminarTicketAdmin(){
@@ -6338,12 +6357,15 @@ function avisosCircuito(ini){
   };
 }
 function abrirTicketDesdeAviso(id){goTo('tickets',document.getElementById('nav-tickets'));gestionarTicket(id);}
+function mios0(){return tickets.filter(function(t){return t.cierreSolPor===currentUser.ini&&t.estado!=='Resuelto';});}
 function renderAvisosLegal(){
   var el=document.getElementById('dash-avisos');if(!el)return;
   if(!currentUser||!(currentUser.perfil==='Admin'||legalUser(currentUser.ini))||VER_COMO){el.innerHTML='';return;}
   var a=avisosCircuito(currentUser.ini);
   var fila=function(t,txt,col){return '<div class="tk-mio" data-tid="'+t.id+'" onclick="abrirTicketDesdeAviso(this.dataset.tid)" style="display:flex;gap:10px;align-items:center;padding:6px 8px;border-radius:var(--rs);cursor:pointer;font-size:13px"><span style="font-weight:600;color:'+col+';white-space:nowrap">'+txt+'</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+t.asunto+'</span><span style="color:var(--bl);font-size:12px;font-weight:600">Abrir ›</span></div>';};
   var h='';
+  if(currentUser.perfil==='Admin')tickets.filter(function(t){return t.cierreSolPor&&t.estado!=='Resuelto';}).forEach(function(t){h+=fila(t,'🔒 Aprobar cierre ('+escHtml(primerNombre((legalUser(t.cierreSolPor)||{}).name||t.cierreSolPor))+')','var(--bl)');});
+  else mios0().forEach(function(t){h+=fila(t,'🔒 Esperando OK para cerrar','var(--tx2)');});
   a.reabiertos.forEach(function(t){h+=fila(t,'🔄 Reabierto','var(--rd-tx)');});
   a.sinTomar.forEach(function(t){h+=fila(t,'📥 Sin tomar hace '+contarHabiles(String(t.creadoTs).split('T')[0],todayStr())+' día(s) háb.','#C2410C');});
   a.esperaSol.forEach(function(t){h+=fila(t,'⏸ Esperando a '+escHtml(t.esperaDe)+' hace '+contarHabiles(String(t.esperaDesde).split('T')[0],todayStr())+' días háb.','var(--am-tx)');});
@@ -6372,6 +6394,55 @@ function abrirTicketDeURL(){
   goTo('tickets',document.getElementById('nav-tickets'));
   if(!t){showToast('No encontré ese pedido (puede que no tengas acceso)',true);return;}
   if(currentUser.perfil==='Admin'||legalUser(currentUser.ini))gestionarTicket(t.id);else verTicket(t.id);
+}
+
+// ─── CIERRE CON APROBACIÓN DEL ADMIN ────────────────────────────────────────
+// Legal cierra sus tickets. Los críticos o con vencimiento real los cierra el Admin: el resto de Legal pide el OK.
+// Todo queda en el historial (Respuesta) con fecha, hora e iniciales.
+function adminIni(){var u=USERS_LIST.filter(function(x){return x.perfil==='Admin';})[0];return u?u.ini:'EG';}
+function requiereOKCierre(t){return currentUser.perfil!=='Admin'&&(t.urgenciaRaw==='Crítica'||!!t.venc);}
+function selloAhora(){var d=new Date();return '['+d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false})+' · '+currentUser.ini+']';}
+function avisoPedidoCierre(t,com){
+  var adm=legalUser(adminIni())||{}, quien=(legalUser(currentUser.ini)||currentUser).name;
+  var titulo='🔒 '+primerNombre(quien)+' pide cerrar '+numLimpio(t);
+  var lineas=[primerNombre(quien)+' quiere cerrar “'+t.asuntoRaw+'”. Es '+(t.urgenciaRaw==='Crítica'?'un ticket crítico':'un ticket con vencimiento real'+(t.venc?' ('+fmtDate(t.venc)+')':''))+', así que necesita tu OK.'];
+  if(com){lineas.push('Su comentario de cierre:');lineas.push(citaHTML(com));}
+  lineas.push('Abrí el ticket y tocá “✅ Aprobar cierre” o “↩️ No aprobar”.');
+  var me=(legalUser(currentUser.ini)||{}).email||'';
+  return camposAviso('pedido-cierre',adm.email||adminEmail(),titulo+' — '+t.asuntoRaw,mailHTML(titulo,lineas,'Abrir el ticket',linkTicket(t.id)),adm.email||adminEmail(),me);
+}
+function bannerPedidoCierre(t){
+  if(!t.cierreSolPor||t.estado==='Resuelto')return '';
+  var quien=(legalUser(t.cierreSolPor)||{}).name||t.cierreSolPor;
+  var h='<div style="margin-top:8px;padding:10px 12px;border-radius:var(--rs);background:var(--am-bg);color:var(--am-tx);font-size:12px">🔒 <b>'+escHtml(primerNombre(quien))+'</b> pidió cerrar este ticket el '+fmtDateTime(t.cierreSolTs)+(t.cierreSolCom?'<div style="margin-top:4px;color:var(--tx)">“'+escHtml(t.cierreSolCom)+'”</div>':'');
+  if(currentUser.perfil==='Admin'&&!VER_COMO)h+='<div style="display:flex;gap:6px;margin-top:8px"><button class="btnp" style="font-size:12px;padding:5px 12px" data-tid="'+t.id+'" onclick="aprobarCierre(this.dataset.tid)">✅ Aprobar cierre</button><button class="btns" style="font-size:12px;padding:5px 12px" data-tid="'+t.id+'" onclick="rechazarCierre(this.dataset.tid)">↩️ No aprobar</button></div>';
+  else h+='<div style="margin-top:4px">Esperando el OK de '+escHtml(primerNombre((legalUser(adminIni())||{}).name||'Eduardo'))+'.</div>';
+  return h+'</div>';
+}
+async function aprobarCierre(id){
+  var t=tickets.find(function(x){return x.id===id;});if(!t||!t.cierreSolPor)return;
+  if(!confirm('¿Aprobar el cierre de '+numLimpio(t)+'?\n\nSe cierra y le avisamos al solicitante.'))return;
+  var ahora=new Date().toISOString();
+  var f={Estado:'Resuelto',FechaCierre:ahora,CierreAuto:null,CierreSolicitadoPor:'',CierreSolicitadoTs:null,CierreSolicitadoComent:'',
+    Respuesta:(t.respuestaRaw?t.respuestaRaw+'\n\n':'')+selloAhora()+' ✅ Cierre aprobado (lo pidió '+t.cierreSolPor+')'+(t.cierreSolCom?': '+t.cierreSolCom:'')};
+  if(!t.tomadoTs){f.FechaTomado=ahora;f.TomadoPor=t.cierreSolPor;}
+  Object.assign(f,avisoSolicitante(Object.assign({},t),'cierre',t.cierreSolCom));
+  try{await updateListItem(LIST_TICKETS,id,f);await syncAll();closeFormTicket();showToast('✅ Cierre aprobado — le avisamos al solicitante');}
+  catch(e){showToast('Error: '+e.message,true);}
+}
+async function rechazarCierre(id){
+  var t=tickets.find(function(x){return x.id===id;});if(!t||!t.cierreSolPor)return;
+  var motivo=prompt('¿Por qué no se cierra todavía? (le llega a '+primerNombre((legalUser(t.cierreSolPor)||{}).name||t.cierreSolPor)+')','');
+  if(motivo===null)return;
+  var pidio=legalUser(t.cierreSolPor)||{};
+  var f={CierreSolicitadoPor:'',CierreSolicitadoTs:null,CierreSolicitadoComent:'',
+    Respuesta:(t.respuestaRaw?t.respuestaRaw+'\n\n':'')+selloAhora()+' ↩️ Cierre no aprobado'+(motivo.trim()?': '+motivo.trim():'')};
+  if(pidio.email){
+    var tit='↩️ No se cierra todavía '+numLimpio(t);
+    Object.assign(f,camposAviso('cierre-rechazado',pidio.email,tit+' — '+t.asuntoRaw,mailHTML(tit,[primerNombre(currentUser.name)+' no aprobó el cierre de “'+t.asuntoRaw+'”.',motivo.trim()?citaHTML(motivo.trim()):'Sin comentario.'],'Abrir el ticket',linkTicket(t.id)),'',(legalUser(currentUser.ini)||{}).email||''));
+  }
+  try{await updateListItem(LIST_TICKETS,id,f);await syncAll();closeFormTicket();showToast('↩️ Cierre no aprobado'+(pidio.email?' — le avisamos a '+primerNombre(pidio.name):''));}
+  catch(e){showToast('Error: '+e.message,true);}
 }
 </script>
 </body>
