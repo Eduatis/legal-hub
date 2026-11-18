@@ -366,7 +366,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div class="pageview active" id="page-dashboard">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px">
           <div id="dash-greeting" style="font-size:22px;font-weight:700;color:var(--bl);padding:0 2px"></div>
-          <button class="btnp" id="btn-repaso" style="display:none" onclick="abrirRepaso()">🎙 Repaso del día</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btns" id="btn-pantalla" style="display:none" onclick="abrirPantalla()" title="Para un segundo monitor: va pasando la información sola">📺 Modo pantalla</button><button class="btnp" id="btn-repaso" style="display:none" onclick="abrirRepaso()">🎙 Repaso del día</button></div>
         </div>
         <!-- Repaso del día por voz (se arma con los datos ya cargados; no sale nada del Hub) -->
         <div id="repaso" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;align-items:center;justify-content:center;padding:16px">
@@ -1585,7 +1585,7 @@ async function initApp(account){
   await syncAll();hideLoading();document.getElementById('app').style.display='block';
   if(currentUser.perfil==='Admin'){document.getElementById('setup-btn-wrap').style.display='flex';}
   // Repaso del día por voz: para quien tiene dashboard
-  if(currentUser.perfil!=='Solicitante'&&!currentUser.mlaOnly)document.getElementById('btn-repaso').style.display='inline-block';
+  if(currentUser.perfil!=='Solicitante'&&!currentUser.mlaOnly){document.getElementById('btn-repaso').style.display='inline-block';document.getElementById('btn-pantalla').style.display='inline-block';}
   // Register login
   registrarLogin();mantenerSesion();setTimeout(limpiarMarcasManagement,6000);
   // Respaldo mensual automático (solo Admin, en segundo plano)
@@ -5921,6 +5921,217 @@ function renderCriteriosMails(){
     '<input class="fsel" id="mc-valor" placeholder="mail, dominio (ej: estudio.com) o palabra" style="min-width:230px"><input class="fsel" id="mc-nota" placeholder="Nota (opcional)">'+
     '<button class="btnp" style="font-size:12px;padding:6px 12px" onclick="agregarCriterioMail(document.getElementById(\'mc-tipo\').value,document.getElementById(\'mc-valor\').value,document.getElementById(\'mc-nota\').value)">Agregar</button></div>';
   h+='</div>';el.innerHTML=h;
+}
+
+// ─── MODO PANTALLA (segundo monitor) ────────────────────────────────────────
+// Slides que rotan solas con los datos ya cargados en el Hub. No guarda nada ni manda datos afuera.
+// La agenda de Teams aparece solo si Microsoft da el permiso Calendars.Read (requiere aprobación de TI).
+var PANT={on:false,i:0,slides:[],seg:15,pausa:false,timer:null,tick:null,refresh:null,wake:null,agenda:null,agendaErr:'',t0:0};
+function abrirPantalla(){
+  var o=document.getElementById('pantalla');
+  if(!o){o=document.createElement('div');o.id='pantalla';document.body.appendChild(o);}
+  o.style.cssText='position:fixed;inset:0;z-index:950;background:var(--bg);display:flex;flex-direction:column;overflow:hidden';
+  PANT.on=true;PANT.i=0;PANT.pausa=false;
+  try{var s=+localStorage.getItem('pantSeg');if(s>=5)PANT.seg=s;}catch(e){}
+  o.innerHTML='<div style="display:flex;align-items:center;gap:16px;padding:14px 28px;border-bottom:1px solid var(--brd);background:var(--surf)">'
+    +'<div style="font-weight:700;color:var(--bl);font-size:15px;letter-spacing:.02em">⚖️ LEGAL HUB</div>'
+    +'<div id="pant-titulo" style="flex:1;font-size:15px;font-weight:600;color:var(--tx2)"></div>'
+    +'<div id="pant-dots" style="display:flex;gap:5px"></div>'
+    +'<div id="pant-reloj" style="font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;min-width:70px;text-align:right"></div></div>'
+    +'<div id="pant-cuerpo" style="flex:1;overflow:hidden;padding:26px 36px;transition:opacity .35s"></div>'
+    +'<div style="height:4px;background:var(--surf2)"><div id="pant-barra" style="height:4px;width:0;background:var(--bl)"></div></div>'
+    +'<div id="pant-ctrl" style="display:flex;gap:8px;align-items:center;padding:8px 20px;background:var(--surf);border-top:1px solid var(--brd);font-size:12px;color:var(--tx3)">'
+    +'<button class="btns" style="padding:4px 10px" onclick="pantIr(-1)" title="Anterior (←)">◀</button>'
+    +'<button class="btns" style="padding:4px 10px" id="pant-pausa" onclick="pantPausa()" title="Pausa (espacio)">⏸</button>'
+    +'<button class="btns" style="padding:4px 10px" onclick="pantIr(1)" title="Siguiente (→)">▶</button>'
+    +'<select class="fsel" style="padding:3px 6px;font-size:12px" onchange="PANT.seg=+this.value;try{localStorage.setItem(\'pantSeg\',this.value)}catch(e){};pantIr(0)">'+[10,15,20,30,60].map(function(s){return '<option value="'+s+'"'+(s===PANT.seg?' selected':'')+'>'+s+' s por slide</option>';}).join('')+'</select>'
+    +'<button class="btns" style="padding:4px 10px" onclick="pantFull()" title="Pantalla completa (F)">⛶ Pantalla completa</button>'
+    +'<span id="pant-info" style="flex:1;text-align:center"></span>'
+    +'<button class="btns" style="padding:4px 10px" onclick="cerrarPantalla()" title="Salir (Esc)">✕ Salir</button></div>';
+  document.addEventListener('keydown',pantTecla);
+  // Mantener la pantalla encendida mientras está abierto (si el navegador lo permite)
+  try{if(navigator.wakeLock)navigator.wakeLock.request('screen').then(function(w){PANT.wake=w;}).catch(function(){});}catch(e){}
+  PANT.tick=setInterval(pantReloj,1000);pantReloj();
+  // Cada 10 minutos vuelve a leer SharePoint (y la agenda) para que lo que se ve esté al día
+  PANT.refresh=setInterval(function(){Promise.resolve(syncAll()).then(function(){cargarAgendaPant();});},600000);
+  cargarAgendaPant();
+  pantIr(0);
+}
+function cerrarPantalla(){
+  PANT.on=false;clearTimeout(PANT.timer);clearInterval(PANT.tick);clearInterval(PANT.refresh);
+  document.removeEventListener('keydown',pantTecla);
+  try{if(PANT.wake)PANT.wake.release();}catch(e){}PANT.wake=null;
+  try{if(document.fullscreenElement)document.exitFullscreen();}catch(e){}
+  var o=document.getElementById('pantalla');if(o)o.remove();
+}
+function pantTecla(e){
+  if(!PANT.on)return;
+  if(e.key==='Escape'&&!document.fullscreenElement)cerrarPantalla();
+  else if(e.key==='ArrowRight')pantIr(1);else if(e.key==='ArrowLeft')pantIr(-1);
+  else if(e.key===' '){e.preventDefault();pantPausa();}else if(e.key==='f'||e.key==='F')pantFull();
+}
+function pantFull(){try{if(document.fullscreenElement)document.exitFullscreen();else document.getElementById('pantalla').requestFullscreen();}catch(e){}}
+function pantPausa(){PANT.pausa=!PANT.pausa;var b=document.getElementById('pant-pausa');if(b)b.textContent=PANT.pausa?'▶ Seguir':'⏸';if(!PANT.pausa)pantIr(0);else{clearTimeout(PANT.timer);pantBarra(false);}}
+function pantBarra(corre){var b=document.getElementById('pant-barra');if(!b)return;b.style.transition='none';b.style.width='0';void b.offsetWidth;if(corre){b.style.transition='width '+PANT.seg+'s linear';b.style.width='100%';}}
+function pantReloj(){
+  var r=document.getElementById('pant-reloj');if(r){var d=new Date();r.textContent=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);}
+}
+function pantIr(paso){
+  if(!PANT.on)return;
+  PANT.slides=armarSlidesPant();
+  var n=PANT.slides.length;if(!n)return;
+  PANT.i=((PANT.i+paso)%n+n)%n;
+  var s=PANT.slides[PANT.i], c=document.getElementById('pant-cuerpo');
+  c.style.opacity=0;
+  setTimeout(function(){
+    if(!PANT.on)return;
+    c.innerHTML=s.html;c.style.opacity=1;
+    document.getElementById('pant-titulo').textContent=s.titulo;
+    document.getElementById('pant-dots').innerHTML=PANT.slides.map(function(x,k){return '<span title="'+escHtml(x.titulo)+'" onclick="PANT.i='+k+';pantIr(0)" style="cursor:pointer;width:'+(k===PANT.i?18:7)+'px;height:7px;border-radius:4px;background:'+(k===PANT.i?'var(--bl)':'var(--brd2)')+';transition:width .3s"></span>';}).join('');
+    var inf=document.getElementById('pant-info');
+    if(inf)inf.textContent='Datos al '+new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})+(PANT.agendaErr?' · 📅 '+PANT.agendaErr:'')+' · ← → para moverte, espacio para pausar';
+  },PANT.on&&c.innerHTML?300:0);
+  clearTimeout(PANT.timer);PANT.t0=Date.now();pantBarra(!PANT.pausa);
+  if(!PANT.pausa)PANT.timer=setTimeout(function(){pantIr(1);},PANT.seg*1000);
+}
+
+// ── Agenda de Teams (Calendars.Read; solo funciona si TI aprobó el permiso) ──
+async function cargarAgendaPant(){
+  var acc=msalInstance.getAllAccounts()[0];if(!acc)return;
+  try{
+    var tk=(await msalInstance.acquireTokenSilent({scopes:['Calendars.Read'],account:acc})).accessToken;
+    var ini=new Date();ini.setHours(0,0,0,0);var fin=new Date(ini);fin.setDate(fin.getDate()+1);
+    var url='https://graph.microsoft.com/v1.0/me/calendarView?startDateTime='+ini.toISOString()+'&endDateTime='+fin.toISOString()+'&$select=subject,start,end,isOnlineMeeting,onlineMeetingProvider,organizer,location,isAllDay,isCancelled,showAs&$orderby=start/dateTime&$top=50';
+    var r=await fetch(url,{headers:{Authorization:'Bearer '+tk,Prefer:'outlook.timezone="'+(Intl.DateTimeFormat().resolvedOptions().timeZone||'America/Argentina/Buenos_Aires')+'"'}});
+    if(!r.ok)throw new Error('status '+r.status);
+    PANT.agenda=((await r.json()).value||[]).filter(function(e){return !e.isCancelled&&e.showAs!=='free';});PANT.agendaErr='';
+  }catch(e){PANT.agenda=null;PANT.agendaErr='la agenda de Teams aparece cuando TI apruebe el permiso de calendario';}
+}
+
+// ── Armado de slides (se rearman en cada pasada, así reflejan los datos nuevos) ──
+var PANT_PAIS={AR:'🇦🇷 Argentina',UY:'🇺🇾 Uruguay',PY:'🇵🇾 Paraguay',Regional:'🌎 Regional',sin:'📍 Sin país'};
+function pantFila(izq,txt,der,col){
+  return '<div style="display:flex;gap:16px;align-items:center;padding:11px 0;border-bottom:1px solid var(--brd);font-size:19px">'
+    +'<div style="min-width:190px;font-weight:700;color:'+(col||'var(--tx2)')+';white-space:nowrap">'+izq+'</div>'
+    +'<div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+txt+'</div>'
+    +(der?'<div style="color:var(--tx3);font-size:15px;white-space:nowrap">'+der+'</div>':'')+'</div>';
+}
+function pantLista(arr,max,fn){return arr.slice(0,max).map(fn).join('')+(arr.length>max?'<div style="color:var(--tx3);font-size:15px;margin-top:10px">y '+(arr.length-max)+' más…</div>':'');}
+function pantKpi(n,lbl,col){return '<div style="flex:1;min-width:150px;background:var(--surf);border:1px solid var(--brd);border-radius:14px;padding:18px 20px"><div style="font-size:52px;font-weight:800;line-height:1;color:'+(n?(col||'var(--tx)'):'var(--tx3)')+'">'+n+'</div><div style="font-size:15px;color:var(--tx2);margin-top:8px">'+lbl+'</div></div>';}
+function pantTit(t,sub){return '<div style="font-size:34px;font-weight:800;margin-bottom:4px">'+t+'</div>'+(sub?'<div style="font-size:16px;color:var(--tx3);margin-bottom:18px">'+sub+'</div>':'<div style="margin-bottom:18px"></div>');}
+function pantDias(d){return d<0?'hace '+(-d)+(d===-1?' día':' días'):d===0?'HOY':d===1?'mañana':'en '+d+' días';}
+function pantRespNom(ini){var u=legalUser(ini);return u?String(u.name).split(' ')[0]:(ini||'—');}
+function armarSlidesPant(){
+  var S=[], hoy=new Date(), vis=(typeof ticketsVisibles==='function'?ticketsVisibles():tickets);
+  var ab=vis.filter(function(t){return t.estado!=='Resuelto';});
+  var vReal=ab.filter(function(t){return t.venc&&!t.respTs;}).sort(function(a,b){return a.venc<b.venc?-1:1;});
+  var venc7=vReal.filter(function(t){return daysTo(t.venc)<=7;});
+  var atras=ab.filter(function(t){return !t.venc&&!t.esperaDesde&&!t.respTs&&t.deadline&&daysTo(t.deadline)<0;}).sort(function(a,b){return a.deadline<b.deadline?-1:1;});
+  var nuevos=ab.filter(function(t){return etapaTicket(t)==='nuevo';}).sort(function(a,b){return a.fecha<b.fecha?-1:1;});
+  var espera=ab.filter(function(t){return t.esperaDesde;}).sort(function(a,b){return a.esperaDesde<b.esperaDesde?-1:1;});
+  var estanc=ab.filter(function(t){return typeof esEstancado==='function'&&esEstancado(t);});
+  var crit=ab.filter(function(t){return t.urgencia==='Crítica';});
+  var fecha=hoy.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+
+  // 1. Hoy
+  var h=pantTit('Hoy, '+fecha,ab.length+' pedidos abiertos en Legal');
+  h+='<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:22px">'+pantKpi(venc7.length,'⛔ Vencimientos reales en 7 días','var(--rd-tx)')+pantKpi(atras.length,'⏰ Atrasados (fecha estimada)','#C2410C')+pantKpi(nuevos.length,'📥 Nuevos sin tomar','var(--bl)')+pantKpi(espera.length,'⏸ Esperando a terceros','var(--am-tx)')+(crit.length?pantKpi(crit.length,'🚨 Críticos','var(--rd-tx)'):'')+'</div>';
+  var prox=vReal.slice(0,4);
+  if(prox.length)h+='<div style="font-size:18px;font-weight:700;margin-bottom:6px">Lo más próximo</div>'+pantLista(prox,4,function(t){var d=daysTo(t.venc);return pantFila('⛔ '+pantDias(d),t.asunto+(t.vencMotivo?' <span style="color:var(--tx3)">— '+escHtml(t.vencMotivo)+'</span>':''),pantRespNom(t.resp),d<=rojoDesde(t)?'var(--rd-tx)':'var(--am-tx)');});
+  // Próxima reunión (si hay agenda) y fechas clave de esta semana
+  if(PANT.agenda){var sig=PANT.agenda.filter(function(e){return !e.isAllDay&&new Date(e.end.dateTime).getTime()>Date.now();})[0];
+    if(sig){var hs=new Date(sig.start.dateTime);h+='<div style="font-size:18px;font-weight:700;margin:20px 0 6px">Próxima reunión</div>'+pantFila('📅 '+('0'+hs.getHours()).slice(-2)+':'+('0'+hs.getMinutes()).slice(-2),escHtml(sig.subject||'(sin asunto)')+(sig.isOnlineMeeting?' <span style="font-size:14px;color:#5B5FC7">● Teams</span>':''),'','var(--bl)');}}
+  var fSem=(fechas||[]).filter(function(f){var d=daysTo(f.fecha);return d!==null&&d>=0&&d<=7;}).sort(function(a,b){return a.fecha<b.fecha?-1:1;});
+  if(fSem.length)h+='<div style="font-size:18px;font-weight:700;margin:20px 0 6px">Fechas clave de la semana</div>'+pantLista(fSem,3,function(f){return pantFila('📌 '+pantDias(daysTo(f.fecha)),escHtml(f.desc),escHtml(f.cat||''),'var(--am-tx)');});
+  S.push({titulo:'Resumen del día',html:h});
+
+  // 2. Agenda de Teams
+  if(PANT.agenda){
+    var ahora=Date.now(), ag=PANT.agenda;
+    var hA=pantTit('📅 Tu agenda de hoy',ag.length?ag.length+(ag.length===1?' reunión':' reuniones'):'Sin reuniones hoy');
+    hA+=ag.length?pantLista(ag,9,function(e){
+      var s=new Date(e.start.dateTime),f=new Date(e.end.dateTime),hh=function(d){return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);};
+      var ya=f.getTime()<ahora, ahoraM=s.getTime()<=ahora&&f.getTime()>=ahora;
+      var col=ahoraM?'var(--gr-tx)':ya?'var(--tx3)':'var(--bl)';
+      return pantFila((e.isAllDay?'Todo el día':hh(s)+' – '+hh(f))+(ahoraM?' · AHORA':''),'<span style="'+(ya?'color:var(--tx3);text-decoration:line-through':'')+'">'+escHtml(e.subject||'(sin asunto)')+'</span>'+(e.isOnlineMeeting?' <span style="font-size:14px;color:#5B5FC7">● Teams</span>':''),escHtml((e.location&&e.location.displayName)||''),col);}):'<div style="font-size:22px;color:var(--tx3);margin-top:30px">Día libre de reuniones 🎉</div>';
+    S.push({titulo:'Agenda',html:hA});
+  }
+
+  // 3. Vencimientos reales
+  if(vReal.length){
+    S.push({titulo:'Vencimientos reales',html:pantTit('⛔ Vencimientos reales','Plazos que no dependen de nosotros: lo que vence, vence')+pantLista(vReal,8,function(t){var d=daysTo(t.venc);var u=IMPACTO_UI[t.vencImpacto];
+      return pantFila(fmtDate(t.venc)+' · '+pantDias(d),t.asunto+(t.vencMotivo?' <span style="color:var(--tx3)">— '+escHtml(t.vencMotivo)+'</span>':''),(u?u.icon+' ':'')+pantRespNom(t.resp),d<=rojoDesde(t)?'var(--rd-tx)':d<=7?'var(--am-tx)':'var(--gr-tx)');})});
+  }
+
+  // 4. Fechas clave e institucionales (fechas clave, poderes, MLA, contratos de suelo, usufructos)
+  var inst=[];
+  (fechas||[]).forEach(function(f){var d=daysTo(f.fecha);if(d!==null&&d>=-3&&d<=45)inst.push({d:d,f:f.fecha,txt:escHtml(f.desc),tipo:'📌 '+escHtml(f.cat||'Fecha clave'),pais:f.pais});});
+  (poderes||[]).forEach(function(p){var d=daysTo(p.fechaVen);if(d!==null&&d>=-30&&d<=60)inst.push({d:d,f:p.fechaVen,txt:'Poder de '+escHtml(p.apoderado)+(p.tipo?' ('+escHtml(p.tipo)+')':''),tipo:'✍️ Poder',pais:p.pais});});
+  (mla||[]).forEach(function(m){var d=daysTo(m.vencFecha);if(d!==null&&d>=-30&&d<=120)inst.push({d:d,f:m.vencFecha,txt:'MLA '+escHtml(m.nombre||m.contraparte),tipo:'📑 MLA',pais:m.pais});});
+  (suelos||[]).forEach(function(s){var d=daysTo(s.fin);if(d!==null&&d>=-30&&d<=90)inst.push({d:d,f:s.fin,txt:'Contrato de suelo '+escHtml(s.sitio),tipo:'🏗 Suelo',pais:s.pais});});
+  (inm||[]).forEach(function(x){var d=daysTo(x.vencUsuf);if(d!==null&&d>=-30&&d<=120)inst.push({d:d,f:x.vencUsuf,txt:'Usufructo '+escHtml(x.sitio||x.nombre),tipo:'🏠 Inmueble',pais:'UY'});});
+  inst.sort(function(a,b){return a.d-b.d;});
+  if(inst.length){
+    for(var k=0;k<inst.length&&k<24;k+=8){
+      S.push({titulo:'Fechas clave',html:pantTit('📌 Fechas clave y vencimientos institucionales','Fechas clave, poderes, MLA, contratos de suelo e inmuebles'+(inst.length>8?' · '+(k/8+1)+'/'+Math.ceil(Math.min(inst.length,24)/8):''))
+        +inst.slice(k,k+8).map(function(x){return pantFila(fmtDate(x.f)+' · '+pantDias(x.d),x.txt,x.tipo+(x.pais?' · '+escHtml(x.pais):''),x.d<0?'var(--rd-tx)':x.d<=7?'var(--am-tx)':'var(--gr-tx)');}).join('')});
+    }
+  }
+
+  // 5. Semáforo por país
+  var P={};ab.forEach(function(t){var p=paisTicket(t)||'sin';if(!P[p])P[p]={r:0,a:0,v:0,n:0,tot:0};P[p].tot++;var s=semaforoTicket(t).icon;if(t.respTs)P[p].n++;else if(s==='⛔'||s==='⏰')P[p].r++;else if(s==='🟠'||s==='🟡')P[p].a++;else if(s==='🟢')P[p].v++;else P[p].n++;});
+  var pk=['AR','UY','PY','Regional','sin'].filter(function(k){return P[k];});
+  if(pk.length){
+    S.push({titulo:'Por país',html:pantTit('🌎 Semáforo por país','Pedidos abiertos')+'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px">'+pk.map(function(k){var p=P[k];
+      return '<div style="background:var(--surf);border:1px solid var(--brd);border-radius:14px;padding:20px 22px;border-top:6px solid '+(p.r?'var(--rd)':p.a?'var(--am)':'var(--gr-tx)')+'"><div style="font-size:22px;font-weight:700">'+PANT_PAIS[k]+'</div><div style="font-size:44px;font-weight:800;margin:6px 0">'+p.tot+'</div>'
+        +'<div style="font-size:17px;display:flex;gap:14px;flex-wrap:wrap"><span>🔴 '+p.r+'</span><span>🟡 '+p.a+'</span><span>🟢 '+p.v+'</span><span style="color:var(--tx3)">⚪ '+p.n+'</span></div></div>';}).join('')+'</div>'
+      +'<div style="font-size:14px;color:var(--tx3);margin-top:14px">🔴 vencidos o atrasados · 🟡 vencen pronto · 🟢 en plazo · ⚪ respondidos, en espera o sin fecha</div>'});
+  }
+
+  // 6. Carga por responsable
+  var R={};ab.forEach(function(t){var k=t.resp||'—';if(!R[k])R[k]={tot:0,nu:0,at:0,ve:0,es:0};R[k].tot++;if(etapaTicket(t)==='nuevo')R[k].nu++;if(atras.indexOf(t)>=0)R[k].at++;if(venc7.indexOf(t)>=0)R[k].ve++;if(t.esperaDesde)R[k].es++;});
+  var rk=Object.keys(R).sort(function(a,b){return R[b].tot-R[a].tot;});
+  if(rk.length>1||(rk.length&&currentUser.perfil==='Admin')){
+    S.push({titulo:'Equipo',html:pantTit('👥 ¿Quién tiene qué?','Pedidos abiertos por responsable')+'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px">'+rk.map(function(k){var r=R[k],u=legalUser(k);
+      return '<div style="background:var(--surf);border:1px solid var(--brd);border-radius:14px;padding:20px 22px"><div style="font-size:21px;font-weight:700">'+escHtml(u?u.name:k)+'</div><div style="font-size:44px;font-weight:800;margin:6px 0">'+r.tot+'</div>'
+        +'<div style="font-size:16px;line-height:1.7;color:var(--tx2)">'+(r.ve?'<div style="color:var(--rd-tx)">⛔ '+r.ve+' con vencimiento en 7 días</div>':'')+(r.at?'<div style="color:#C2410C">⏰ '+r.at+' atrasados</div>':'')+(r.nu?'<div style="color:var(--bl)">📥 '+r.nu+' sin tomar</div>':'')+(r.es?'<div style="color:var(--am-tx)">⏸ '+r.es+' en espera</div>':'')+(!r.ve&&!r.at&&!r.nu?'<div style="color:var(--gr-tx)">✅ todo en orden</div>':'')+'</div></div>';}).join('')+'</div>'});
+  }
+
+  // 7. Atrasados y estancados
+  var ojo=atras.concat(estanc.filter(function(t){return atras.indexOf(t)<0;}));
+  if(ojo.length)S.push({titulo:'Atención',html:pantTit('⏰ Atrasados y estancados','Pasaron la fecha estimada o están tomados hace más de 3 días sin devolución')+pantLista(ojo,8,function(t){
+    var lbl=atras.indexOf(t)>=0?'⏰ '+pantDias(daysTo(t.deadline)):'🐢 '+diasDesde(t.tomadoTs)+' días tomado';
+    return pantFila(lbl,t.asunto,pantRespNom(t.resp)+(paisTicket(t)?' · '+paisTicket(t):''),'#C2410C');})});
+
+  // 8. Nuevos sin tomar
+  if(nuevos.length)S.push({titulo:'Nuevos',html:pantTit('📥 Nuevos sin tomar',nuevos.length+(nuevos.length===1?' pedido espera':' pedidos esperan')+' que alguien de Legal lo tome')+pantLista(nuevos,8,function(t){var d=diasDesde(t.creadoTs||t.fecha);
+    return pantFila(d<=0?'hoy':'hace '+d+(d===1?' día':' días'),t.asunto,escHtml(nombreSolicitante(t))+' → '+pantRespNom(t.resp),d>=2?'#C2410C':'var(--bl)');})});
+
+  // 9. En espera de terceros
+  if(espera.length)S.push({titulo:'En espera',html:pantTit('⏸ Esperando a terceros','La fecha estimada no corre mientras tanto')+pantLista(espera,8,function(t){var d=diasDesde(t.esperaDesde);
+    return pantFila(d+(d===1?' día':' días'),t.asunto+' <span style="color:var(--tx3)">— espera a '+escHtml(t.esperaDe||'—')+'</span>',pantRespNom(t.resp),d>=7?'var(--rd-tx)':'var(--am-tx)');})});
+
+  // 10. Tickets complejos (avance por hitos)
+  var comp=ab.filter(function(t){return t.esProyecto&&(t.hitos||[]).length;});
+  if(comp.length)S.push({titulo:'Complejos',html:pantTit('🧩 Proyectos complejos','Avance por etapas')+comp.slice(0,7).map(function(t){var hs=t.hitos,ok=hs.filter(function(x){return x.ok;}).length,act=hs.filter(function(x){return !x.ok;})[0];
+    return '<div style="padding:12px 0;border-bottom:1px solid var(--brd)"><div style="display:flex;justify-content:space-between;font-size:19px;gap:12px"><b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+t.asunto+'</b><span style="color:var(--tx3);font-size:15px;white-space:nowrap">'+ok+'/'+hs.length+' · '+pantRespNom(t.resp)+'</span></div>'
+      +'<div style="display:flex;gap:4px;margin:8px 0 4px">'+hs.map(function(x,j){return '<div style="flex:1;height:8px;border-radius:4px;background:'+(x.ok?'var(--gr-tx)':x===act?'var(--bl)':'var(--brd2)')+'"></div>';}).join('')+'</div>'
+      +(act?'<div style="font-size:15px;color:var(--bl)">Ahora: '+escHtml(act.t)+'</div>':'<div style="font-size:15px;color:var(--gr-tx)">✅ Todas las etapas cumplidas</div>')+'</div>';}).join('')});
+
+  // 11. Para management
+  var pm=vis.filter(function(t){return t.pm;});
+  if(pm.length)S.push({titulo:'Management',html:pantTit('📊 Para la reunión de management',pm.length+(pm.length===1?' tema marcado':' temas marcados'))+pantLista(pm,7,function(t){
+    return pantFila(t.estado==='Resuelto'?'✅ Resuelto':semaforoTicket(t).icon+' '+escHtml(etapaTicket(t)),t.asunto+(t.nov?' <span style="color:var(--tx3)">— '+escHtml(t.nov)+'</span>':''),pantRespNom(t.resp));})});
+
+  // 12. Noticias
+  var ns=(NOTICIAS&&NOTICIAS.noticias)||[];
+  for(var q=0;q<ns.length;q+=2){
+    S.push({titulo:'Noticias',html:pantTit('📰 Noticias del sector','Selección automática con IA de medios públicos · verificá en la fuente')+ns.slice(q,q+2).map(function(n){
+      return '<div style="background:var(--surf);border:1px solid var(--brd);border-radius:14px;padding:20px 24px;margin-bottom:14px"><div style="font-size:14px;color:var(--tx3);margin-bottom:6px">'+escHtml(n.categoria||'Noticia')+(n.pais?' · '+escHtml(n.pais):'')+' · '+escHtml(n.fuente||'')+(n.fecha?' · '+fmtDate(n.fecha):'')+'</div>'
+        +'<div style="font-size:24px;font-weight:700;line-height:1.3">'+escHtml(n.titulo)+'</div>'+(n.que_paso?'<div style="font-size:17px;color:var(--tx2);margin-top:8px;line-height:1.5">'+escHtml(n.que_paso)+'</div>':'')
+        +(n.por_que_importa?'<div style="font-size:17px;color:var(--bl);margin-top:8px">→ '+escHtml(n.por_que_importa)+'</div>':'')+'</div>';}).join('')});
+  }
+  return S;
 }
 </script>
 </body>
