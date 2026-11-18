@@ -104,6 +104,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .tk-tipo-card{display:flex;gap:12px;align-items:flex-start;border:1.5px solid var(--brd2);border-radius:10px;padding:14px;margin-bottom:10px;cursor:pointer;transition:border-color .15s,background .15s}
 .tk-tipo-card:hover{border-color:var(--bl);background:var(--bl-bg)}
 .tk-mio{cursor:pointer;transition:box-shadow .15s}.tk-mio:hover{box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.pant-click{transition:background .15s}.pant-click:hover{background:var(--bl-bg)}
 .tk-cont{flex:1;min-width:120px;background:var(--surf);border:1px solid var(--brd);border-radius:10px;padding:12px 14px;cursor:pointer}
 .tk-cont.on{border-color:var(--bl);box-shadow:0 0 0 2px var(--bl-bg)}
 @keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
@@ -391,6 +392,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           </div>
         </div>
         <!-- Tablero high level: fechas clave de los próximos 7 días + semáforo por área (el detalle está en cada solapa) -->
+        <div id="dash-avisos"></div>
         <div id="dash-semana" style="margin-bottom:16px"></div>
         <div id="dash-areas" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px"></div>
         <div id="dash-mapa"></div>
@@ -1238,7 +1240,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <textarea id="tk-respuesta" placeholder="Escribí tu respuesta o comentario... (se agrega al historial con fecha y tus iniciales)"></textarea>
       </div>
       <div style="display:flex;gap:8px;margin-top:8px">
-        <button class="btnp" style="flex:1" id="tk-gestionar-btn" onclick="guardarGestionTicket()">Guardar y enviar mail</button>
+        <button class="btnp" style="flex:1" id="tk-gestionar-btn" onclick="guardarGestionTicket()">Guardar</button>
         <button class="btns" onclick="closeFormTicket()">Cancelar</button>
       </div>
     </div>
@@ -1583,6 +1585,7 @@ async function initApp(account){
   if(typeof MAILS_ACTIVO!=='undefined'&&MAILS_ACTIVO&&currentUser.perfil==='Admin')document.getElementById('nav-mails').style.display='flex';
   if(currentUser.perfil!=='Solicitante'&&!currentUser.mlaOnly)document.getElementById('nav-calendario').style.display='flex';
   await syncAll();hideLoading();document.getElementById('app').style.display='block';
+  try{abrirTicketDeURL();}catch(e){console.warn(e);}
   if(currentUser.perfil==='Admin'){document.getElementById('setup-btn-wrap').style.display='flex';}
   // Repaso del día por voz: para quien tiene dashboard
   if(currentUser.perfil!=='Solicitante'&&!currentUser.mlaOnly){document.getElementById('btn-repaso').style.display='inline-block';document.getElementById('btn-pantalla').style.display='inline-block';}
@@ -1768,6 +1771,7 @@ function renderDash(){
   var vencClave=ev.filter(function(e){var d=daysTo(e.fecha);return CLAVE[e.tipo]&&e.pend&&navOk(CAL_TIPOS[e.tipo].page)&&d!==null&&d<0&&d>=-60;}).length;
   var verCal=navOk('calendario')?'<div class="cardhl" onclick="navTo(\'calendario\')">Ver calendario</div>':'';
   var semana=document.getElementById('dash-semana');
+  renderAvisosLegal();
   if(semana){
     semana.innerHTML=ev7.length
       ?'<div class="card" style="border-left:4px solid var(--rd)"><div class="cardh"><div class="cardht">📅 Fechas clave · próximos 7 días ('+ev7.length+')</div>'+verCal+'</div>'+ev7.slice(0,6).map(calItem).join('')
@@ -2480,6 +2484,7 @@ function estadoAmigable(t){
   if(t.estado==='Resuelto')return {icon:'✅',lbl:'Resuelto'+(t.cierreTs?' el '+fechaCorta(t.cierreTs):''),col:'var(--gr-tx)',bg:'var(--gr-bg)'};
   if(t.esperaDesde)return {icon:'⏸',lbl:'Legal espera información de '+(t.esperaDe||'otra área'),col:'var(--am-tx)',bg:'var(--am-bg)'};
   if(t.respTs||t.respuestaRaw)return {icon:'💬',lbl:quien+' te respondió',col:'var(--bl)',bg:'var(--bl-bg)'};
+  if(t.reabiertoTs)return {icon:'🔄',lbl:'Reabierto — '+quien+' lo retoma',col:'var(--am-tx)',bg:'var(--am-bg)'};
   if(t.tomadoTs)return {icon:'🔵',lbl:quien+' lo está trabajando',col:'var(--bl)',bg:'var(--bl-bg)'};
   return {icon:'📥',lbl:'Recibido — '+quien+' lo va a tomar',col:'var(--tx2)',bg:'var(--surf2)'};
 }
@@ -2636,6 +2641,11 @@ function verTicket(id){
   if(t.esProyecto)h+='<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:var(--tx2)">🧩 Etapas</div>'+timelineHitosHTML(t,false)+'</div>';
   if(t.cuerpo)h+=sec('Lo que pediste',t.cuerpo);
   if(t.respuesta)h+=sec('💬 Respuestas de Legal',t.respuesta,'var(--gr-bg)');
+  // Cierre automático y reapertura
+  if(t.estado!=='Resuelto'&&t.cierreAuto&&t.respTs&&!t.esperaDesde)h+='<div style="margin-bottom:12px;padding:8px 12px;border-radius:var(--rs);background:var(--surf2);font-size:12px;color:var(--tx2)">🗓 Si no necesitás nada más, se cierra solo el <b>'+fmtDate(String(t.cierreAuto).split('T')[0])+'</b>. Si hace falta seguir, escribile a Legal con el botón de abajo.</div>';
+  var pendR=reaperturaPendiente(t);
+  if(t.estado==='Resuelto'&&pendR)h+='<div style="margin-bottom:12px;padding:10px 12px;border-radius:var(--rs);background:var(--bl-bg);color:var(--bl);font-size:12px">🔄 Pediste reabrirlo el '+fechaCorta(pendR)+'. En unos minutos queda reabierto.</div>';
+  else if(t.estado==='Resuelto')h+='<button class="btnp" style="width:100%;margin-bottom:8px;background:var(--am)" data-tid="'+t.id+'" onclick="abrirReabrir(this.dataset.tid)">🔄 Reabrir este pedido</button><div style="font-size:11px;color:var(--tx3);margin-bottom:12px;text-align:center">Si quedó algo pendiente: le avisamos a Legal con tu comentario.</div>';
   h+='<button class="btnp" style="width:100%;margin-bottom:8px" data-tid="'+t.id+'" onclick="escribirSobreTicket(this.dataset.tid)">✉️ Escribirle a '+escHtml(String(r.name||'Legal').split(' ')[0])+' sobre este pedido</button>';
   h+='<div style="font-size:11px;color:var(--tx3);margin-bottom:12px;text-align:center">Para agregar información o documentos. El número del pedido va en el asunto.</div>';
   h+='<button class="btns" style="width:100%" onclick="closeFormTicket()">Cerrar</button>';
@@ -3017,7 +3027,8 @@ async function guardarEspera(tid){
   var sol=String(nombreSolicitante(t)||'el solicitante').split(' ')[0];
   if(q!=='sol'&&!otro){alert('Indicá a qué área o tercero esperamos.');return;}
   var de=q==='sol'?sol:(q==='area'?'área '+otro:otro);
-  var f={EsperaDesde:todayStr(),EsperaDe:de,Respuesta:(t.respuestaRaw?t.respuestaRaw+'\n\n':'')+selloHist()+' ⏸ En espera de '+de+(que?': '+que:'')};
+  // EsperaTipo/RecordarEspera: si esperamos al solicitante, Power Automate le recuerda cada 3 días hábiles
+  var f={EsperaDesde:todayStr(),EsperaDe:de,EsperaTipo:q,RecordarEspera:q==='sol'?sumarDiasHabiles(new Date(),3)+'T00:00:00Z':null,CierreAuto:null,Respuesta:(t.respuestaRaw?t.respuestaRaw+'\n\n':'')+selloHist()+' ⏸ En espera de '+de+(que?': '+que:'')};
   if(!t.tomadoTs){f.FechaTomado=new Date().toISOString();f.TomadoPor=currentUser.ini;}
   try{
     await updateListItem(LIST_TICKETS,t.id,f);
@@ -3035,7 +3046,7 @@ async function retomarTicket(tid){
   var dias=contarHabiles(t.esperaDesde,todayStr());
   var nuevo=t.deadline&&dias?sumarDiasHabiles(t.deadline+'T12:00:00',dias):t.deadline;
   if(!confirm('Retomar '+String(t.num).replace(/&[a-z#0-9]+;/g,'')+'\n\nEstuvo '+dias+(dias===1?' día hábil':' días hábiles')+' en espera de '+t.esperaDe+'.'+(t.deadline&&dias?'\nEl deadline pasa del '+fmtDate(t.deadline)+' al '+fmtDate(nuevo)+'.':'')))return;
-  var f={EsperaDesde:'',EsperaDe:'',DiasEspera:(t.diasEspera||0)+dias,
+  var f={EsperaDesde:'',EsperaDe:'',EsperaTipo:'',RecordarEspera:null,DiasEspera:(t.diasEspera||0)+dias,
     Respuesta:(t.respuestaRaw?t.respuestaRaw+'\n\n':'')+selloHist()+' ▶ Retomado: '+dias+(dias===1?' día hábil':' días hábiles')+' en espera de '+t.esperaDe+(t.deadline&&dias?'; fecha estimada corrida al '+fmtDate(nuevo):'')};
   if(nuevo&&nuevo!==t.deadline)f.Deadline=nuevo+'T00:00:00Z';
   try{await updateListItem(LIST_TICKETS,t.id,f);await syncAll();showToast('▶ Retomado'+(f.Deadline?' — nueva fecha estimada '+fmtDate(nuevo):''));}
@@ -3786,7 +3797,7 @@ function escUrl(s){s=String(s==null?'':s).trim();return (/^[a-z][a-z0-9+.\-]*:/i
 // Los campos de texto de Tickets los escribe cualquier solicitante: se guardan ya escapados para mostrar; *Raw = texto original (para mails)
 function mapTicket(item){var f=item.fields;return{id:item.id,num:escHtml(f.NumTicket||ticketNumFromId(item.id,f.FechaRecibido)),remitente:escHtml(f.Remitente),remitenteRaw:f.Remitente||'',email:(f.EmailRemitente||'').toLowerCase(),asunto:escHtml(f.Asunto),asuntoRaw:f.Asunto||'',resp:f.Responsable||'',cuerpo:escHtml(f.Cuerpo),cuerpoRaw:f.Cuerpo||'',fecha:f.FechaRecibido?f.FechaRecibido.split('T')[0]:'',estado:(f.Estado==='Resuelto'?'Resuelto':'En curso'),link:f.LinkMail||'',cat:escHtml(f.Categoria),catRaw:f.Categoria||'',sitio:escHtml(f.CodigoSitio),sitioRaw:f.CodigoSitio||'',deadline:f.Deadline?f.Deadline.split('T')[0]:'',bloq:escHtml(f.BloqQuien),bloqQuienRaw:f.BloqQuien||'',respuesta:escHtml(f.Respuesta),respuestaRaw:f.Respuesta||'',urgencia:escHtml(f.Urgencia),urgenciaRaw:f.Urgencia||'',cierre:f.FechaCierre?f.FechaCierre.split('T')[0]:'',
   // Timeline: creado → tomado por Legal → primera devolución → cerrado (fechas completas)
-  creadoTs:f.FechaRecibido||'',tomadoTs:f.FechaTomado||'',tomadoPor:escHtml(f.TomadoPor),respTs:f.FechaRespuesta||'',cierreTs:f.FechaCierre||'',esProyecto:!!f.EsProyecto,hitos:parseHitos(f.Hitos),pais:f.Pais||'',venc:f.VencimientoReal?f.VencimientoReal.split('T')[0]:'',vencMotivo:f.MotivoVencimiento||'',vencImpacto:f.ImpactoVencimiento||'',esperaDesde:f.EsperaDesde||'',esperaDe:f.EsperaDe||'',diasEspera:f.DiasEspera||0,pmRaw:!!f.ParaManagement,pmFecha:f.ParaManagementFecha||'',pm:pmVigente(!!f.ParaManagement,f.ParaManagementFecha),nov:f.Novedad||'',prox:f.ProximoPaso||'',dec:f.DecisionRequerida||''};}
+  creadoTs:f.FechaRecibido||'',tomadoTs:f.FechaTomado||'',tomadoPor:escHtml(f.TomadoPor),respTs:f.FechaRespuesta||'',cierreTs:f.FechaCierre||'',esProyecto:!!f.EsProyecto,hitos:parseHitos(f.Hitos),pais:f.Pais||'',venc:f.VencimientoReal?f.VencimientoReal.split('T')[0]:'',vencMotivo:f.MotivoVencimiento||'',vencImpacto:f.ImpactoVencimiento||'',esperaDesde:f.EsperaDesde||'',esperaDe:f.EsperaDe||'',diasEspera:f.DiasEspera||0,pmRaw:!!f.ParaManagement,pmFecha:f.ParaManagementFecha||'',pm:pmVigente(!!f.ParaManagement,f.ParaManagementFecha),nov:f.Novedad||'',prox:f.ProximoPaso||'',dec:f.DecisionRequerida||'',esperaTipo:f.EsperaTipo||'',cierreAuto:f.CierreAuto||'',reabiertoTs:f.FechaReapertura||''};}
 
 // ─── TICKETS: prioridad, orden y timeline ───────────────────────────────────
 var PRIO_RANK={'Crítica':4,'Alta':3,'Media':2,'Baja':1};
@@ -4828,6 +4839,8 @@ function renderTickets(){
     h+='<span class="mono" style="font-size:10px">'+t.num+'</span>';
     h+='<span class="badge" style="background:'+eu.bg+';color:'+eu.tx+'">'+eu.icon+' '+eu.lbl+'</span>';
     if(t.esProyecto)h+='<span class="badge" style="background:var(--bl-bg);color:var(--bl)">🧩 Complejo</span>';
+    if(t.reabiertoTs&&t.estado!=='Resuelto'&&!t.respTs)h+='<span class="badge" style="background:var(--am-bg);color:var(--am-tx)" title="Reabierto por el solicitante el '+fechaCorta(t.reabiertoTs)+'">🔄 Reabierto</span>';
+    if(t.cierreAuto&&t.estado!=='Resuelto'&&t.respTs&&!t.esperaDesde)h+='<span class="badge" title="Se cierra automáticamente si el solicitante no escribe">🗓 Cierre auto '+fmtDate(String(t.cierreAuto).split('T')[0])+'</span>';
     if(t.pm&&puedeGestionar)h+='<span class="badge" style="background:var(--am-bg);color:var(--am-tx)">📊 Management</span>';
     h+=prioBadge(t);
     if(cat)h+='<span class="badge" style="background:'+col+'1A;color:'+col+'">'+escHtml(cat)+'</span>';
@@ -4881,7 +4894,10 @@ async function marcarDevolucion(id){
   var t=tickets.find(function(x){return x.id===id;});if(!t)return;
   var ahora=new Date().toISOString(), f={FechaRespuesta:ahora};
   if(!t.tomadoTs){f.FechaTomado=ahora;f.TomadoPor=currentUser.ini;}
-  try{await updateListItem(LIST_TICKETS,id,f);await syncAll();showToast('📤 Devolución registrada');}
+  // Cierre automático en 5 días hábiles (si corresponde) y aviso al solicitante
+  f.CierreAuto=fechaCierreAuto(t);
+  Object.assign(f,avisoSolicitante(t,'respuesta','',f.CierreAuto));
+  try{await updateListItem(LIST_TICKETS,id,f);await syncAll();showToast('📤 Devolución registrada'+(t.email?' — le avisamos a '+primerNombre(nombreSolicitante(t))+' por mail':''));}
   catch(e){showToast('Error: '+e.message,true);}
 }
 // Panel superior de Tickets: "cómo estamos" (solo Legal/Admin). Todo es clickeable y filtra la lista.
@@ -5308,6 +5324,8 @@ var editingTicketId=null;
 function gestionarTicket(id){
   var t=tickets.find(function(x){return x.id===id;});if(!t)return;
   editingTicketId=id;
+  // Tomar automático: si el responsable abre su ticket nuevo, queda tomado (es lo que pide el circuito)
+  if(!t.tomadoTs&&t.estado!=='Resuelto'&&t.resp===currentUser.ini&&!VER_COMO){var ah=new Date().toISOString();t.tomadoTs=ah;t.tomadoPor=currentUser.ini;updateListItem(LIST_TICKETS,id,{FechaTomado:ah,TomadoPor:currentUser.ini}).then(function(){showToast('🙋 Lo marcamos como tomado por vos');renderTickets();try{renderAvisosLegal();}catch(e){}}).catch(function(e){console.warn('auto-tomar',e);});}
   document.getElementById('form-ticket-title').textContent='Gestionar Ticket — '+t.num;
   document.getElementById('tk-vista-crear').style.display='none';
   document.getElementById('tk-vista-gestionar').style.display='block';
@@ -5423,27 +5441,27 @@ async function guardarGestionTicket(){
     if(pm&&!t.pm){fields.ParaManagement=true;fields.ParaManagementFecha=new Date().toISOString();}
     if(!pm&&t.pmRaw)fields.ParaManagement=false;
     [['tk-nov','Novedad','nov'],['tk-prox','ProximoPaso','prox'],['tk-dec','DecisionRequerida','dec']].forEach(function(x){var v=document.getElementById(x[0]).value.trim();if(v!==(t[x[2]]||''))fields[x[1]]=v;});
+    // Avisos automáticos (los manda Power Automate) y cierre automático
+    var urgN=fields.Urgencia!==undefined?fields.Urgencia:t.urgenciaRaw;
+    var tAv=Object.assign({},t,{email:fields.EmailRemitente!==undefined?fields.EmailRemitente:t.email,asuntoRaw:fields.Asunto||t.asuntoRaw,venc:fields.VencimientoReal!==undefined?(fields.VencimientoReal||''):t.venc,esProyecto:fields.EsProyecto!==undefined?fields.EsProyecto:t.esProyecto});
+    var cerrando=estado==='Resuelto'&&t.estado!=='Resuelto';
+    var devolucionNueva=!!fields.FechaRespuesta||(respuesta&&estado!=='Resuelto');
+    var aviso='';
+    if(cerrando){fields.CierreAuto=null;Object.assign(fields,avisoSolicitante(tAv,'cierre',cierreCom||respuesta));aviso='cierre';}
+    else if(estado!=='Resuelto'&&devolucionNueva&&!t.esperaDesde){fields.CierreAuto=fechaCierreAuto(tAv,urgN);Object.assign(fields,avisoSolicitante(tAv,'respuesta',respuesta,fields.CierreAuto));aviso='respuesta';}
+    else if(estado!=='Resuelto'&&t.cierreAuto&&!elegibleCierreAuto(tAv,urgN))fields.CierreAuto=null;
+    if(estado!=='Resuelto'&&t.estado==='Resuelto')fields.CierreAuto=null;
+    if(!aviso&&fields.Urgencia==='Crítica'&&t.estado!=='Resuelto'){
+      Object.assign(fields,avisoCritico({resp:fields.Responsable||t.resp,asunto:tAv.asuntoRaw,solicitante:nombreSolicitante(t),sector:sectorSolicitante(t),desc:t.cuerpoRaw}));aviso='critico';
+    }
     await updateListItem(LIST_TICKETS,editingTicketId,fields);
     await syncAll();
-    var mailTo=fields.EmailRemitente!==undefined?fields.EmailRemitente:(t&&t.email);
-    if(t&&mailTo&&(respuesta||cierreCom)){
-      var estadoTxt=estado==='Resuelto'?'RESUELTO':'EN CURSO';
-      var c='Hola,\n\nTu solicitud '+t.num+(cierreCom?' quedó cerrada.':' ha sido actualizada.')+'\n\nEstado: '+estadoTxt+'\n';
-      if(bloq)c+='Requiere intervencion de: '+bloq+'\n';
-      if(respuesta)c+='\nRespuesta del equipo legal:\n'+recortarParaMail(respuesta)+'\n';
-      if(cierreCom)c+='\nComentario de cierre:\n'+recortarParaMail(cierreCom)+'\n';
-      c+='\nSaludos,\nATIS Legal Team';
-      // Mail al solicitante con botones (abrirlo solo lo bloquea el navegador)
-      showMailStep('✅ Ticket actualizado: '+estado,'Avisale al solicitante por mail. Podés adjuntar documentos antes de enviarlo.',
-        mailTo,'['+t.num+'] '+(cierreCom?'Cerrado':'Actualización')+' — '+(fields.Asunto||t.asuntoRaw),c);
-    } else {
-      closeFormTicket();
-      showToast('Ticket actualizado: '+estado);
-    }
+    closeFormTicket();
+    showToast('Ticket actualizado: '+estado+(aviso==='cierre'||aviso==='respuesta'?(tAv.email?' — le avisamos a '+primerNombre(nombreSolicitante(t))+' por mail':''):aviso==='critico'?' — aviso de crítico enviado':''),false,4500);
   }catch(e){showToast('Error: '+e.message,true);}
-  btn.disabled=false;btn.textContent='Guardar y enviar mail';
+  btn.disabled=false;btn.textContent='Guardar';
 }
-function closeFormTicket(){document.getElementById('form-ticket').classList.remove('open');}
+function closeFormTicket(){document.getElementById('form-ticket').classList.remove('open');if(typeof PANT!=='undefined'&&PANT.on&&PANT.fuera&&PANT.desdeTicket)setTimeout(pantVolver,150);}
 // Muestra el comentario de cierre solo cuando se está cerrando un ticket abierto
 function onEstadoTicketChange(){
   var t=tickets.find(function(x){return x.id===editingTicketId;});
@@ -5533,6 +5551,8 @@ async function submitTicket(){
       ImpactoVencimiento:vencReal?vencImp:'',
       Urgencia:urgencia // columna de SharePoint "Urgencia"; en pantalla se muestra como "Prioridad"
     };
+    // Crítico: aviso inmediato por mail y Teams al responsable y al Admin (lo envía Power Automate)
+    if(urgencia==='Crítica')Object.assign(fields,avisoCritico({resp:resp,asunto:asuntoFull,solicitante:userName,sector:sector,desc:desc}));
     // Ticket complejo con timeline de hitos
     if(TK_TIPO_NUEVO==='complejo'){
       fields.EsProyecto=true;
@@ -5942,7 +5962,7 @@ function abrirPantalla(){
     +'<div style="height:4px;background:var(--surf2)"><div id="pant-barra" style="height:4px;width:0;background:var(--bl)"></div></div>'
     +'<div id="pant-ctrl" style="display:flex;gap:8px;align-items:center;padding:8px 20px;background:var(--surf);border-top:1px solid var(--brd);font-size:12px;color:var(--tx3)">'
     +'<button class="btns" style="padding:4px 10px" onclick="pantIr(-1)" title="Anterior (←)">◀</button>'
-    +'<button class="btns" style="padding:4px 10px" id="pant-pausa" onclick="pantPausa()" title="Pausa (espacio)">⏸</button>'
+    +'<button class="btns" style="padding:4px 10px" id="pant-pausa" onclick="pantPausa()" title="Fijar esta slide (espacio)">📌 Fijar</button>'
     +'<button class="btns" style="padding:4px 10px" onclick="pantIr(1)" title="Siguiente (→)">▶</button>'
     +'<select class="fsel" style="padding:3px 6px;font-size:12px" onchange="PANT.seg=+this.value;try{localStorage.setItem(\'pantSeg\',this.value)}catch(e){};pantIr(0)">'+[10,15,20,30,60].map(function(s){return '<option value="'+s+'"'+(s===PANT.seg?' selected':'')+'>'+s+' s por slide</option>';}).join('')+'</select>'
     +'<button class="btns" style="padding:4px 10px" onclick="pantFull()" title="Pantalla completa (F)">⛶ Pantalla completa</button>'
@@ -5965,13 +5985,14 @@ function cerrarPantalla(){
   var o=document.getElementById('pantalla');if(o)o.remove();
 }
 function pantTecla(e){
+  if(PANT.fuera)return;
   if(!PANT.on)return;
   if(e.key==='Escape'&&!document.fullscreenElement)cerrarPantalla();
   else if(e.key==='ArrowRight')pantIr(1);else if(e.key==='ArrowLeft')pantIr(-1);
   else if(e.key===' '){e.preventDefault();pantPausa();}else if(e.key==='f'||e.key==='F')pantFull();
 }
 function pantFull(){try{if(document.fullscreenElement)document.exitFullscreen();else document.getElementById('pantalla').requestFullscreen();}catch(e){}}
-function pantPausa(){PANT.pausa=!PANT.pausa;var b=document.getElementById('pant-pausa');if(b)b.textContent=PANT.pausa?'▶ Seguir':'⏸';if(!PANT.pausa)pantIr(0);else{clearTimeout(PANT.timer);pantBarra(false);}}
+function pantPausa(){PANT.pausa=!PANT.pausa;var b=document.getElementById('pant-pausa');if(b)b.textContent=PANT.pausa?'▶ Seguir':'📌 Fijar';var tt=document.getElementById('pant-titulo');if(tt&&PANT.slides[PANT.i])tt.textContent=(PANT.pausa?'📌 ':'')+PANT.slides[PANT.i].titulo;if(!PANT.pausa)pantIr(0);else{clearTimeout(PANT.timer);pantBarra(false);}}
 function pantBarra(corre){var b=document.getElementById('pant-barra');if(!b)return;b.style.transition='none';b.style.width='0';void b.offsetWidth;if(corre){b.style.transition='width '+PANT.seg+'s linear';b.style.width='100%';}}
 function pantReloj(){
   var r=document.getElementById('pant-reloj');if(r){var d=new Date();r.textContent=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);}
@@ -5986,10 +6007,10 @@ function pantIr(paso){
   setTimeout(function(){
     if(!PANT.on)return;
     c.innerHTML=s.html;c.style.opacity=1;
-    document.getElementById('pant-titulo').textContent=s.titulo;
+    document.getElementById('pant-titulo').textContent=(PANT.pausa?'📌 ':'')+s.titulo;
     document.getElementById('pant-dots').innerHTML=PANT.slides.map(function(x,k){return '<span title="'+escHtml(x.titulo)+'" onclick="PANT.i='+k+';pantIr(0)" style="cursor:pointer;width:'+(k===PANT.i?18:7)+'px;height:7px;border-radius:4px;background:'+(k===PANT.i?'var(--bl)':'var(--brd2)')+';transition:width .3s"></span>';}).join('');
     var inf=document.getElementById('pant-info');
-    if(inf)inf.textContent='Datos al '+new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})+(PANT.agendaErr?' · 📅 '+PANT.agendaErr:'')+' · ← → para moverte, espacio para pausar';
+    if(inf)inf.textContent='Datos al '+new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})+(PANT.agendaErr?' · 📅 '+PANT.agendaErr:'')+' · tocá una fila para abrirla · ← → para moverte · espacio para fijar';
   },PANT.on&&c.innerHTML?300:0);
   clearTimeout(PANT.timer);PANT.t0=Date.now();pantBarra(!PANT.pausa);
   if(!PANT.pausa)PANT.timer=setTimeout(function(){pantIr(1);},PANT.seg*1000);
@@ -6010,14 +6031,39 @@ async function cargarAgendaPant(){
 
 // ── Armado de slides (se rearman en cada pasada, así reflejan los datos nuevos) ──
 var PANT_PAIS={AR:'🇦🇷 Argentina',UY:'🇺🇾 Uruguay',PY:'🇵🇾 Paraguay',Regional:'🌎 Regional',sin:'📍 Sin país'};
-function pantFila(izq,txt,der,col){
-  return '<div style="display:flex;gap:16px;align-items:center;padding:11px 0;border-bottom:1px solid var(--brd);font-size:19px">'
+// Interactivo: tocar una fila abre el ticket o la sección; un botón flotante vuelve a la pantalla
+function pantBotonVolver(v){
+  var b=document.getElementById('pant-volver');
+  if(v){if(!b){b=document.createElement('button');b.id='pant-volver';b.className='btnp';b.style.cssText='position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:960;padding:10px 20px;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.25)';b.textContent='⬅ Volver a la pantalla';b.onclick=pantVolver;document.body.appendChild(b);}b.style.display='block';}
+  else if(b)b.style.display='none';
+}
+function pantSalirA(fn){
+  if(!PANT.on)return;
+  PANT.fuera=true;PANT.pausaPrev=PANT.pausa;PANT.eraFull=!!document.fullscreenElement;
+  clearTimeout(PANT.timer);pantBarra(false);
+  try{if(document.fullscreenElement)document.exitFullscreen();}catch(e){}
+  document.getElementById('pantalla').style.display='none';pantBotonVolver(true);
+  try{fn();}catch(e){console.error(e);}
+}
+function pantVolver(){
+  if(!PANT.on||!PANT.fuera)return;
+  PANT.fuera=false;PANT.desdeTicket=false;pantBotonVolver(false);
+  var o=document.getElementById('pantalla');o.style.display='flex';
+  if(PANT.eraFull){try{o.requestFullscreen();}catch(e){}}
+  PANT.pausa=!!PANT.pausaPrev;var b=document.getElementById('pant-pausa');if(b)b.textContent=PANT.pausa?'▶ Seguir':'📌 Fijar';
+  pantIr(0);
+}
+function pantTicket(id){pantSalirA(function(){PANT.desdeTicket=true;goTo('tickets',document.getElementById('nav-tickets'));gestionarTicket(id);});}
+function pantModulo(p){pantSalirA(function(){goTo(p,document.getElementById('nav-'+p)||document.getElementById('nav-dashboard'));});}
+function pantTickets(o){pantSalirA(function(){goTo('tickets',document.getElementById('nav-tickets'));filtrarTk(o);});}
+function pantFila(izq,txt,der,col,click){
+  return '<div'+(click?' onclick="'+click+'" class="pant-click" title="Tocá para abrir"':'')+' style="display:flex;gap:16px;align-items:center;padding:11px 6px;border-bottom:1px solid var(--brd);font-size:19px'+(click?';cursor:pointer;border-radius:8px':'')+'">'
     +'<div style="min-width:190px;font-weight:700;color:'+(col||'var(--tx2)')+';white-space:nowrap">'+izq+'</div>'
     +'<div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+txt+'</div>'
     +(der?'<div style="color:var(--tx3);font-size:15px;white-space:nowrap">'+der+'</div>':'')+'</div>';
 }
 function pantLista(arr,max,fn){return arr.slice(0,max).map(fn).join('')+(arr.length>max?'<div style="color:var(--tx3);font-size:15px;margin-top:10px">y '+(arr.length-max)+' más…</div>':'');}
-function pantKpi(n,lbl,col){return '<div style="flex:1;min-width:150px;background:var(--surf);border:1px solid var(--brd);border-radius:14px;padding:18px 20px"><div style="font-size:52px;font-weight:800;line-height:1;color:'+(n?(col||'var(--tx)'):'var(--tx3)')+'">'+n+'</div><div style="font-size:15px;color:var(--tx2);margin-top:8px">'+lbl+'</div></div>';}
+function pantKpi(n,lbl,col,click){return '<div'+(click&&n?' onclick="'+click+'" class="pant-click" title="Tocá para ver la lista"':'')+' style="'+(click&&n?'cursor:pointer;':'')+'flex:1;min-width:150px;background:var(--surf);border:1px solid var(--brd);border-radius:14px;padding:18px 20px"><div style="font-size:52px;font-weight:800;line-height:1;color:'+(n?(col||'var(--tx)'):'var(--tx3)')+'">'+n+'</div><div style="font-size:15px;color:var(--tx2);margin-top:8px">'+lbl+'</div></div>';}
 function pantTit(t,sub){return '<div style="font-size:34px;font-weight:800;margin-bottom:4px">'+t+'</div>'+(sub?'<div style="font-size:16px;color:var(--tx3);margin-bottom:18px">'+sub+'</div>':'<div style="margin-bottom:18px"></div>');}
 function pantDias(d){return d<0?'hace '+(-d)+(d===-1?' día':' días'):d===0?'HOY':d===1?'mañana':'en '+d+' días';}
 function pantRespNom(ini){var u=legalUser(ini);return u?String(u.name).split(' ')[0]:(ini||'—');}
@@ -6035,9 +6081,9 @@ function armarSlidesPant(){
 
   // 1. Hoy
   var h=pantTit('Hoy, '+fecha,ab.length+' pedidos abiertos en Legal');
-  h+='<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:22px">'+pantKpi(venc7.length,'⛔ Vencimientos reales en 7 días','var(--rd-tx)')+pantKpi(atras.length,'⏰ Atrasados (fecha estimada)','#C2410C')+pantKpi(nuevos.length,'📥 Nuevos sin tomar','var(--bl)')+pantKpi(espera.length,'⏸ Esperando a terceros','var(--am-tx)')+(crit.length?pantKpi(crit.length,'🚨 Críticos','var(--rd-tx)'):'')+'</div>';
+  h+='<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:22px">'+pantKpi(venc7.length,'⛔ Vencimientos reales en 7 días','var(--rd-tx)','pantTickets({extra:\'vence7\'})')+pantKpi(atras.length,'⏰ Atrasados (fecha estimada)','#C2410C','pantTickets({venc:\'atrasado\'})')+pantKpi(nuevos.length,'📥 Nuevos sin tomar','var(--bl)','pantTickets({etapa:\'nuevo\'})')+pantKpi(espera.length,'⏸ Esperando a terceros','var(--am-tx)','pantTickets({venc:\'espera\'})')+(crit.length?pantKpi(crit.length,'🚨 Críticos','var(--rd-tx)'):'')+'</div>';
   var prox=vReal.slice(0,4);
-  if(prox.length)h+='<div style="font-size:18px;font-weight:700;margin-bottom:6px">Lo más próximo</div>'+pantLista(prox,4,function(t){var d=daysTo(t.venc);return pantFila('⛔ '+pantDias(d),t.asunto+(t.vencMotivo?' <span style="color:var(--tx3)">— '+escHtml(t.vencMotivo)+'</span>':''),pantRespNom(t.resp),d<=rojoDesde(t)?'var(--rd-tx)':'var(--am-tx)');});
+  if(prox.length)h+='<div style="font-size:18px;font-weight:700;margin-bottom:6px">Lo más próximo</div>'+pantLista(prox,4,function(t){var d=daysTo(t.venc);return pantFila('⛔ '+pantDias(d),t.asunto+(t.vencMotivo?' <span style="color:var(--tx3)">— '+escHtml(t.vencMotivo)+'</span>':''),pantRespNom(t.resp),d<=rojoDesde(t)?'var(--rd-tx)':'var(--am-tx)','pantTicket(\x27'+t.id+'\x27)');});
   // Próxima reunión (si hay agenda) y fechas clave de esta semana
   if(PANT.agenda){var sig=PANT.agenda.filter(function(e){return !e.isAllDay&&new Date(e.end.dateTime).getTime()>Date.now();})[0];
     if(sig){var hs=new Date(sig.start.dateTime);h+='<div style="font-size:18px;font-weight:700;margin:20px 0 6px">Próxima reunión</div>'+pantFila('📅 '+('0'+hs.getHours()).slice(-2)+':'+('0'+hs.getMinutes()).slice(-2),escHtml(sig.subject||'(sin asunto)')+(sig.isOnlineMeeting?' <span style="font-size:14px;color:#5B5FC7">● Teams</span>':''),'','var(--bl)');}}
@@ -6060,21 +6106,21 @@ function armarSlidesPant(){
   // 3. Vencimientos reales
   if(vReal.length){
     S.push({titulo:'Vencimientos reales',html:pantTit('⛔ Vencimientos reales','Plazos que no dependen de nosotros: lo que vence, vence')+pantLista(vReal,8,function(t){var d=daysTo(t.venc);var u=IMPACTO_UI[t.vencImpacto];
-      return pantFila(fmtDate(t.venc)+' · '+pantDias(d),t.asunto+(t.vencMotivo?' <span style="color:var(--tx3)">— '+escHtml(t.vencMotivo)+'</span>':''),(u?u.icon+' ':'')+pantRespNom(t.resp),d<=rojoDesde(t)?'var(--rd-tx)':d<=7?'var(--am-tx)':'var(--gr-tx)');})});
+      return pantFila(fmtDate(t.venc)+' · '+pantDias(d),t.asunto+(t.vencMotivo?' <span style="color:var(--tx3)">— '+escHtml(t.vencMotivo)+'</span>':''),(u?u.icon+' ':'')+pantRespNom(t.resp),d<=rojoDesde(t)?'var(--rd-tx)':d<=7?'var(--am-tx)':'var(--gr-tx)','pantTicket(\x27'+t.id+'\x27)');})});
   }
 
   // 4. Fechas clave e institucionales (fechas clave, poderes, MLA, contratos de suelo, usufructos)
   var inst=[];
-  (fechas||[]).forEach(function(f){var d=daysTo(f.fecha);if(d!==null&&d>=-3&&d<=45)inst.push({d:d,f:f.fecha,txt:escHtml(f.desc),tipo:'📌 '+escHtml(f.cat||'Fecha clave'),pais:f.pais});});
-  (poderes||[]).forEach(function(p){var d=daysTo(p.fechaVen);if(d!==null&&d>=-30&&d<=60)inst.push({d:d,f:p.fechaVen,txt:'Poder de '+escHtml(p.apoderado)+(p.tipo?' ('+escHtml(p.tipo)+')':''),tipo:'✍️ Poder',pais:p.pais});});
-  (mla||[]).forEach(function(m){var d=daysTo(m.vencFecha);if(d!==null&&d>=-30&&d<=120)inst.push({d:d,f:m.vencFecha,txt:'MLA '+escHtml(m.nombre||m.contraparte),tipo:'📑 MLA',pais:m.pais});});
-  (suelos||[]).forEach(function(s){var d=daysTo(s.fin);if(d!==null&&d>=-30&&d<=90)inst.push({d:d,f:s.fin,txt:'Contrato de suelo '+escHtml(s.sitio),tipo:'🏗 Suelo',pais:s.pais});});
-  (inm||[]).forEach(function(x){var d=daysTo(x.vencUsuf);if(d!==null&&d>=-30&&d<=120)inst.push({d:d,f:x.vencUsuf,txt:'Usufructo '+escHtml(x.sitio||x.nombre),tipo:'🏠 Inmueble',pais:'UY'});});
+  (fechas||[]).forEach(function(f){var d=daysTo(f.fecha);if(d!==null&&d>=-3&&d<=45)inst.push({page:'fechas',d:d,f:f.fecha,txt:escHtml(f.desc),tipo:'📌 '+escHtml(f.cat||'Fecha clave'),pais:f.pais});});
+  (poderes||[]).forEach(function(p){var d=daysTo(p.fechaVen);if(d!==null&&d>=-30&&d<=60)inst.push({page:'poderes',d:d,f:p.fechaVen,txt:'Poder de '+escHtml(p.apoderado)+(p.tipo?' ('+escHtml(p.tipo)+')':''),tipo:'✍️ Poder',pais:p.pais});});
+  (mla||[]).forEach(function(m){var d=daysTo(m.vencFecha);if(d!==null&&d>=-30&&d<=120)inst.push({page:'mla',d:d,f:m.vencFecha,txt:'MLA '+escHtml(m.nombre||m.contraparte),tipo:'📑 MLA',pais:m.pais});});
+  (suelos||[]).forEach(function(s){var d=daysTo(s.fin);if(d!==null&&d>=-30&&d<=90)inst.push({page:'suelo',d:d,f:s.fin,txt:'Contrato de suelo '+escHtml(s.sitio),tipo:'🏗 Suelo',pais:s.pais});});
+  (inm||[]).forEach(function(x){var d=daysTo(x.vencUsuf);if(d!==null&&d>=-30&&d<=120)inst.push({page:'inm',d:d,f:x.vencUsuf,txt:'Usufructo '+escHtml(x.sitio||x.nombre),tipo:'🏠 Inmueble',pais:'UY'});});
   inst.sort(function(a,b){return a.d-b.d;});
   if(inst.length){
     for(var k=0;k<inst.length&&k<24;k+=8){
       S.push({titulo:'Fechas clave',html:pantTit('📌 Fechas clave y vencimientos institucionales','Fechas clave, poderes, MLA, contratos de suelo e inmuebles'+(inst.length>8?' · '+(k/8+1)+'/'+Math.ceil(Math.min(inst.length,24)/8):''))
-        +inst.slice(k,k+8).map(function(x){return pantFila(fmtDate(x.f)+' · '+pantDias(x.d),x.txt,x.tipo+(x.pais?' · '+escHtml(x.pais):''),x.d<0?'var(--rd-tx)':x.d<=7?'var(--am-tx)':'var(--gr-tx)');}).join('')});
+        +inst.slice(k,k+8).map(function(x){return pantFila(fmtDate(x.f)+' · '+pantDias(x.d),x.txt,x.tipo+(x.pais?' · '+escHtml(x.pais):''),x.d<0?'var(--rd-tx)':x.d<=7?'var(--am-tx)':'var(--gr-tx)','pantModulo(\x27'+x.page+'\x27)');}).join('')});
     }
   }
 
@@ -6101,15 +6147,15 @@ function armarSlidesPant(){
   var ojo=atras.concat(estanc.filter(function(t){return atras.indexOf(t)<0;}));
   if(ojo.length)S.push({titulo:'Atención',html:pantTit('⏰ Atrasados y estancados','Pasaron la fecha estimada o están tomados hace más de 3 días sin devolución')+pantLista(ojo,8,function(t){
     var lbl=atras.indexOf(t)>=0?'⏰ '+pantDias(daysTo(t.deadline)):'🐢 '+diasDesde(t.tomadoTs)+' días tomado';
-    return pantFila(lbl,t.asunto,pantRespNom(t.resp)+(paisTicket(t)?' · '+paisTicket(t):''),'#C2410C');})});
+    return pantFila(lbl,t.asunto,pantRespNom(t.resp)+(paisTicket(t)?' · '+paisTicket(t):''),'#C2410C','pantTicket(\x27'+t.id+'\x27)');})});
 
   // 8. Nuevos sin tomar
   if(nuevos.length)S.push({titulo:'Nuevos',html:pantTit('📥 Nuevos sin tomar',nuevos.length+(nuevos.length===1?' pedido espera':' pedidos esperan')+' que alguien de Legal lo tome')+pantLista(nuevos,8,function(t){var d=diasDesde(t.creadoTs||t.fecha);
-    return pantFila(d<=0?'hoy':'hace '+d+(d===1?' día':' días'),t.asunto,escHtml(nombreSolicitante(t))+' → '+pantRespNom(t.resp),d>=2?'#C2410C':'var(--bl)');})});
+    return pantFila(d<=0?'hoy':'hace '+d+(d===1?' día':' días'),t.asunto,escHtml(nombreSolicitante(t))+' → '+pantRespNom(t.resp),d>=2?'#C2410C':'var(--bl)','pantTicket(\x27'+t.id+'\x27)');})});
 
   // 9. En espera de terceros
   if(espera.length)S.push({titulo:'En espera',html:pantTit('⏸ Esperando a terceros','La fecha estimada no corre mientras tanto')+pantLista(espera,8,function(t){var d=diasDesde(t.esperaDesde);
-    return pantFila(d+(d===1?' día':' días'),t.asunto+' <span style="color:var(--tx3)">— espera a '+escHtml(t.esperaDe||'—')+'</span>',pantRespNom(t.resp),d>=7?'var(--rd-tx)':'var(--am-tx)');})});
+    return pantFila(d+(d===1?' día':' días'),t.asunto+' <span style="color:var(--tx3)">— espera a '+escHtml(t.esperaDe||'—')+'</span>',pantRespNom(t.resp),d>=7?'var(--rd-tx)':'var(--am-tx)','pantTicket(\x27'+t.id+'\x27)');})});
 
   // 10. Tickets complejos (avance por hitos)
   var comp=ab.filter(function(t){return t.esProyecto&&(t.hitos||[]).length;});
@@ -6121,9 +6167,59 @@ function armarSlidesPant(){
   // 11. Para management
   var pm=vis.filter(function(t){return t.pm;});
   if(pm.length)S.push({titulo:'Management',html:pantTit('📊 Para la reunión de management',pm.length+(pm.length===1?' tema marcado':' temas marcados'))+pantLista(pm,7,function(t){
-    return pantFila(t.estado==='Resuelto'?'✅ Resuelto':semaforoTicket(t).icon+' '+escHtml(etapaTicket(t)),t.asunto+(t.nov?' <span style="color:var(--tx3)">— '+escHtml(t.nov)+'</span>':''),pantRespNom(t.resp));})});
+    return pantFila(t.estado==='Resuelto'?'✅ Resuelto':semaforoTicket(t).icon+' '+escHtml(etapaTicket(t)),t.asunto+(t.nov?' <span style="color:var(--tx3)">— '+escHtml(t.nov)+'</span>':''),pantRespNom(t.resp),'','pantTicket(\x27'+t.id+'\x27)');})});
 
-  // 12. Noticias
+  // 12. Últimas 24 horas (qué se movió desde ayer)
+  var hace24=Date.now()-864e5, en24=function(ts){return ts&&new Date(ts).getTime()>=hace24;};
+  var mov=[];
+  vis.forEach(function(t){
+    if(en24(t.creadoTs))mov.push({ts:t.creadoTs,lbl:'📥 Entró',col:'var(--bl)',t:t});
+    if(en24(t.tomadoTs))mov.push({ts:t.tomadoTs,lbl:'🙋 Tomado',col:'var(--bl)',t:t});
+    if(en24(t.respTs))mov.push({ts:t.respTs,lbl:'📤 Devuelto',col:'var(--gr-tx)',t:t});
+    if(en24(t.cierreTs))mov.push({ts:t.cierreTs,lbl:'✅ Cerrado',col:'var(--gr-tx)',t:t});
+    if(en24(t.reabiertoTs))mov.push({ts:t.reabiertoTs,lbl:'🔄 Reabierto',col:'var(--am-tx)',t:t});
+  });
+  mov.sort(function(a,b){return a.ts<b.ts?1:-1;});
+  var cnt=function(l){return mov.filter(function(m){return m.lbl===l;}).length;};
+  S.push({titulo:'Últimas 24 h',html:pantTit('📈 Últimas 24 horas',mov.length?'Lo que se movió desde ayer a esta hora':'Sin movimientos desde ayer')
+    +'<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px">'+pantKpi(cnt('📥 Entró'),'📥 Entraron','var(--bl)')+pantKpi(cnt('🙋 Tomado'),'🙋 Tomados','var(--bl)')+pantKpi(cnt('📤 Devuelto'),'📤 Devueltos','var(--gr-tx)')+pantKpi(cnt('✅ Cerrado'),'✅ Cerrados','var(--gr-tx)')+(cnt('🔄 Reabierto')?pantKpi(cnt('🔄 Reabierto'),'🔄 Reabiertos','var(--am-tx)'):'')+'</div>'
+    +pantLista(mov,6,function(m){var d=new Date(m.ts);return pantFila(m.lbl+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2),m.t.asunto,pantRespNom(m.t.resp),m.col,'pantTicket(\''+m.t.id+'\')');})});
+
+  // 13. Cumplimiento por persona (últimos 30 días)
+  var leg=usersInGroup('Legal').filter(function(u){return metricasPersona(u.ini,30).total;});
+  if(leg.length&&currentUser.perfil==='Admin'){
+    var pc=function(v,ok,mal){return v===null?'<span style="color:var(--tx3)">—</span>':'<b style="color:'+(v>=ok?'var(--gr-tx)':v>=mal?'var(--am-tx)':'var(--rd-tx)')+'">'+v+'%</b>';};
+    S.push({titulo:'Cumplimiento',html:pantTit('🏆 Cumplimiento del equipo','Tickets que entraron en los últimos 30 días')+'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">'+leg.map(function(u){var m=metricasPersona(u.ini,30);
+      return '<div style="background:var(--surf);border:1px solid var(--brd);border-radius:14px;padding:20px 22px"><div style="font-size:21px;font-weight:700;margin-bottom:10px">'+escHtml(u.name)+'</div>'
+        +'<div style="font-size:17px;line-height:1.9">📥 '+m.total+' recibidos · ✅ '+m.cerrados+' cerrados<br>🙋 Tarda en tomarlos: <b>'+fmtHoras(m.hTomar)+'</b><br>📤 Devolución registrada: '+pc(m.pctDev,90,70)+'<br>🎯 Respondidos en plazo: '+pc(m.pctPlazo,85,65)+'</div></div>';}).join('')+'</div>'
+      +'<div style="font-size:14px;color:var(--tx3);margin-top:14px">Meta del circuito: tomar en 1 día hábil, registrar siempre la devolución (📤) y responder en plazo.</div>'});
+  }
+
+  // 14. Hitos de esta semana (proyectos complejos)
+  var hit=[];
+  ab.filter(function(t){return t.esProyecto;}).forEach(function(t){(t.hitos||[]).forEach(function(x){if(!x.ok&&x.f){var d=daysTo(x.f);if(d!==null&&d<=7)hit.push({t:t,h:x,d:d});}});});
+  hit.sort(function(a,b){return a.d-b.d;});
+  if(hit.length)S.push({titulo:'Hitos',html:pantTit('🧩 Hitos de esta semana','Etapas de proyectos complejos con fecha en los próximos 7 días (o atrasadas)')+pantLista(hit,8,function(x){
+    return pantFila(fmtDate(x.h.f)+' · '+pantDias(x.d),escHtml(x.h.t)+' <span style="color:var(--tx3)">— '+x.t.asunto+'</span>',pantRespNom(x.t.resp),x.d<0?'var(--rd-tx)':x.d<=2?'var(--am-tx)':'var(--bl)','pantTicket(\''+x.t.id+'\')');})});
+
+  // 15. Decisiones pendientes
+  var dec=ab.filter(function(t){return String(t.dec||'').trim();});
+  if(dec.length)S.push({titulo:'Decisiones',html:pantTit('❓ Decisiones pendientes','Tickets abiertos que esperan una decisión')+pantLista(dec,7,function(t){
+    return pantFila('❓ '+pantRespNom(t.resp),'<b>'+escHtml(t.dec)+'</b> <span style="color:var(--tx3)">— '+t.asunto+'</span>',paisTicket(t)||'','var(--am-tx)','pantTicket(\''+t.id+'\')');})});
+
+  // 16. Quién pide más (este mes)
+  var ini=new Date(hoy.getFullYear(),hoy.getMonth(),1).getTime();
+  var mes=vis.filter(function(t){return t.creadoTs&&new Date(t.creadoTs).getTime()>=ini;});
+  if(mes.length){
+    var porA={},porS={};
+    mes.forEach(function(t){var a=sectorSolicitante(t)||'Sin área',s=nombreSolicitante(t)||'—';porA[a]=(porA[a]||0)+1;porS[s]=(porS[s]||0)+1;});
+    var top=function(o){return Object.keys(o).sort(function(a,b){return o[b]-o[a];}).slice(0,6);};
+    var barras=function(o){var mx=Math.max.apply(null,Object.keys(o).map(function(k){return o[k];}));return top(o).map(function(k){return '<div style="display:flex;align-items:center;gap:12px;margin:9px 0;font-size:18px"><div style="width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escHtml(k)+'</div><div style="flex:1;background:var(--surf2);border-radius:6px;height:22px"><div style="width:'+Math.round(o[k]/mx*100)+'%;background:var(--bl);height:22px;border-radius:6px"></div></div><b style="width:36px;text-align:right">'+o[k]+'</b></div>';}).join('');};
+    S.push({titulo:'Quién pide',html:pantTit('🏢 ¿Quién pide más?',mes.length+' pedidos en '+hoy.toLocaleDateString('es-AR',{month:'long'}))
+      +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:28px"><div><div style="font-size:17px;font-weight:700;color:var(--tx2);margin-bottom:6px">Por área</div>'+barras(porA)+'</div><div><div style="font-size:17px;font-weight:700;color:var(--tx2);margin-bottom:6px">Por persona</div>'+barras(porS)+'</div></div>'});
+  }
+
+  // 17. Noticias
   var ns=(NOTICIAS&&NOTICIAS.noticias)||[];
   for(var q=0;q<ns.length;q+=2){
     S.push({titulo:'Noticias',html:pantTit('📰 Noticias del sector','Selección automática con IA de medios públicos · verificá en la fuente')+ns.slice(q,q+2).map(function(n){
@@ -6132,6 +6228,149 @@ function armarSlidesPant(){
         +(n.por_que_importa?'<div style="font-size:17px;color:var(--bl);margin-top:8px">→ '+escHtml(n.por_que_importa)+'</div>':'')+'</div>';}).join('')});
   }
   return S;
+}
+
+// ─── AVISOS AUTOMÁTICOS POR MAIL / TEAMS ────────────────────────────────────
+// El Hub deja el aviso armado en columnas del ticket (AvisoPara, AvisoAsunto, AvisoCuerpo, AvisoTeams) y el flujo de
+// Power Automate "Hub - Avisos de tickets" lo envía como notificación de Microsoft y limpia las columnas.
+// "{ID}" en el texto lo reemplaza el flujo por el ID del ticket (sirve cuando el ticket recién se crea).
+var HUB_URL='https://eduatis.github.io/legal-hub/';
+function numLimpio(t){return String(t&&t.num||'').replace(/&[a-z#0-9]+;/g,'');}
+function linkTicket(id){return HUB_URL+'?tk='+encodeURIComponent(id);}
+function primerNombre(s){return String(s||'').split(' ')[0];}
+function mailHTML(titulo,lineas,boton,link,pie){
+  var esc=function(s){return escHtml(String(s==null?'':s)).replace(/\n/g,'<br>');};
+  return '<div style="font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#1A1916;max-width:620px">'
+    +'<div style="font-size:12px;color:#6B6A64;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">ATIS Legal Hub</div>'
+    +'<div style="font-size:18px;font-weight:700;margin-bottom:12px">'+esc(titulo)+'</div>'
+    +lineas.map(function(l){return l&&l.html?l.html:'<p style="margin:0 0 10px;line-height:1.5">'+esc(l)+'</p>';}).join('')
+    +(link?'<p style="margin:16px 0"><a href="'+link+'" style="background:#1B4FD8;color:#fff;padding:9px 16px;border-radius:6px;text-decoration:none;font-weight:600">'+esc(boton||'Abrir en el Legal Hub')+'</a></p>':'')
+    +'<p style="font-size:11px;color:#A09F98;margin-top:18px">'+esc(pie||'Aviso automático del Legal Hub: no respondas a este mail.')+'</p></div>';
+}
+function citaHTML(txt){return {html:'<div style="border-left:3px solid #1B4FD8;background:#EEF2FF;padding:8px 12px;margin:0 0 12px;white-space:pre-wrap;line-height:1.5">'+escHtml(txt)+'</div>'};}
+function camposAviso(tipo,para,asunto,cuerpo,teams,cc){return {AvisoTipo:tipo,AvisoPara:para||'',AvisoCC:cc||'',AvisoAsunto:String(asunto).slice(0,250),AvisoCuerpo:cuerpo,AvisoTeams:teams||''};}
+// Cierre automático: 5 días hábiles después de la devolución, salvo crítico, alta, vencimiento real o complejo
+function elegibleCierreAuto(t,urg){urg=urg||t.urgenciaRaw;return urg!=='Crítica'&&urg!=='Alta'&&!t.venc&&!t.esProyecto;}
+function fechaCierreAuto(t,urg){return elegibleCierreAuto(t,urg)?sumarDiasHabiles(new Date(),5)+'T00:00:00Z':null;}
+// Aviso al solicitante: Legal le respondió (con el comentario, si hay) o cerró el pedido
+function avisoSolicitante(t,tipo,comentario,cierreAuto){
+  if(!t||!t.email)return {};
+  var quien=(legalUser(currentUser.ini)||currentUser).name||'Legal', num=numLimpio(t), sol=primerNombre(nombreSolicitante(t));
+  var titulo,lineas=[];
+  if(tipo==='cierre'){
+    titulo='Cerramos tu pedido '+num;
+    lineas.push('Hola '+sol+', '+primerNombre(quien)+' dio por resuelto tu pedido “'+t.asuntoRaw+'”.');
+    if(comentario){lineas.push('Comentario de '+primerNombre(quien)+':');lineas.push(citaHTML(comentario));}
+    lineas.push('Si necesitás retomarlo, entrá al pedido en el Hub y tocá “🔄 Reabrir”.');
+  }else{
+    titulo=primerNombre(quien)+' respondió tu pedido '+num;
+    lineas.push('Hola '+sol+', '+primerNombre(quien)+' te dio una respuesta sobre “'+t.asuntoRaw+'”.');
+    if(comentario){lineas.push('Lo que escribió:');lineas.push(citaHTML(comentario));}
+    else lineas.push('La respuesta te llegó por mail o Teams; en el Hub ves el detalle y el historial.');
+    if(cierreAuto)lineas.push('Si no necesitás nada más, no hace falta que hagas nada: el pedido se cierra solo el '+fmtDate(cierreAuto.split('T')[0])+'. Si necesitás seguir, escribile a '+primerNombre(quien)+' desde el pedido en el Hub.');
+  }
+  return camposAviso(tipo,t.email,(tipo==='cierre'?'✅ ':'💬 ')+titulo+' — '+t.asuntoRaw,mailHTML(titulo,lineas,'Ver mi pedido',linkTicket(t.id)));
+}
+// Aviso a Legal: ticket crítico (mail + Teams al responsable y al Admin)
+function avisoCritico(datos){
+  var r=legalUser(datos.resp)||{}, adm=adminEmail();
+  var para=[r.email,adm].filter(function(x,i,a){return x&&a.indexOf(x)===i;}).join(';');
+  var titulo='🚨 Ticket CRÍTICO: '+datos.asunto;
+  var cuerpo=mailHTML(titulo,['Pedido de '+datos.solicitante+(datos.sector?' ('+datos.sector+')':'')+' para '+(r.name||datos.resp)+'.','Prioridad Crítica: tiene que resolverse en el día.',datos.desc?citaHTML(datos.desc):''],'Abrir el ticket',HUB_URL+'?tk={ID}');
+  return camposAviso('critico',para,titulo,cuerpo,para);
+}
+
+// ─── REABRIR (solicitante) ───────────────────────────────────────────────────
+// El solicitante no puede editar Tickets_Legal: deja el pedido en Reaperturas_Tickets y Power Automate
+// reabre el ticket y le avisa al responsable (y al Admin) con el comentario.
+const LIST_REAPERTURAS='Reaperturas_Tickets';
+function reaperturaPendiente(t){try{var v=localStorage.getItem('reabrir:'+t.id);return v&&(!t.reabiertoTs||t.reabiertoTs<v)&&t.estado==='Resuelto'?v:'';}catch(e){return '';}}
+function abrirReabrir(id){
+  var t=tickets.find(function(x){return x.id===id;});if(!t)return;
+  var r=legalUser(t.resp)||{};
+  var v=document.getElementById('tk-vista-ver');
+  v.innerHTML='<div style="font-size:16px;font-weight:700;margin-bottom:6px">🔄 Reabrir pedido</div>'
+    +'<div style="font-size:13px;color:var(--tx2);margin-bottom:12px">'+t.asunto+'<br>Le avisamos a <b>'+escHtml(r.name||'Legal')+'</b> que lo reabriste.</div>'
+    +'<div class="field"><label>¿Por qué lo reabrís? <span style="color:var(--tx3);font-weight:400">(opcional)</span></label><textarea id="reabrir-com" placeholder="Ej: faltó revisar la cláusula de rescisión / apareció un documento nuevo"></textarea></div>'
+    +'<button class="btnp" style="width:100%;margin-bottom:8px" data-tid="'+t.id+'" onclick="enviarReapertura(this.dataset.tid,this)">🔄 Reabrir</button>'
+    +'<button class="btns" style="width:100%" data-tid="'+t.id+'" onclick="verTicket(this.dataset.tid)">Cancelar</button>';
+}
+async function enviarReapertura(id,btn){
+  var t=tickets.find(function(x){return x.id===id;});if(!t)return;
+  if(VER_COMO){alert('Estás en vista previa como '+VER_COMO.name+': no se reabre nada.');return;}
+  btn.disabled=true;btn.textContent='Enviando…';
+  var r=legalUser(t.resp)||{};
+  try{
+    await createListItem(LIST_REAPERTURAS,{Title:numLimpio(t),TicketId:String(t.id),NumTicket:numLimpio(t),AsuntoTicket:String(t.asuntoRaw).slice(0,250),
+      Comentario:document.getElementById('reabrir-com').value.trim(),EmailSolicitante:t.email||currentUser.email,NombreSolicitante:nombreSolicitante(t)||currentUser.name,RespEmail:r.email||adminEmail()});
+    try{localStorage.setItem('reabrir:'+t.id,new Date().toISOString());}catch(e){}
+    showToast('🔄 Listo: en unos minutos queda reabierto y '+primerNombre(r.name||'Legal')+' recibe el aviso');
+    verTicket(id);renderTickets();
+  }catch(e){btn.disabled=false;btn.textContent='🔄 Reabrir';showToast('No se pudo reabrir: '+e.message,true);}
+}
+
+// ─── INDICADORES POR PERSONA (Legal) ────────────────────────────────────────
+// Sobre los tickets que entraron en los últimos N días
+function metricasPersona(ini,dias){
+  var desde=Date.now()-dias*864e5;
+  var ts=tickets.filter(function(t){return t.resp===ini&&t.creadoTs&&new Date(t.creadoTs).getTime()>=desde;});
+  var tomados=ts.filter(function(t){return t.tomadoTs;});
+  var hTomar=tomados.length?tomados.reduce(function(s,t){return s+Math.max(0,(new Date(t.tomadoTs)-new Date(t.creadoTs))/36e5);},0)/tomados.length:null;
+  var cerrados=ts.filter(function(t){return t.estado==='Resuelto';});
+  var conDev=cerrados.filter(function(t){return t.respTs;}).length;
+  var conFecha=cerrados.filter(function(t){return (t.venc||t.deadline)&&(t.respTs||t.cierreTs);});
+  var enPlazo=conFecha.filter(function(t){var fin=String(t.respTs||t.cierreTs).split('T')[0];return fin<=(t.venc||t.deadline);}).length;
+  return {total:ts.length,cerrados:cerrados.length,hTomar:hTomar,pctDev:cerrados.length?Math.round(conDev/cerrados.length*100):null,pctPlazo:conFecha.length?Math.round(enPlazo/conFecha.length*100):null};
+}
+function fmtHoras(h){if(h===null)return '—';if(h<1)return 'menos de 1 h';if(h<24)return Math.round(h)+' h';return (Math.round(h/24*10)/10)+' días';}
+
+// ─── AVISOS EN EL INICIO (Legal / Admin) ────────────────────────────────────
+// Lo que pide la regla del circuito: tomar en 1 día hábil y cerrar lo devuelto. Cada línea abre el ticket.
+function avisosCircuito(ini){
+  var hoy=todayStr();
+  var mios=tickets.filter(function(t){return t.resp===ini&&t.estado!=='Resuelto';});
+  return {
+    sinTomar:mios.filter(function(t){return etapaTicket(t)==='nuevo'&&t.creadoTs&&contarHabiles(String(t.creadoTs).split('T')[0],hoy)>=1;}),
+    sinCerrar:mios.filter(function(t){return etapaTicket(t)==='respondido'&&!t.esperaDesde&&contarHabiles(String(t.respTs).split('T')[0],hoy)>5;}),
+    reabiertos:mios.filter(function(t){return t.reabiertoTs&&etapaTicket(t)!=='respondido';}),
+    esperaSol:mios.filter(function(t){return t.esperaDesde&&t.esperaTipo==='sol'&&contarHabiles(String(t.esperaDesde).split('T')[0],hoy)>=3;})
+  };
+}
+function abrirTicketDesdeAviso(id){goTo('tickets',document.getElementById('nav-tickets'));gestionarTicket(id);}
+function renderAvisosLegal(){
+  var el=document.getElementById('dash-avisos');if(!el)return;
+  if(!currentUser||!(currentUser.perfil==='Admin'||legalUser(currentUser.ini))||VER_COMO){el.innerHTML='';return;}
+  var a=avisosCircuito(currentUser.ini);
+  var fila=function(t,txt,col){return '<div class="tk-mio" data-tid="'+t.id+'" onclick="abrirTicketDesdeAviso(this.dataset.tid)" style="display:flex;gap:10px;align-items:center;padding:6px 8px;border-radius:var(--rs);cursor:pointer;font-size:13px"><span style="font-weight:600;color:'+col+';white-space:nowrap">'+txt+'</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+t.asunto+'</span><span style="color:var(--bl);font-size:12px;font-weight:600">Abrir ›</span></div>';};
+  var h='';
+  a.reabiertos.forEach(function(t){h+=fila(t,'🔄 Reabierto','var(--rd-tx)');});
+  a.sinTomar.forEach(function(t){h+=fila(t,'📥 Sin tomar hace '+contarHabiles(String(t.creadoTs).split('T')[0],todayStr())+' día(s) háb.','#C2410C');});
+  a.esperaSol.forEach(function(t){h+=fila(t,'⏸ Esperando a '+escHtml(t.esperaDe)+' hace '+contarHabiles(String(t.esperaDesde).split('T')[0],todayStr())+' días háb.','var(--am-tx)');});
+  a.sinCerrar.forEach(function(t){h+=fila(t,'📤 Devuelto, sin cerrar','var(--am-tx)');});
+  // Admin: cómo viene el resto del equipo
+  var eq='';
+  if(currentUser.perfil==='Admin'){
+    usersInGroup('Legal').filter(function(u){return u.ini!==currentUser.ini;}).forEach(function(u){
+      var x=avisosCircuito(u.ini),n=x.sinTomar.length+x.sinCerrar.length+x.reabiertos.length;
+      if(n)eq+='<span class="tk-cont" style="min-width:0;padding:6px 10px;cursor:pointer" onclick="goTo(\'tickets\',document.getElementById(\'nav-tickets\'));filtrarTk({resp:\''+u.ini+'\'})">'+escHtml(primerNombre(u.name))+': '+(x.sinTomar.length?'📥 '+x.sinTomar.length+' sin tomar ':'')+(x.sinCerrar.length?'📤 '+x.sinCerrar.length+' sin cerrar ':'')+(x.reabiertos.length?'🔄 '+x.reabiertos.length:'')+'</span>';
+    });
+  }
+  if(!h&&!eq){el.innerHTML='';return;}
+  el.innerHTML='<div class="card" style="margin-bottom:14px;border-left:4px solid var(--am);padding:12px 16px">'
+    +(h?'<div style="font-weight:600;font-size:14px;margin-bottom:6px">⚠️ Para ponerte al día</div>'+h:'')
+    +(eq?'<div style="font-size:12px;color:var(--tx2);margin:'+(h?'10px':'0')+' 0 6px;font-weight:600">👥 Equipo</div><div style="display:flex;gap:8px;flex-wrap:wrap;font-size:12px">'+eq+'</div>':'')
+    +'</div>';
+}
+// Link directo desde los mails: ?tk=ID abre el ticket (gestión para Legal, detalle para solicitantes).
+// Se guarda al cargar porque el login de Microsoft vuelve sin los parámetros de la URL.
+try{var _tkm=/[?&]tk=([^&]+)/.exec(location.search);if(_tkm){sessionStorage.setItem('hubTk',decodeURIComponent(_tkm[1]));history.replaceState(null,'',location.pathname);}}catch(e){}
+function abrirTicketDeURL(){
+  var id='';try{id=sessionStorage.getItem('hubTk')||'';sessionStorage.removeItem('hubTk');}catch(e){}
+  if(!id)return;
+  var t=tickets.find(function(x){return String(x.id)===id;});
+  goTo('tickets',document.getElementById('nav-tickets'));
+  if(!t){showToast('No encontré ese pedido (puede que no tengas acceso)',true);return;}
+  if(currentUser.perfil==='Admin'||legalUser(currentUser.ini))gestionarTicket(t.id);else verTicket(t.id);
 }
 </script>
 </body>
