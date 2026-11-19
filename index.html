@@ -930,6 +930,12 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 </div>
 
 <!-- FORM FECHA CLAVE -->
+<div class="formov" id="form-vac" onclick="if(event.target===this)closeFormVac()">
+  <div class="formpanel" onclick="event.stopPropagation()" style="max-width:720px">
+    <div class="formtit"><span>🏖️ Vacaciones del equipo</span><button class="formclose" onclick="closeFormVac()">×</button></div>
+    <div id="vac-cuerpo"></div>
+  </div>
+</div>
 <div class="formov" id="form-fecha" onclick="if(event.target===this)closeFormFecha()">
   <div class="formpanel" onclick="event.stopPropagation()">
     <div class="formtit"><span id="form-fecha-title">Nueva fecha clave</span><button class="formclose" onclick="closeFormFecha()">×</button></div>
@@ -1061,13 +1067,14 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       </div>
       <div style="height:12px"></div>
       <div class="field"><label>¿A quién de Legal va dirigido?</label>
-        <select id="tk-resp" onchange="TK_RESP_MANUAL=true;document.getElementById('tk-resp-hint').textContent=''">
+        <select id="tk-resp" onchange="TK_RESP_MANUAL=true;TK_VAC_DE='';document.getElementById('tk-resp-hint').textContent='';vacAvisoForm()">
           <option value="">— Seleccionar —</option>
           <option value="EG">Eduardo Galindo — Legal Manager</option>
           <option value="CS">Camila Soto — Legal AR / UY</option>
           <option value="ST">Samira Taboada — Legal PY</option>
         </select>
         <div id="tk-resp-hint" style="font-size:11px;color:var(--tx3);margin-top:4px"></div>
+        <div id="tk-vac-aviso" style="display:none;margin-top:8px;padding:10px 12px;border-radius:var(--rs);background:var(--am-bg);color:var(--am-tx);font-size:12px;line-height:1.5"></div>
       </div>
       <div class="fieldrow">
         <div class="field" style="margin:0"><label>Categoría <span style="color:var(--tx3);font-weight:400">(las más usadas primero)</span></label>
@@ -1537,6 +1544,7 @@ async function initApp(account){
   const email=account.username.toLowerCase();
   var usuariosOk=await loadUsuarios().catch(function(e){console.error('Usuarios_Hub:',e);return false;});
   if(!usuariosOk)showToast('No se pudo leer la lista Usuarios_Hub de SharePoint',true);
+  await loadVacaciones();
   // Quien no tiene perfil en Usuarios_Hub entra como "Solicitante": solo ve y crea sus propios tickets
   // Si está cargado en Usuarios_Hub sin perfil, igual se toman su nombre y sector
   var fila=USERS_LIST.filter(function(u){return u.email===email;})[0]||{};
@@ -1588,6 +1596,7 @@ async function initApp(account){
   if(currentUser.perfil!=='Solicitante'&&!currentUser.mlaOnly)document.getElementById('nav-calendario').style.display='flex';
   await syncAll();hideLoading();document.getElementById('app').style.display='block';
   try{abrirTicketDeURL();}catch(e){console.warn(e);}
+  try{if(sessionStorage.getItem('hubVac')==='1'){sessionStorage.removeItem('hubVac');if(puedeGestionarVac())abrirVacaciones();}}catch(e){}
   if(currentUser.perfil==='Admin'){document.getElementById('setup-btn-wrap').style.display='flex';}
   // Repaso del día por voz: para quien tiene dashboard
   if(currentUser.perfil!=='Solicitante'&&!currentUser.mlaOnly){document.getElementById('btn-repaso').style.display='inline-block';document.getElementById('btn-pantalla').style.display='inline-block';}
@@ -1714,6 +1723,7 @@ async function syncAll(){
     if(btn){btn.textContent='↻ Actualizar';btn.disabled=false;}
     return;
   }
+  await loadVacaciones();
   try{
     const results=await Promise.allSettled([getListItems(LIST_DOCS),Promise.resolve([]),getListItems(LIST_SUELO),getListItems(LIST_DD),getListItems(LIST_INTORU),getListItems(LIST_PODERES),getListItems(LIST_SOC_AUT),getListItems(LIST_SOC_ACC),getListItems(LIST_MLA),getListItems(LIST_INM),getListItems(LIST_FECHAS),getListItems(LIST_TICKETS)]);
     if(results[0].status==='fulfilled')docs=results[0].value.map(mapDoc);
@@ -2331,7 +2341,7 @@ function goTo(page,el){
   document.getElementById('tb-act').innerHTML=A[page]||'';
   if(page==='tickets'&&esSolicitanteTk()){document.getElementById('tb-title').textContent='Mis pedidos a Legal';document.getElementById('tb-sub').textContent='Cargá un pedido y seguí en qué está';}
   if(page==='tickets'&&currentUser&&!VER_COMO&&currentUser.perfil==='Admin')document.getElementById('tb-act').insertAdjacentHTML('afterbegin','<button class="btns" onclick="abrirVerComo()" style="font-size:12px" title="Ver el Hub como lo ve un solicitante">👁 Ver como…</button>');
-  if(page==='tickets'&&currentUser&&!VER_COMO&&(currentUser.perfil==='Admin'||legalUser(currentUser.ini)))document.getElementById('tb-act').insertAdjacentHTML('afterbegin','<button class="btns" onclick="abrirReunion()" style="font-size:12px">📊 Modo reunión</button>');
+  if(page==='tickets'&&currentUser&&!VER_COMO&&(currentUser.perfil==='Admin'||legalUser(currentUser.ini)))document.getElementById('tb-act').insertAdjacentHTML('afterbegin','<button class="btns" onclick="abrirReunion()" style="font-size:12px">📊 Modo reunión</button><button class="btns" onclick="abrirVacaciones()" style="font-size:12px">🏖️ Vacaciones</button>');
   var EXTRA_T={mails:['Mails importantes','Resumen de tu bandeja — se lee en vivo, no se guarda nada'],semanas:['Punteo semanal','Repaso de tickets uno por uno — reunión de los lunes con el equipo'],calendario:['Calendario','Todos los vencimientos en un solo lugar']};
   if(EXTRA_T[page]){document.getElementById('tb-title').textContent=EXTRA_T[page][0];document.getElementById('tb-sub').textContent=EXTRA_T[page][1];}
   if(page==='semanas')setTimeout(function(){renderPunteo();renderSemanas();},50);
@@ -2402,6 +2412,7 @@ function onPaisTicketChange(){
   var ini=RESP_POR_PAIS[document.getElementById('tk-pais').value]||'';
   document.getElementById('tk-resp').value=ini;
   document.getElementById('tk-resp-hint').textContent=ini?'Sugerido según el país. Si es para otra persona, cambialo.':'';
+  vacAvisoForm();
 }
 // Categorías: las más usadas primero ("Otro" siempre al final)
 function ordenarCategoriasTicket(){
@@ -3824,7 +3835,7 @@ function escUrl(s){s=String(s==null?'':s).trim();return (/^[a-z][a-z0-9+.\-]*:/i
 // Los campos de texto de Tickets los escribe cualquier solicitante: se guardan ya escapados para mostrar; *Raw = texto original (para mails)
 function mapTicket(item){var f=item.fields;return{id:item.id,num:escHtml(f.NumTicket||ticketNumFromId(item.id,f.FechaRecibido)),remitente:escHtml(f.Remitente),remitenteRaw:f.Remitente||'',email:(f.EmailRemitente||'').toLowerCase(),asunto:escHtml(f.Asunto),asuntoRaw:f.Asunto||'',resp:f.Responsable||'',cuerpo:escHtml(f.Cuerpo),cuerpoRaw:f.Cuerpo||'',fecha:f.FechaRecibido?f.FechaRecibido.split('T')[0]:'',estado:(f.Estado==='Resuelto'?'Resuelto':'En curso'),link:f.LinkMail||'',cat:escHtml(f.Categoria),catRaw:f.Categoria||'',sitio:escHtml(f.CodigoSitio),sitioRaw:f.CodigoSitio||'',deadline:f.Deadline?f.Deadline.split('T')[0]:'',bloq:escHtml(f.BloqQuien),bloqQuienRaw:f.BloqQuien||'',respuesta:escHtml(f.Respuesta),respuestaRaw:f.Respuesta||'',urgencia:escHtml(f.Urgencia),urgenciaRaw:f.Urgencia||'',cierre:f.FechaCierre?f.FechaCierre.split('T')[0]:'',
   // Timeline: creado → tomado por Legal → primera devolución → cerrado (fechas completas)
-  creadoTs:f.FechaRecibido||'',tomadoTs:f.FechaTomado||'',tomadoPor:escHtml(f.TomadoPor),respTs:f.FechaRespuesta||'',cierreTs:f.FechaCierre||'',esProyecto:!!f.EsProyecto,hitos:parseHitos(f.Hitos),pais:f.Pais||'',venc:f.VencimientoReal?f.VencimientoReal.split('T')[0]:'',vencMotivo:f.MotivoVencimiento||'',vencImpacto:f.ImpactoVencimiento||'',esperaDesde:f.EsperaDesde||'',esperaDe:f.EsperaDe||'',diasEspera:f.DiasEspera||0,pmRaw:!!f.ParaManagement,pmFecha:f.ParaManagementFecha||'',pm:pmVigente(!!f.ParaManagement,f.ParaManagementFecha),nov:f.Novedad||'',prox:f.ProximoPaso||'',dec:f.DecisionRequerida||'',esperaTipo:f.EsperaTipo||'',cierreAuto:f.CierreAuto||'',reabiertoTs:f.FechaReapertura||'',cierreSolPor:f.CierreSolicitadoPor||'',cierreSolTs:f.CierreSolicitadoTs||'',cierreSolCom:f.CierreSolicitadoComent||''};}
+  creadoTs:f.FechaRecibido||'',tomadoTs:f.FechaTomado||'',tomadoPor:escHtml(f.TomadoPor),respTs:f.FechaRespuesta||'',cierreTs:f.FechaCierre||'',esProyecto:!!f.EsProyecto,hitos:parseHitos(f.Hitos),pais:f.Pais||'',venc:f.VencimientoReal?f.VencimientoReal.split('T')[0]:'',vencMotivo:f.MotivoVencimiento||'',vencImpacto:f.ImpactoVencimiento||'',esperaDesde:f.EsperaDesde||'',esperaDe:f.EsperaDe||'',diasEspera:f.DiasEspera||0,pmRaw:!!f.ParaManagement,pmFecha:f.ParaManagementFecha||'',pm:pmVigente(!!f.ParaManagement,f.ParaManagementFecha),nov:f.Novedad||'',prox:f.ProximoPaso||'',dec:f.DecisionRequerida||'',esperaTipo:f.EsperaTipo||'',cierreAuto:f.CierreAuto||'',reabiertoTs:f.FechaReapertura||'',cierreSolPor:f.CierreSolicitadoPor||'',cierreSolTs:f.CierreSolicitadoTs||'',cierreSolCom:f.CierreSolicitadoComent||'',planVac:f.PlanVacaciones||'',delegadoDe:f.DelegadoDe||'',delegadoTs:f.DelegadoTs||''};}
 
 // ─── TICKETS: prioridad, orden y timeline ───────────────────────────────────
 var PRIO_RANK={'Crítica':4,'Alta':3,'Media':2,'Baja':1};
@@ -5321,7 +5332,7 @@ function openFormTicket(){
   // Paso 1: elegir simple o complejo
   document.getElementById('tk-paso-tipo').style.display='block';
   document.getElementById('tk-paso-datos').style.display='none';
-  TK_TIPO_NUEVO='simple';TK_RESP_MANUAL=false;
+  TK_TIPO_NUEVO='simple';TK_RESP_MANUAL=false;TK_VAC_DE='';
   ['tk-sector','tk-asunto','tk-desc'].forEach(function(id){document.getElementById(id).value='';});
   // Sector según Usuarios_Hub (Legal → Legales por defecto): si ya se conoce, no se pregunta
   var yo=personaTk(), sec=(yo&&(yo.sector||(!VER_COMO&&legalUser(currentUser.ini)?'Legales':'')))||'';
@@ -5599,6 +5610,8 @@ async function submitTicket(){
     };
     // Crítico: aviso inmediato por mail y Teams al responsable y al Admin (lo envía Power Automate)
     if(urgencia==='Crítica')Object.assign(fields,avisoCritico({resp:resp,asunto:asuntoFull,solicitante:userName,sector:sector,desc:desc}));
+    // Pedido urgente para alguien de vacaciones: va a quien cubre, queda marcado y le aparece en su inicio
+    Object.assign(fields,camposUrgenteVac(resp,asuntoFull,userName,urgencia));TK_VAC_DE='';
     // Ticket complejo con timeline de hitos
     if(TK_TIPO_NUEVO==='complejo'){
       fields.EsProyecto=true;
@@ -6267,6 +6280,11 @@ function armarSlidesPant(){
       +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:28px"><div><div style="font-size:17px;font-weight:700;color:var(--tx2);margin-bottom:6px">Por área</div>'+barras(porA)+'</div><div><div style="font-size:17px;font-weight:700;color:var(--tx2);margin-bottom:6px">Por persona</div>'+barras(porS)+'</div></div>'});
   }
 
+  // Vacaciones del equipo: solo si alguien está afuera o sale en los próximos 7 días
+  var vr=(typeof vacRelevantes==='function')?vacRelevantes(7):[];
+  if(vr.length)S.push({titulo:'Vacaciones',html:pantTit('🏖️ Vacaciones del equipo','Quién está afuera o sale en los próximos días, y quién cubre')+pantLista(vr,6,function(v){
+    var en=vacHoy(v.ini)===v, d=daysTo(v.desde), sp=en?0:sinPreparar(v.ini,v).length;
+    return pantFila('🏖️ '+escHtml(vacNombre(v.ini)),(en?'De vacaciones hasta el '+fmtCorta(v.hasta):'Sale '+pantDias(d)+' · '+vacFechas(v))+' · cubre <b>'+escHtml(vacNombre(v.cubre))+'</b>'+(sp?' <span style="color:#C2410C">· '+sp+' sin preparar</span>':''),en?'vuelve el '+fmtCorta(vacVuelta(v)):'',en?'var(--gr-tx)':'var(--bl)','pantVacaciones()');})});
   // 17. Noticias
   var ns=(NOTICIAS&&NOTICIAS.noticias)||[];
   for(var q=0;q<ns.length;q+=2){
@@ -6393,6 +6411,7 @@ function renderAvisosLegal(){
   var a=avisosCircuito(currentUser.ini);
   var fila=function(t,txt,col){return '<div class="tk-mio" data-tid="'+t.id+'" onclick="abrirTicketDesdeAviso(this.dataset.tid)" style="display:flex;gap:10px;align-items:center;padding:6px 8px;border-radius:var(--rs);cursor:pointer;font-size:13px"><span style="font-weight:600;color:'+col+';white-space:nowrap">'+txt+'</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+t.asunto+'</span><span style="color:var(--bl);font-size:12px;font-weight:600">Abrir ›</span></div>';};
   var h='';
+  avisosVacTickets().forEach(function(t){var p=String(t.planVac).split('|')[0];h+=fila(t,p==='urgente'?'🏖️ Urgente (vacaciones de '+escHtml(vacNombre(t.delegadoDe))+')':'🏖️ Delegado por '+escHtml(vacNombre(t.delegadoDe)),'var(--bl)');});
   if(currentUser.perfil==='Admin')tickets.filter(function(t){return t.cierreSolPor&&t.estado!=='Resuelto';}).forEach(function(t){h+=fila(t,'🔒 Aprobar cierre ('+escHtml(primerNombre((legalUser(t.cierreSolPor)||{}).name||t.cierreSolPor))+')','var(--bl)');});
   else mios0().forEach(function(t){h+=fila(t,'🔒 Esperando OK para cerrar','var(--tx2)');});
   a.reabiertos.forEach(function(t){h+=fila(t,'🔄 Reabierto','var(--rd-tx)');});
@@ -6407,14 +6426,17 @@ function renderAvisosLegal(){
       if(n)eq+='<span class="tk-cont" style="min-width:0;padding:6px 10px;cursor:pointer" onclick="goTo(\'tickets\',document.getElementById(\'nav-tickets\'));filtrarTk({resp:\''+u.ini+'\'})">'+escHtml(primerNombre(u.name))+': '+(x.sinTomar.length?'📥 '+x.sinTomar.length+' sin tomar ':'')+(x.sinCerrar.length?'📤 '+x.sinCerrar.length+' sin cerrar ':'')+(x.reabiertos.length?'🔄 '+x.reabiertos.length:'')+'</span>';
     });
   }
-  if(!h&&!eq){el.innerHTML='';return;}
-  el.innerHTML='<div class="card" style="margin-bottom:14px;border-left:4px solid var(--am);padding:12px 16px">'
+  var vh=vacAvisosHTML();
+  vh=vh?'<div class="card" style="margin-bottom:14px;border-left:4px solid var(--bl);padding:10px 14px">'+vh+'</div>':'';
+  if(!h&&!eq){el.innerHTML=vh;return;}
+  el.innerHTML=vh+'<div class="card" style="margin-bottom:14px;border-left:4px solid var(--am);padding:12px 16px">'
     +(h?'<div style="font-weight:600;font-size:14px;margin-bottom:6px">⚠️ Para ponerte al día</div>'+h:'')
     +(eq?'<div style="font-size:12px;color:var(--tx2);margin:'+(h?'10px':'0')+' 0 6px;font-weight:600">👥 Equipo</div><div style="display:flex;gap:8px;flex-wrap:wrap;font-size:12px">'+eq+'</div>':'')
     +'</div>';
 }
 // Link directo desde los mails: ?tk=ID abre el ticket (gestión para Legal, detalle para solicitantes).
 // Se guarda al cargar porque el login de Microsoft vuelve sin los parámetros de la URL.
+try{if(/[?&]vac=1/.test(location.search)){sessionStorage.setItem('hubVac','1');history.replaceState(null,'',location.pathname);}}catch(e){}
 try{var _tkm=/[?&]tk=([^&]+)/.exec(location.search);if(_tkm){sessionStorage.setItem('hubTk',decodeURIComponent(_tkm[1]));history.replaceState(null,'',location.pathname);}}catch(e){}
 function abrirTicketDeURL(){
   var id='';try{id=sessionStorage.getItem('hubTk')||'';sessionStorage.removeItem('hubTk');}catch(e){}
@@ -6423,6 +6445,208 @@ function abrirTicketDeURL(){
   goTo('tickets',document.getElementById('nav-tickets'));
   if(!t){showToast('No encontré ese pedido (puede que no tengas acceso)',true);return;}
   if(currentUser.perfil==='Admin'||legalUser(currentUser.ini))gestionarTicket(t.id);else verTicket(t.id);
+}
+
+// ─── VACACIONES DEL EQUIPO LEGAL ────────────────────────────────────────────
+// Cada uno carga sus vacaciones (lista Vacaciones_Legal) con quién lo cubre. Antes de salir prepara sus tickets uno por uno:
+// lo cierra antes, lo delega (le avisa al solicitante y a quien lo recibe) o espera a su vuelta.
+// Si un solicitante le pide algo a alguien de vacaciones, puede mandárselo a quien lo cubre si es urgente.
+const LIST_VAC='Vacaciones_Legal';
+var VACS=[];
+async function loadVacaciones(){
+  try{VACS=(await getListItems(LIST_VAC)).map(function(i){var f=i.fields||{};return {id:i.id,ini:String(f.Persona||'').trim().toUpperCase(),desde:String(f.Desde||'').split('T')[0],hasta:String(f.Hasta||'').split('T')[0],cubre:String(f.Cubre||'').trim().toUpperCase(),nota:f.Nota||''};})
+    .filter(function(v){return v.ini&&v.desde&&v.hasta;}).sort(function(a,b){return a.desde<b.desde?-1:1;});}
+  catch(e){console.warn('Vacaciones_Legal:',e);VACS=[];}
+}
+// Vacaciones en curso (hoy adentro del período)
+function vacHoy(ini){var h=todayStr();return VACS.filter(function(v){return v.ini===ini&&v.desde<=h&&v.hasta>=h;})[0]||null;}
+// La próxima (o la actual) de una persona
+function vacProxima(ini){var h=todayStr();return VACS.filter(function(v){return v.ini===ini&&v.hasta>=h;})[0]||null;}
+// Las que importan para avisos: en curso o que empiezan dentro de N días
+function vacRelevantes(dias){var h=todayStr();return VACS.filter(function(v){var d=daysTo(v.desde);return v.hasta>=h&&d!==null&&d<=dias;});}
+function vacNombre(ini){var u=legalUser(ini);return u?primerNombre(u.name):(ini||'—');}
+function vacFechas(v){return fmtCorta(v.desde)+' al '+fmtCorta(v.hasta);}
+function fmtCorta(d){if(!d)return '';var p=d.split('-');return p[2]+'/'+p[1];}
+function vacVuelta(v){return sumarDiasHabiles(v.hasta+'T12:00:00',1);}
+// Plan de cada ticket para un período: "cierro|desde", "espera|desde", "delegado|desde", "urgente|desde"
+function planTk(t,v){var p=String(t.planVac||'').split('|');return v&&p[1]===v.desde?p[0]:'';}
+function misTicketsVac(ini){return tickets.filter(function(t){return t.resp===ini&&t.estado!=='Resuelto';});}
+function sinPreparar(ini,v){return misTicketsVac(ini).filter(function(t){return !planTk(t,v);});}
+function puedeGestionarVac(){return !!currentUser&&!VER_COMO&&(currentUser.perfil==='Admin'||!!legalUser(currentUser.ini));}
+
+// Panel 🏖️ Vacaciones
+function abrirVacaciones(){
+  if(!puedeGestionarVac())return;
+  var el=document.getElementById('form-vac');if(!el)return;
+  renderVacPanel();el.classList.add('open');
+}
+function closeFormVac(){var el=document.getElementById('form-vac');if(el)el.classList.remove('open');if(typeof PANT!=='undefined'&&PANT.on&&PANT.fuera&&PANT.desdeTicket)setTimeout(pantVolver,150);}
+function pantVacaciones(){pantSalirA(function(){PANT.desdeTicket=true;abrirVacaciones();});}
+function renderVacPanel(){
+  var cont=document.getElementById('vac-cuerpo');if(!cont)return;
+  var yo=currentUser.ini, esAdm=currentUser.perfil==='Admin', leg=usersInGroup('Legal');
+  var h='';
+  // 1. Las vacaciones cargadas
+  var lista=VACS.filter(function(v){return v.hasta>=todayStr();});
+  h+='<div style="font-weight:600;font-size:13px;margin-bottom:6px">📅 Vacaciones cargadas</div>';
+  h+=lista.length?lista.map(function(v){
+    var enCurso=vacHoy(v.ini)===v, d=daysTo(v.desde);
+    return '<div style="display:flex;gap:8px;align-items:center;padding:7px 8px;border-bottom:1px solid var(--brd);font-size:13px"><span style="font-weight:600;min-width:70px">'+escHtml(vacNombre(v.ini))+'</span><span style="flex:1">'+vacFechas(v)+' · cubre <b>'+escHtml(vacNombre(v.cubre))+'</b>'+(v.nota?' <span style="color:var(--tx3)">· '+escHtml(v.nota)+'</span>':'')+'</span><span style="font-size:11px;color:'+(enCurso?'var(--gr-tx)':'var(--tx3)')+'">'+(enCurso?'de vacaciones':d===0?'sale hoy':'en '+d+' días')+'</span>'
+      +((v.ini===yo||esAdm)?'<button class="btns" style="font-size:11px;padding:3px 8px" data-id="'+v.id+'" onclick="borrarVac(this.dataset.id)" title="Borrar este período">🗑</button>':'')+'</div>';
+  }).join(''):'<div style="font-size:12px;color:var(--tx3);padding:4px 0 8px">No hay vacaciones cargadas.</div>';
+  // 2. Cargar
+  var opts=function(sel,excluir){return leg.filter(function(u){return u.ini!==excluir;}).map(function(u){return '<option value="'+u.ini+'"'+(u.ini===sel?' selected':'')+'>'+escHtml(u.name)+'</option>';}).join('');};
+  var cubreDef=yo===adminIni()?'CS':adminIni();
+  h+='<div style="margin:14px 0 6px;font-weight:600;font-size:13px">➕ Cargar vacaciones</div>'
+    +'<div class="fieldrow">'
+    +(esAdm?'<div class="field" style="margin:0"><label>¿Quién?</label><select id="vac-persona">'+opts(yo,'')+'</select></div>':'')
+    +'<div class="field" style="margin:0"><label>Desde</label><input type="date" id="vac-desde"></div>'
+    +'<div class="field" style="margin:0"><label>Hasta (inclusive)</label><input type="date" id="vac-hasta"></div></div>'
+    +'<div class="fieldrow" style="margin-top:8px"><div class="field" style="margin:0"><label>¿Quién cubre?</label><select id="vac-cubre">'+opts(cubreDef,esAdm?'':yo)+'</select></div>'
+    +'<div class="field" style="margin:0"><label>Nota <span style="color:var(--tx3);font-weight:400">(opcional)</span></label><input type="text" id="vac-nota" placeholder="Ej: con acceso al mail para urgencias"></div></div>'
+    +'<button class="btnp" style="margin-top:8px" onclick="guardarVac(this)">Guardar</button>';
+  // 3. Preparar mis tickets (si tengo vacaciones cargadas)
+  var v=vacProxima(yo);
+  if(v){
+    var mis=misTicketsVac(yo);
+    h+='<div style="margin:18px 0 4px;font-weight:600;font-size:14px">🧳 Preparar mis tickets ('+vacFechas(v)+')</div>'
+      +'<div style="font-size:12px;color:var(--tx2);margin-bottom:8px">Elegí qué hacer con cada uno. Si lo delegás, cambia de responsable y le avisamos por mail al solicitante y a quien lo recibe.</div>';
+    if(!mis.length)h+='<div style="font-size:12px;color:var(--gr-tx)">No tenés tickets abiertos. 🎉</div>';
+    mis.forEach(function(t){
+      var p=planTk(t,v);
+      var chip=p==='cierro'?'<span style="color:var(--gr-tx);font-weight:600">✅ Lo cerrás antes</span>':p==='espera'?'<span style="color:var(--am-tx);font-weight:600">⏸ Espera tu vuelta</span>':'<span style="color:#C2410C;font-weight:600">Sin decidir</span>';
+      h+='<div style="border:1px solid var(--brd);border-radius:var(--rs);padding:8px 10px;margin-bottom:6px;font-size:13px">'
+        +'<div style="display:flex;gap:8px;align-items:center"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer" data-tid="'+t.id+'" onclick="vacAbrirTicket(this.dataset.tid)" title="Abrir el ticket"><b>'+t.num+'</b> · '+t.asunto+'</span><span style="font-size:11px;white-space:nowrap">'+chip+'</span></div>'
+        +'<div style="font-size:11px;color:var(--tx3);margin:2px 0 6px">'+(t.venc?'⛔ vence '+fmtDate(t.venc)+' · ':'')+(t.urgenciaRaw?'Prioridad '+escHtml(t.urgenciaRaw)+' · ':'')+'pedido de '+escHtml(nombreSolicitante(t))+'</div>'
+        +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'
+        +'<button class="btns" style="font-size:11px;padding:3px 9px" data-tid="'+t.id+'" onclick="planVac(this.dataset.tid,\'cierro\')">✅ Lo cierro antes</button>'
+        +'<button class="btns" style="font-size:11px;padding:3px 9px" data-tid="'+t.id+'" onclick="planVac(this.dataset.tid,\'espera\')">⏸ Espera mi vuelta</button>'
+        +'<span style="font-size:11px;color:var(--tx3)">o delegar a</span><select id="vac-del-'+t.id+'" style="font-size:11px;padding:3px 6px;width:auto">'+opts(v.cubre,yo)+'</select>'
+        +'<button class="btnp" style="font-size:11px;padding:3px 9px" data-tid="'+t.id+'" onclick="delegarVac(this.dataset.tid,this)">➡️ Delegar</button></div></div>';
+    });
+  }
+  // 4. Lo que delegué y sigue abierto (para recuperarlo a la vuelta)
+  var deleg=tickets.filter(function(t){return t.delegadoDe===yo&&t.estado!=='Resuelto'&&t.resp!==yo;});
+  if(deleg.length){
+    h+='<div style="margin:18px 0 6px;font-weight:600;font-size:13px">↩️ Lo que delegaste y sigue abierto</div>';
+    deleg.forEach(function(t){h+='<div style="display:flex;gap:8px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--brd);font-size:13px"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+t.asunto+'</span><span style="font-size:11px;color:var(--tx3)">lo tiene '+escHtml(vacNombre(t.resp))+'</span><button class="btns" style="font-size:11px;padding:3px 9px" data-tid="'+t.id+'" onclick="recuperarVac(this.dataset.tid,this)">↩️ Recuperar</button></div>';});
+  }
+  cont.innerHTML=h;
+}
+function vacAbrirTicket(id){var el=document.getElementById('form-vac');if(el)el.classList.remove('open');goTo('tickets',document.getElementById('nav-tickets'));gestionarTicket(id);}
+async function guardarVac(btn){
+  var persona=(document.getElementById('vac-persona')||{}).value||currentUser.ini;
+  var desde=document.getElementById('vac-desde').value, hasta=document.getElementById('vac-hasta').value, cubre=document.getElementById('vac-cubre').value, nota=document.getElementById('vac-nota').value.trim();
+  if(!desde||!hasta){alert('Completá desde y hasta.');return;}
+  if(hasta<desde){alert('La fecha "hasta" es anterior a "desde".');return;}
+  if(cubre===persona){alert('Elegí a otra persona para que cubra.');return;}
+  if(VACS.some(function(v){return v.ini===persona&&v.desde<=hasta&&v.hasta>=desde;})){alert('Ya hay vacaciones cargadas para '+vacNombre(persona)+' que se superponen con esas fechas.');return;}
+  btn.disabled=true;btn.textContent='Guardando…';
+  try{
+    await createListItem(LIST_VAC,{Title:((legalUser(persona)||{}).name||persona)+' '+desde,Persona:persona,Desde:desde+'T12:00:00Z',Hasta:hasta+'T12:00:00Z',Cubre:cubre,Nota:nota});
+    await loadVacaciones();renderVacPanel();renderAvisosLegal();showToast('🏖️ Vacaciones cargadas');
+  }catch(e){btn.disabled=false;btn.textContent='Guardar';showToast('No se pudo guardar: '+e.message,true);}
+}
+async function borrarVac(id){
+  var v=VACS.filter(function(x){return String(x.id)===String(id);})[0];if(!v)return;
+  if(!confirm('¿Borrar las vacaciones de '+vacNombre(v.ini)+' del '+vacFechas(v)+'?\n\nLos tickets que ya se delegaron quedan como están.'))return;
+  try{await deleteListItem(LIST_VAC,id);await loadVacaciones();renderVacPanel();renderAvisosLegal();showToast('Vacaciones borradas');}
+  catch(e){showToast('No se pudo borrar: '+e.message,true);}
+}
+async function planVac(id,plan){
+  var t=tickets.find(function(x){return x.id===id;}), v=vacProxima(currentUser.ini);if(!t||!v)return;
+  try{await updateListItem(LIST_TICKETS,id,{PlanVacaciones:plan+'|'+v.desde});t.planVac=plan+'|'+v.desde;renderVacPanel();renderAvisosLegal();}
+  catch(e){showToast('Error: '+e.message,true);}
+}
+async function delegarVac(id,btn){
+  var t=tickets.find(function(x){return x.id===id;}), v=vacProxima(currentUser.ini);if(!t||!v)return;
+  var para=document.getElementById('vac-del-'+id).value, pu=legalUser(para)||{}, de=currentUser.ini;
+  if(!confirm('¿Delegar '+numLimpio(t)+' a '+primerNombre(pu.name||para)+'?\n\nLe avisamos por mail a '+primerNombre(pu.name||para)+(t.email?' y al solicitante':'')+'.'))return;
+  btn.disabled=true;
+  var ahora=new Date().toISOString();
+  var f={Responsable:para,DelegadoDe:de,DelegadoTs:ahora,PlanVacaciones:'delegado|'+v.desde,
+    Respuesta:(t.respuestaRaw?t.respuestaRaw+'\n\n':'')+selloAhora()+' 🏖️ Delegado a '+para+' por vacaciones de '+de+' ('+vacFechas(v)+')'};
+  var titulo=primerNombre(pu.name||para)+' sigue el pedido '+numLimpio(t);
+  var lineas=[(t.email?'Hola '+primerNombre(nombreSolicitante(t))+', ':'')+vacNombre(de)+' va a estar de vacaciones del '+vacFechas(v)+', así que tu pedido “'+t.asuntoRaw+'” lo sigue '+(pu.name||para)+'.','Si necesitás algo, escribile directamente a '+primerNombre(pu.name||para)+' (respondiendo este mail le llega).'];
+  var para2=[t.email,pu.email].filter(Boolean).join(';');
+  if(para2)Object.assign(f,camposAviso('delegado',para2,'🏖️ '+titulo+' — '+t.asuntoRaw,mailHTML(titulo,lineas,'Ver el pedido',linkTicket(t.id)),'',pu.email||''));
+  try{await updateListItem(LIST_TICKETS,id,f);await syncAll();renderVacPanel();showToast('➡️ Delegado a '+primerNombre(pu.name||para));}
+  catch(e){btn.disabled=false;showToast('Error: '+e.message,true);}
+}
+async function recuperarVac(id,btn){
+  var t=tickets.find(function(x){return x.id===id;});if(!t)return;
+  if(!confirm('¿Recuperar '+numLimpio(t)+'? Vuelve a estar a tu nombre.'))return;
+  btn.disabled=true;
+  var f={Responsable:currentUser.ini,DelegadoDe:'',DelegadoTs:null,PlanVacaciones:'',Respuesta:(t.respuestaRaw?t.respuestaRaw+'\n\n':'')+selloAhora()+' ↩️ Vuelve a '+currentUser.ini+' (lo tenía '+t.resp+')'};
+  try{await updateListItem(LIST_TICKETS,id,f);await syncAll();renderVacPanel();showToast('↩️ Recuperado');}
+  catch(e){btn.disabled=false;showToast('Error: '+e.message,true);}
+}
+
+// Tarjeta del inicio: quién está o se va de vacaciones (Legal / Admin)
+function vacAvisosHTML(){
+  if(!puedeGestionarVac())return '';
+  var rel=vacRelevantes(7);
+  var yo=currentUser.ini, h='';
+  rel.forEach(function(v){
+    var en=vacHoy(v.ini)===v, d=daysTo(v.desde), mio=v.ini===yo, sp=sinPreparar(v.ini,v).length;
+    var txt=en?'<b>'+escHtml(vacNombre(v.ini))+'</b> está de vacaciones hasta el '+fmtCorta(v.hasta)+' · cubre <b>'+escHtml(vacNombre(v.cubre))+'</b>'
+      :(mio?'<b>Te vas de vacaciones '+(d===0?'hoy':d===1?'mañana':'en '+d+' días')+'</b> ('+vacFechas(v)+')':'<b>'+escHtml(vacNombre(v.ini))+'</b> sale de vacaciones '+(d===0?'hoy':d===1?'mañana':'en '+d+' días')+' ('+vacFechas(v)+') · cubre '+escHtml(vacNombre(v.cubre)));
+    if(!en&&sp)txt+=' · <span style="color:#C2410C;font-weight:600">'+sp+(sp===1?' ticket sin preparar':' tickets sin preparar')+'</span>';
+    h+='<div style="display:flex;gap:10px;align-items:center;padding:6px 8px;font-size:13px"><span>🏖️</span><span style="flex:1">'+txt+'</span>'+(mio&&!en?'<button class="btnp" style="font-size:12px;padding:4px 12px" onclick="abrirVacaciones()">Preparar mis tickets</button>':'<span class="dash-link" style="font-size:12px;color:var(--bl);cursor:pointer;font-weight:600" onclick="abrirVacaciones()">Ver ›</span>')+'</div>';
+  });
+  return h;
+}
+// Tickets que me llegaron por vacaciones de otro (delegados o urgentes del solicitante)
+function avisosVacTickets(){
+  var yo=currentUser.ini, esAdm=currentUser.perfil==='Admin';
+  return tickets.filter(function(t){
+    if(t.estado==='Resuelto'||!t.delegadoDe)return false;
+    var v=vacProxima(t.delegadoDe), p=String(t.planVac||'').split('|')[0];
+    if(!v||v.desde!==String(t.planVac||'').split('|')[1])return false; // ya volvió
+    return t.resp===yo||(esAdm&&p==='urgente');
+  });
+}
+
+// Formulario de pedido: si la persona elegida está de vacaciones, se avisa y (si es urgente) se puede mandar a quien cubre
+var TK_VAC_DE='';
+function vacAvisoForm(){
+  var el=document.getElementById('tk-vac-aviso');if(!el)return;
+  var sel=document.getElementById('tk-resp'), ini=sel.value;
+  if(TK_VAC_DE&&ini===vacCubreDe(TK_VAC_DE)){
+    el.style.display='block';
+    el.innerHTML='🚨 Lo mandás a <b>'+escHtml(vacNombre(ini))+'</b> porque '+escHtml(vacNombre(TK_VAC_DE))+' está de vacaciones. '+escHtml(vacNombre(ini))+' lo va a ver en su pantalla. <a href="#" onclick="vacDeshacerUrgente();return false">deshacer</a>';
+    return;
+  }
+  TK_VAC_DE='';
+  var v=vacHoy(ini), p=!v&&vacProxima(ini), dp=p?daysTo(p.desde):null;
+  if(v){
+    el.style.display='block';
+    el.innerHTML='🏖️ <b>'+escHtml(vacNombre(ini))+'</b> está de vacaciones hasta el '+fmtCorta(v.hasta)+' (vuelve el '+fmtCorta(vacVuelta(v))+'). Si tu pedido puede esperar, dejalo así y lo ve a la vuelta.'
+      +(v.cubre&&legalUser(v.cubre)?'<div style="margin-top:8px"><button type="button" class="btnp" style="font-size:12px;padding:5px 12px" onclick="vacMandarUrgente()">🚨 Es urgente: mandárselo a '+escHtml(vacNombre(v.cubre))+'</button></div>':'');
+  }else if(p&&dp!==null&&dp<=3){
+    el.style.display='block';
+    el.innerHTML='🏖️ Ojo: <b>'+escHtml(vacNombre(ini))+'</b> sale de vacaciones '+(dp===0?'hoy':dp===1?'mañana':'en '+dp+' días')+' (del '+vacFechas(p)+'). La/lo cubre '+escHtml(vacNombre(p.cubre))+'.';
+  }else{el.style.display='none';el.innerHTML='';}
+}
+function vacCubreDe(ini){var v=vacHoy(ini);return v?v.cubre:'';}
+function vacMandarUrgente(){
+  var sel=document.getElementById('tk-resp'), ini=sel.value, v=vacHoy(ini);if(!v)return;
+  TK_VAC_DE=ini;sel.value=v.cubre;TK_RESP_MANUAL=true;document.getElementById('tk-resp-hint').textContent='';vacAvisoForm();
+}
+function vacDeshacerUrgente(){var sel=document.getElementById('tk-resp');sel.value=TK_VAC_DE;TK_VAC_DE='';vacAvisoForm();}
+// Al crear el ticket: marca que llegó por vacaciones y avisa a quien cubre (y al Admin)
+function camposUrgenteVac(resp,asunto,solicitante,urgencia){
+  if(!TK_VAC_DE)return {};
+  var v=vacHoy(TK_VAC_DE);if(!v)return {};
+  var f={DelegadoDe:TK_VAC_DE,DelegadoTs:new Date().toISOString(),PlanVacaciones:'urgente|'+v.desde,
+    Respuesta:'['+new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})+'] 🏖️ '+solicitante+' lo mandó a '+resp+' como urgente porque '+TK_VAC_DE+' está de vacaciones'};
+  if(urgencia!=='Crítica'){ // el crítico ya avisa por su cuenta
+    var r=legalUser(resp)||{}, adm=adminEmail();
+    var para=[r.email,adm].filter(function(x,i,a){return x&&a.indexOf(x)===i;}).join(';');
+    var titulo='🏖️ Pedido urgente para '+vacNombre(TK_VAC_DE)+' (de vacaciones)';
+    Object.assign(f,camposAviso('vac-urgente',para,titulo+' — '+asunto,mailHTML(titulo,[solicitante+' le pidió algo a '+vacNombre(TK_VAC_DE)+', que está de vacaciones hasta el '+fmtCorta(v.hasta)+', y lo marcó como urgente. Te llegó a vos porque lo cubrís.','Asunto: '+asunto],'Abrir el ticket',HUB_URL+'?tk={ID}'),''));
+  }
+  return f;
 }
 
 // ─── CIERRE CON APROBACIÓN DEL ADMIN ────────────────────────────────────────
