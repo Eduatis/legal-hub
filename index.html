@@ -1848,7 +1848,7 @@ function dashTk(o){
   goTo('tickets',document.getElementById('nav-tickets'));
   var sp=document.getElementById('tickets-pais');if(sp)sp.value=o.pais||'';
   setTimeout(function(){
-    filtrarTk({etapa:o.etapa||'',venc:o.venc||'',extra:o.pm?'pm':(o.extra||'')});
+    filtrarTk({etapa:o.etapa||'',venc:o.venc||'',pais:o.pais||'',extra:o.pm?'pm':(o.extra||'')});
     if(o.prio){var p=document.getElementById('tickets-prio');if(p){p.value=o.prio;renderTickets();}}
     if(o.pm){var se=document.getElementById('tickets-estado');if(se){se.value='';renderTickets();}}
   },60);
@@ -3059,7 +3059,7 @@ function mapaMarca(g,on){mapaMarcaK(g.getAttribute('data-k'),on);}
 function mapaLimpiar(){document.querySelectorAll('.mapa-pais.activo').forEach(function(g){g.classList.remove('activo');});document.querySelectorAll('.mapa-marca.visible').forEach(function(m){m.classList.remove('visible');});}
 function mapaMarcaK(k,on){
   mapaLimpiar();if(!on)return;
-  document.querySelectorAll('.mapa-pais[data-k="'+k+'"]').forEach(function(g){g.classList.toggle('activo',!!on);if(on&&g.parentNode){var m=g.parentNode.querySelector('.mapa-marca');g.parentNode.insertBefore(g,m);}});
+  document.querySelectorAll('.mapa-pais[data-k="'+k+'"]').forEach(function(g){g.classList.toggle('activo',!!on);if(on&&g.parentNode){var m=g.parentNode.querySelector('.mapa-marca');if(m&&g.nextElementSibling!==m)g.parentNode.insertBefore(g,m);}});
   document.querySelectorAll('.mapa-marca[data-k="'+k+'"]').forEach(function(t){t.classList.toggle('visible',!!on);});
 }
 
