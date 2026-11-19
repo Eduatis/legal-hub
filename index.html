@@ -4934,7 +4934,7 @@ function renderTickets(){
   var fe=esSol?'':val('tickets-estado'),fr=val('tickets-resp'),fp=val('tickets-prio'),fs=val('tickets-solic'),fet=val('tickets-etapa'),fv=val('tickets-venc');
   var extra=typeof TK_EXTRA!=='undefined'?TK_EXTRA:'';
   var list=base.filter(function(t){return (!fe||t.estado===fe)&&(!fr||t.resp===fr)&&(!fp||t.urgencia===fp)&&(!fs||t.email===fs)&&(!fet||etapaTicket(t)===fet)&&(!fv||vencBucket(t)===fv)
-    &&(extra!=='estancado'||esEstancado(t))&&(extra!=='vence7'||['hoy','manana','semana'].indexOf(vencBucket(t))>=0)&&(extra!=='pm'||t.pm)&&(extra!=='rojo'||(t.venc&&t.estado!=='Resuelto'&&!t.respTs&&daysTo(t.venc)<=rojoDesde(t)))&&(!fpa||(fpa==='sin'?!paisTicket(t):paisTicket(t)===fpa));});
+    &&(extra!=='estancado'||esEstancado(t))&&(extra!=='vence7'||['hoy','manana','semana'].indexOf(vencBucket(t))>=0)&&(extra!=='pm'||t.pm)&&(extra!=='nuevos'||TK_NUEVOS_IDS.indexOf(String(t.id))>=0)&&(extra!=='rojo'||(t.venc&&t.estado!=='Resuelto'&&!t.respTs&&daysTo(t.venc)<=rojoDesde(t)))&&(!fpa||(fpa==='sin'?!paisTicket(t):paisTicket(t)===fpa));});
   var q=val('tickets-q').trim().toLowerCase();
   if(q)list=list.filter(function(t){return [t.num,t.asuntoRaw,t.cuerpoRaw,t.sitioRaw,catDeTicket(t),nombreSolicitante(t)].join(' ').toLowerCase().indexOf(q)>=0;});
   ordenarTickets(list,esSol?'recientes':(val('tickets-orden')||'deadline'));
@@ -4949,7 +4949,7 @@ function renderTickets(){
     return;
   }
   // Filtros especiales que vienen del tablero (no tienen selector propio)
-  var chip=extra?'<div style="margin-bottom:10px"><span class="badge" style="background:var(--bl-bg);color:var(--bl);cursor:pointer;padding:4px 10px" onclick="TK_EXTRA=\'\';renderTickets()">Filtro: '+(extra==='estancado'?'⏸ Estancados':extra==='pm'?'📊 Para management':extra==='rojo'?'⛔ Vencimientos reales en zona roja':'Vencen en los próximos 7 días')+' ✕</span></div>':'';
+  var chip=extra?'<div style="margin-bottom:10px"><span class="badge" style="background:var(--bl-bg);color:var(--bl);cursor:pointer;padding:4px 10px" onclick="TK_EXTRA=\'\';renderTickets()">Filtro: '+(extra==='estancado'?'⏸ Estancados':extra==='pm'?'📊 Para management':extra==='rojo'?'⛔ Vencimientos reales en zona roja':extra==='nuevos'?'🆕 Nuevos desde tu último ingreso':'Vencen en los próximos 7 días')+' ✕</span></div>':'';
   if(!list.length){el.innerHTML=chip+'<div class="card"><div class="empty">Sin tickets para este filtro</div></div>';return;}
   var respNames={};usersInGroup('Legal').forEach(function(u){respNames[u.ini]=u.name;});
   el.innerHTML=chip+list.map(function(t){
@@ -6537,6 +6537,41 @@ function avisosCircuito(ini){
 }
 function abrirTicketDesdeAviso(id){goTo('tickets',document.getElementById('nav-tickets'));gestionarTicket(id);}
 function mios0(){return tickets.filter(function(t){return t.cierreSolPor===currentUser.ini&&t.estado!=='Resuelto';});}
+// ─── TICKETS NUEVOS DESDE LA ÚLTIMA VEZ ─────────────────────────────────────
+// Se guarda en este navegador hasta cuándo los viste (y cuáles abriste); nada del contenido.
+// Quedan en el inicio hasta que tocás "Ya los vi" o los abrís uno por uno.
+function claveNuevos(){return 'hubNuevos:'+String((currentUser||{}).email||'').toLowerCase();}
+function leerNuevos(){
+  var v=null;try{v=JSON.parse(localStorage.getItem(claveNuevos())||'null');}catch(e){}
+  if(!v||!v.hasta){v={hasta:new Date(Date.now()-3*864e5).toISOString(),vistos:[]};try{localStorage.setItem(claveNuevos(),JSON.stringify(v));}catch(e){}}
+  return v;
+}
+function guardarNuevos(v){try{localStorage.setItem(claveNuevos(),JSON.stringify(v));}catch(e){}}
+function ticketsNuevosDesde(){
+  var v=leerNuevos(), desde=new Date(v.hasta).getTime();
+  return tickets.filter(function(t){return t.creadoTs&&new Date(t.creadoTs).getTime()>desde&&v.vistos.indexOf(String(t.id))<0&&t.email!==String(currentUser.email||'').toLowerCase();})
+    .sort(function(a,b){return a.creadoTs<b.creadoTs?1:-1;});
+}
+function abrirNuevo(id){var v=leerNuevos();if(v.vistos.indexOf(String(id))<0){v.vistos.push(String(id));guardarNuevos(v);}abrirTicketDesdeAviso(id);}
+function nuevosVistos(){guardarNuevos({hasta:new Date().toISOString(),vistos:[]});renderAvisosLegal();}
+function verNuevosEnLista(){var ids=ticketsNuevosDesde().map(function(t){return String(t.id);});goTo('tickets',document.getElementById('nav-tickets'));filtrarTk({});TK_EXTRA='nuevos';TK_NUEVOS_IDS=ids;renderTickets();}
+var TK_NUEVOS_IDS=[];
+function nuevosDesdeHTML(){
+  var ns=ticketsNuevosDesde();if(!ns.length)return '';
+  var v=leerNuevos(), desde=new Date(v.hasta);
+  var cuando=desde.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})+' '+desde.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false});
+  var filas=ns.slice(0,8).map(function(t){
+    var mio=t.resp===currentUser.ini, viaMail=/📧/.test(t.respuestaRaw||'');
+    return '<div class="tk-mio" data-tid="'+t.id+'" onclick="abrirNuevo(this.dataset.tid)" style="display:flex;gap:10px;align-items:center;padding:6px 8px;border-radius:var(--rs);cursor:pointer;font-size:13px">'
+      +'<span class="mono" style="font-size:10px;white-space:nowrap">'+t.num+'</span>'
+      +'<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(viaMail?'📧 ':'')+t.asunto+' <span style="color:var(--tx3)">· '+escHtml(primerNombre(nombreSolicitante(t)))+'</span></span>'
+      +'<span style="font-size:11px;white-space:nowrap;'+(mio?'color:var(--bl);font-weight:600':'color:var(--tx3)')+'">'+(mio?'para vos':'→ '+escHtml(vacNombre(t.resp)))+'</span>'
+      +'<span style="font-size:11px;color:var(--tx3);white-space:nowrap">'+fmtDateTime(t.creadoTs)+'</span></div>';}).join('');
+  return '<div class="card" style="margin-bottom:14px;border-left:4px solid #7C3AED;padding:12px 16px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px"><div style="font-weight:600;font-size:14px">🆕 '+ns.length+(ns.length===1?' ticket nuevo':' tickets nuevos')+' <span style="font-weight:400;font-size:12px;color:var(--tx3)">desde el '+cuando+'</span></div>'
+    +'<div style="display:flex;gap:6px">'+(ns.length>1?'<button class="btns" style="font-size:11px;padding:3px 10px" onclick="verNuevosEnLista()">Ver en la lista</button>':'')+'<button class="btns" style="font-size:11px;padding:3px 10px" onclick="nuevosVistos()">✓ Ya los vi</button></div></div>'
+    +filas+(ns.length>8?'<div style="font-size:11px;color:var(--tx3);padding:4px 8px">y '+(ns.length-8)+' más… tocá “Ver en la lista”</div>':'')+'</div>';
+}
 function renderAvisosLegal(){
   var el=document.getElementById('dash-avisos');if(!el)return;
   if(!currentUser||!(currentUser.perfil==='Admin'||legalUser(currentUser.ini))||VER_COMO){el.innerHTML='';return;}
@@ -6559,7 +6594,7 @@ function renderAvisosLegal(){
     });
   }
   var vh=vacAvisosHTML();
-  vh=vh?'<div class="card" style="margin-bottom:14px;border-left:4px solid var(--bl);padding:10px 14px">'+vh+'</div>':'';
+  vh=nuevosDesdeHTML()+(vh?'<div class="card" style="margin-bottom:14px;border-left:4px solid var(--bl);padding:10px 14px">'+vh+'</div>':'');
   if(!h&&!eq){el.innerHTML=vh;return;}
   el.innerHTML=vh+'<div class="card" style="margin-bottom:14px;border-left:4px solid var(--am);padding:12px 16px">'
     +(h?'<div style="font-weight:600;font-size:14px;margin-bottom:6px">⚠️ Para ponerte al día</div>'+h:'')
