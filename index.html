@@ -3835,7 +3835,7 @@ function escUrl(s){s=String(s==null?'':s).trim();return (/^[a-z][a-z0-9+.\-]*:/i
 // Los campos de texto de Tickets los escribe cualquier solicitante: se guardan ya escapados para mostrar; *Raw = texto original (para mails)
 function mapTicket(item){var f=item.fields;return{id:item.id,num:escHtml(f.NumTicket||ticketNumFromId(item.id,f.FechaRecibido)),remitente:escHtml(f.Remitente),remitenteRaw:f.Remitente||'',email:(f.EmailRemitente||'').toLowerCase(),asunto:escHtml(f.Asunto),asuntoRaw:f.Asunto||'',resp:f.Responsable||'',cuerpo:escHtml(f.Cuerpo),cuerpoRaw:f.Cuerpo||'',fecha:f.FechaRecibido?f.FechaRecibido.split('T')[0]:'',estado:(f.Estado==='Resuelto'?'Resuelto':'En curso'),link:f.LinkMail||'',cat:escHtml(f.Categoria),catRaw:f.Categoria||'',sitio:escHtml(f.CodigoSitio),sitioRaw:f.CodigoSitio||'',deadline:f.Deadline?f.Deadline.split('T')[0]:'',bloq:escHtml(f.BloqQuien),bloqQuienRaw:f.BloqQuien||'',respuesta:escHtml(f.Respuesta),respuestaRaw:f.Respuesta||'',urgencia:escHtml(f.Urgencia),urgenciaRaw:f.Urgencia||'',cierre:f.FechaCierre?f.FechaCierre.split('T')[0]:'',
   // Timeline: creado → tomado por Legal → primera devolución → cerrado (fechas completas)
-  creadoTs:f.FechaRecibido||'',tomadoTs:f.FechaTomado||'',tomadoPor:escHtml(f.TomadoPor),respTs:f.FechaRespuesta||'',cierreTs:f.FechaCierre||'',esProyecto:!!f.EsProyecto,hitos:parseHitos(f.Hitos),pais:f.Pais||'',venc:f.VencimientoReal?f.VencimientoReal.split('T')[0]:'',vencMotivo:f.MotivoVencimiento||'',vencImpacto:f.ImpactoVencimiento||'',esperaDesde:f.EsperaDesde||'',esperaDe:f.EsperaDe||'',diasEspera:f.DiasEspera||0,pmRaw:!!f.ParaManagement,pmFecha:f.ParaManagementFecha||'',pm:pmVigente(!!f.ParaManagement,f.ParaManagementFecha),nov:f.Novedad||'',prox:f.ProximoPaso||'',dec:f.DecisionRequerida||'',esperaTipo:f.EsperaTipo||'',cierreAuto:f.CierreAuto||'',reabiertoTs:f.FechaReapertura||'',cierreSolPor:f.CierreSolicitadoPor||'',cierreSolTs:f.CierreSolicitadoTs||'',cierreSolCom:f.CierreSolicitadoComent||'',planVac:f.PlanVacaciones||'',delegadoDe:f.DelegadoDe||'',delegadoTs:f.DelegadoTs||''};}
+  creadoTs:f.FechaRecibido||'',tomadoTs:f.FechaTomado||'',tomadoPor:escHtml(f.TomadoPor),respTs:f.FechaRespuesta||'',cierreTs:f.FechaCierre||'',esProyecto:!!f.EsProyecto,hitos:parseHitos(f.Hitos),pais:f.Pais||'',venc:f.VencimientoReal?f.VencimientoReal.split('T')[0]:'',vencMotivo:f.MotivoVencimiento||'',vencImpacto:f.ImpactoVencimiento||'',esperaDesde:f.EsperaDesde||'',esperaDe:f.EsperaDe||'',diasEspera:f.DiasEspera||0,pmRaw:!!f.ParaManagement,pmFecha:f.ParaManagementFecha||'',pm:pmVigente(!!f.ParaManagement,f.ParaManagementFecha),nov:f.Novedad||'',prox:f.ProximoPaso||'',dec:f.DecisionRequerida||'',esperaTipo:f.EsperaTipo||'',cierreAuto:f.CierreAuto||'',reabiertoTs:f.FechaReapertura||'',cierreSolPor:f.CierreSolicitadoPor||'',cierreSolTs:f.CierreSolicitadoTs||'',cierreSolCom:f.CierreSolicitadoComent||'',planVac:f.PlanVacaciones||'',delegadoDe:f.DelegadoDe||'',delegadoTs:f.DelegadoTs||'',notaDeleg:f.NotaDelegacion||''};}
 
 // ─── TICKETS: prioridad, orden y timeline ───────────────────────────────────
 var PRIO_RANK={'Crítica':4,'Alta':3,'Media':2,'Baja':1};
@@ -4900,6 +4900,7 @@ function renderTickets(){
     if(puedeGestionar&&(et==='nuevo'||et==='tomado')&&!t.esperaDesde)h+='<button class="btnedit" data-tid="'+t.id+'" onclick="abrirEspera(this.dataset.tid)" style="font-size:11px;padding:4px 12px;border-radius:20px">⏸ En espera</button>';
     if(puedeGestionar&&t.esperaDesde&&t.estado!=='Resuelto')h+='<button class="btnedit" data-tid="'+t.id+'" onclick="retomarTicket(this.dataset.tid)" style="font-size:11px;padding:4px 12px;border-radius:20px">▶ Retomar</button>';
     if(puedeGestionar&&et==='tomado')h+='<button class="btnedit" data-tid="'+t.id+'" onclick="marcarDevolucion(this.dataset.tid)" style="font-size:11px;padding:4px 12px;border-radius:20px">📤 Ya devolvimos</button>';
+    if(puedeGestionar&&t.estado!=='Resuelto'&&!(t.cierreSolPor&&currentUser.perfil!=='Admin'))h+='<button class="btnedit" data-tid="'+t.id+'" onclick="abrirCierreRapido(this.dataset.tid)" style="font-size:11px;padding:4px 12px;border-radius:20px">'+(requiereOKCierre(t)?'🔒 Pedir cierre':'✅ Cerrar')+'</button>';
     if(puedeGestionar)h+='<button class="btnedit" data-tid="'+t.id+'" onclick="gestionarTicket(this.dataset.tid)" style="font-size:11px;padding:4px 12px;border-radius:20px">✏️ Gestionar</button>';
     h+='</div></div>';
     return h;
@@ -4938,6 +4939,47 @@ async function marcarDevolucion(id){
   Object.assign(f,avisoSolicitante(t,'respuesta','',f.CierreAuto));
   try{await updateListItem(LIST_TICKETS,id,f);await syncAll();showToast('📤 Devolución registrada'+(t.email?' — le avisamos a '+primerNombre(nombreSolicitante(t))+' por mail':''));}
   catch(e){showToast('Error: '+e.message,true);}
+}
+// Botón rápido: cerrar desde la lista, con confirmación y comentario final (le llega al solicitante).
+// Críticos o con vencimiento real: si no es el Admin, se pide su OK (igual que desde ✏️ Gestionar).
+function abrirCierreRapido(tid){
+  var t=tickets.find(function(x){return x.id===tid;});if(!t)return;
+  var ok=requiereOKCierre(t), adm=primerNombre((legalUser(adminIni())||{}).name||'Eduardo'), sol=primerNombre(nombreSolicitante(t)||'el solicitante');
+  var ov=document.getElementById('cierre-ov');
+  if(!ov){ov=document.createElement('div');ov.id='cierre-ov';ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:640;display:flex;align-items:center;justify-content:center;padding:16px';
+    ov.addEventListener('click',function(e){if(e.target===ov)ov.style.display='none';});document.body.appendChild(ov);}
+  ov.innerHTML='<div style="background:var(--surf);border-radius:14px;max-width:520px;width:100%;padding:20px 22px;box-shadow:0 10px 40px rgba(0,0,0,.25)">'
+    +'<div style="font-size:16px;font-weight:700;margin-bottom:4px">'+(ok?'🔒 Pedir cierre':'✅ Cerrar ticket')+'</div>'
+    +'<div style="font-size:12px;color:var(--tx2);margin-bottom:12px"><span class="mono">'+t.num+'</span> '+t.asunto+'</div>'
+    +(ok?'<div style="font-size:12px;padding:8px 10px;border-radius:var(--rs);background:var(--am-bg);color:var(--am-tx);margin-bottom:12px">Es '+(t.urgenciaRaw==='Crítica'?'crítico':'un ticket con vencimiento real')+': le pedimos el OK a '+escHtml(adm)+'. Cuando lo apruebe, se cierra y le avisamos a '+escHtml(sol)+'.</div>':'')
+    +'<div class="field"><label>Comentario final <span style="color:var(--tx3);font-weight:400">(opcional · le llega a '+escHtml(sol)+' por mail'+(ok?' cuando se apruebe':'')+')</span></label><textarea id="cierre-com" style="min-height:70px" placeholder="Ej: Se firmó el contrato y quedó archivado en SharePoint."></textarea></div>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btns" onclick="document.getElementById(\'cierre-ov\').style.display=\'none\'">Cancelar</button>'
+    +'<button class="btnp" id="cierre-btn" data-tid="'+t.id+'" onclick="confirmarCierreRapido(this.dataset.tid,this)">'+(ok?'🔒 Pedir el OK':'✅ Cerrar')+'</button></div></div>';
+  ov.style.display='flex';setTimeout(function(){var c=document.getElementById('cierre-com');if(c)c.focus();},50);
+}
+async function confirmarCierreRapido(id,btn){
+  var t=tickets.find(function(x){return x.id===id;});if(!t)return;
+  if(VER_COMO){alert('Estás en vista previa: no se cierra nada.');return;}
+  var com=document.getElementById('cierre-com').value.trim(), ahora=new Date().toISOString(), ok=requiereOKCierre(t);
+  btn.disabled=true;btn.textContent='Guardando…';
+  var hist=t.respuestaRaw?t.respuestaRaw+'\n\n':'', f={};
+  if(!t.tomadoTs){f.FechaTomado=ahora;f.TomadoPor=currentUser.ini;}
+  if(ok){
+    f.CierreSolicitadoPor=currentUser.ini;f.CierreSolicitadoTs=ahora;f.CierreSolicitadoComent=com;
+    f.Respuesta=hist+selloAhora()+' 🔒 Pidió cerrar el ticket (requiere OK de '+primerNombre((legalUser(adminIni())||{}).name||'Eduardo')+')'+(com?': '+com:'');
+    Object.assign(f,avisoPedidoCierre(t,com));
+  }else{
+    f.Estado='Resuelto';f.FechaCierre=ahora;f.CierreAuto=null;
+    f.Respuesta=hist+selloAhora()+' ✅ Cerrado'+(com?': '+com:'');
+    if(t.cierreSolPor){f.CierreSolicitadoPor='';f.CierreSolicitadoTs=null;f.CierreSolicitadoComent='';}
+    Object.assign(f,avisoSolicitante(t,'cierre',com));
+  }
+  try{
+    await updateListItem(LIST_TICKETS,id,f);
+    document.getElementById('cierre-ov').style.display='none';
+    await syncAll();
+    showToast(ok?'🔒 Le pedimos el OK a '+primerNombre((legalUser(adminIni())||{}).name||'Eduardo')+' para cerrarlo':'✅ Cerrado'+(t.email?' — le avisamos a '+primerNombre(nombreSolicitante(t))+' por mail':''),false,4500);
+  }catch(e){btn.disabled=false;btn.textContent=ok?'🔒 Pedir el OK':'✅ Cerrar';showToast('Error: '+e.message,true);}
 }
 // Panel superior de Tickets: "cómo estamos" (solo Legal/Admin). Todo es clickeable y filtra la lista.
 // Tramo de vencimiento: solo aplica a lo que todavía no respondimos (nuevo o tomado)
@@ -5380,6 +5422,7 @@ function gestionarTicket(id){
     +(t.cuerpo?'<div style="font-size:11px;color:var(--tx3);margin-top:4px;white-space:pre-wrap">'+t.cuerpo+'</div>':'');
   // Timeline + botón "Tomar ticket" si Legal todavía no lo tomó
   header.insertAdjacentHTML('beforeend',bannerPedidoCierre(t));
+  if(t.delegadoDe&&t.estado!=='Resuelto')header.insertAdjacentHTML('beforeend','<div style="margin-top:8px;padding:10px 12px;border-radius:var(--rs);background:var(--bl-bg);color:var(--bl);font-size:12px">🏖️ '+(String(t.planVac).split('|')[0]==='urgente'?'Llegó como <b>urgente</b> porque '+escHtml(vacNombre(t.delegadoDe))+' está de vacaciones':'Te lo delegó <b>'+escHtml(vacNombre(t.delegadoDe))+'</b>'+(t.delegadoTs?' el '+fmtDateTime(t.delegadoTs):''))+(t.notaDeleg?'<div style="margin-top:4px;color:var(--tx)">“'+escHtml(t.notaDeleg)+'”</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">🔒 Comentario interno, el solicitante no lo ve</div>':'')+'</div>');
   document.getElementById('tk-timeline').innerHTML=ticketTimeline(t,false)
     +(!t.tomadoTs&&t.estado!=='Resuelto'?'<button type="button" class="btnp" style="width:100%;margin-top:10px" data-tid="'+t.id+'" onclick="tomarTicket(this.dataset.tid)">🙋 Tomar ticket</button>':'');
   // Devolución: se marca a mano o sola al responder; desmarcarla solo lo puede el Admin
@@ -6522,7 +6565,9 @@ function renderVacPanel(){
         +'<button class="btns" style="font-size:11px;padding:3px 9px" data-tid="'+t.id+'" onclick="planVac(this.dataset.tid,\'cierro\')">✅ Lo cierro antes</button>'
         +'<button class="btns" style="font-size:11px;padding:3px 9px" data-tid="'+t.id+'" onclick="planVac(this.dataset.tid,\'espera\')">⏸ Espera mi vuelta</button>'
         +'<span style="font-size:11px;color:var(--tx3)">o delegar a</span><select id="vac-del-'+t.id+'" style="font-size:11px;padding:3px 6px;width:auto">'+opts(v.cubre,yo)+'</select>'
-        +'<button class="btnp" style="font-size:11px;padding:3px 9px" data-tid="'+t.id+'" onclick="delegarVac(this.dataset.tid,this)">➡️ Delegar</button></div></div>';
+        +'<button class="btnp" style="font-size:11px;padding:3px 9px" data-tid="'+t.id+'" onclick="delegarVac(this.dataset.tid,this)">➡️ Delegar</button></div>'
+        +'<textarea id="vac-com-'+t.id+'" rows="2" placeholder="Comentario para quien lo recibe (opcional): en qué quedó, qué falta, con quién hablar…" style="width:100%;margin-top:6px;font-size:12px"></textarea>'
+        +'<div style="font-size:10px;color:var(--tx3);margin-top:2px">🔒 El comentario lo ve solo Legal: no le llega al solicitante.</div></div>';
     });
   }
   // 4. Lo que delegué y sigue abierto (para recuperarlo a la vuelta)
@@ -6560,16 +6605,27 @@ async function planVac(id,plan){
 }
 async function delegarVac(id,btn){
   var t=tickets.find(function(x){return x.id===id;}), v=vacProxima(currentUser.ini);if(!t||!v)return;
-  var para=document.getElementById('vac-del-'+id).value, pu=legalUser(para)||{}, de=currentUser.ini;
-  if(!confirm('¿Delegar '+numLimpio(t)+' a '+primerNombre(pu.name||para)+'?\n\nLe avisamos por mail a '+primerNombre(pu.name||para)+(t.email?' y al solicitante':'')+'.'))return;
+  var para=document.getElementById('vac-del-'+id).value, pu=legalUser(para)||{}, de=currentUser.ini, yoU=legalUser(de)||currentUser;
+  var com=((document.getElementById('vac-com-'+id)||{}).value||'').trim();
+  if(!confirm('¿Delegar '+numLimpio(t)+' a '+primerNombre(pu.name||para)+'?\n\n• A '+primerNombre(pu.name||para)+' le llega un mail y un Teams'+(com?' con tu comentario':'')+'.'+(t.email?'\n• Al solicitante le avisamos que lo sigue '+primerNombre(pu.name||para)+(com?' (sin tu comentario)':'')+'.':'')))return;
   btn.disabled=true;
   var ahora=new Date().toISOString();
-  var f={Responsable:para,DelegadoDe:de,DelegadoTs:ahora,PlanVacaciones:'delegado|'+v.desde,
+  var f={Responsable:para,DelegadoDe:de,DelegadoTs:ahora,PlanVacaciones:'delegado|'+v.desde,NotaDelegacion:com,
     Respuesta:(t.respuestaRaw?t.respuestaRaw+'\n\n':'')+selloAhora()+' 🏖️ Delegado a '+para+' por vacaciones de '+de+' ('+vacFechas(v)+')'};
-  var titulo=primerNombre(pu.name||para)+' sigue el pedido '+numLimpio(t);
-  var lineas=[(t.email?'Hola '+primerNombre(nombreSolicitante(t))+', ':'')+vacNombre(de)+' va a estar de vacaciones del '+vacFechas(v)+', así que tu pedido “'+t.asuntoRaw+'” lo sigue '+(pu.name||para)+'.','Si necesitás algo, escribile directamente a '+primerNombre(pu.name||para)+' (respondiendo este mail le llega).'];
-  var para2=[t.email,pu.email].filter(Boolean).join(';');
-  if(para2)Object.assign(f,camposAviso('delegado',para2,'🏖️ '+titulo+' — '+t.asuntoRaw,mailHTML(titulo,lineas,'Ver el pedido',linkTicket(t.id)),'',pu.email||''));
+  // 1) A quien lo recibe: con el comentario (interno), por mail y Teams; si responde, le llega a quien delegó
+  if(pu.email){
+    var tit1=primerNombre(yoU.name)+' te delegó '+numLimpio(t);
+    var l1=[primerNombre(yoU.name)+' se va de vacaciones del '+vacFechas(v)+' y te pasó “'+t.asuntoRaw+'”. Ahora figurás como responsable.'];
+    if(com){l1.push('Su comentario:');l1.push(citaHTML(com));}
+    l1.push('Pedido de '+nombreSolicitante(t)+(t.venc?' · ⛔ vencimiento real '+fmtDate(t.venc):'')+(t.urgenciaRaw?' · prioridad '+t.urgenciaRaw:'')+'.');
+    Object.assign(f,camposAviso('delegado',pu.email,'🏖️ '+tit1+' — '+t.asuntoRaw,mailHTML(tit1,l1,'Abrir el ticket',linkTicket(t.id),'Aviso automático del Legal Hub. Si respondés este mail, le llega a '+primerNombre(yoU.name)+'.'),pu.email,yoU.email||''));
+  }
+  // 2) Al solicitante: solo que lo sigue otra persona (sin el comentario interno)
+  if(t.email){
+    var tit2=primerNombre(pu.name||para)+' sigue tu pedido '+numLimpio(t);
+    var l2=['Hola '+primerNombre(nombreSolicitante(t))+', '+vacNombre(de)+' va a estar de vacaciones del '+vacFechas(v)+', así que tu pedido “'+t.asuntoRaw+'” lo sigue '+(pu.name||para)+'.','Si necesitás algo, escribile directamente a '+primerNombre(pu.name||para)+' (respondiendo este mail le llega).'];
+    Object.assign(f,{Aviso2Para:t.email,Aviso2CC:pu.email||'',Aviso2Asunto:('🏖️ '+tit2+' — '+t.asuntoRaw).slice(0,250),Aviso2Cuerpo:mailHTML(tit2,l2,'Ver mi pedido',linkTicket(t.id))});
+  }
   try{await updateListItem(LIST_TICKETS,id,f);await syncAll();renderVacPanel();showToast('➡️ Delegado a '+primerNombre(pu.name||para));}
   catch(e){btn.disabled=false;showToast('Error: '+e.message,true);}
 }
@@ -6577,7 +6633,7 @@ async function recuperarVac(id,btn){
   var t=tickets.find(function(x){return x.id===id;});if(!t)return;
   if(!confirm('¿Recuperar '+numLimpio(t)+'? Vuelve a estar a tu nombre.'))return;
   btn.disabled=true;
-  var f={Responsable:currentUser.ini,DelegadoDe:'',DelegadoTs:null,PlanVacaciones:'',Respuesta:(t.respuestaRaw?t.respuestaRaw+'\n\n':'')+selloAhora()+' ↩️ Vuelve a '+currentUser.ini+' (lo tenía '+t.resp+')'};
+  var f={Responsable:currentUser.ini,DelegadoDe:'',DelegadoTs:null,PlanVacaciones:'',NotaDelegacion:'',Respuesta:(t.respuestaRaw?t.respuestaRaw+'\n\n':'')+selloAhora()+' ↩️ Vuelve a '+currentUser.ini+' (lo tenía '+t.resp+')'};
   try{await updateListItem(LIST_TICKETS,id,f);await syncAll();renderVacPanel();showToast('↩️ Recuperado');}
   catch(e){btn.disabled=false;showToast('Error: '+e.message,true);}
 }
