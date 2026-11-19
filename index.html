@@ -105,6 +105,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .tk-tipo-card:hover{border-color:var(--bl);background:var(--bl-bg)}
 .tk-mio{cursor:pointer;transition:box-shadow .15s}.tk-mio:hover{box-shadow:0 2px 10px rgba(0,0,0,.08)}
 .pant-click{transition:background .15s}.pant-click:hover{background:var(--bl-bg)}
+.mapa-forma{transition:transform .2s ease;transform-box:fill-box;transform-origin:center}.mapa-pais.activo .mapa-forma{transform:scale(1.09)}.mapa-pais.activo{filter:drop-shadow(0 3px 6px rgba(0,0,0,.25))}
+.mapa-marca{opacity:0;transition:opacity .25s;pointer-events:none}.mapa-marca.visible{opacity:.3}
 .tk-cont{flex:1;min-width:120px;background:var(--surf);border:1px solid var(--brd);border-radius:10px;padding:12px 14px;cursor:pointer}
 .tk-cont.on{border-color:var(--bl);box-shadow:0 0 0 2px var(--bl-bg)}
 @keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
@@ -532,7 +534,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <select class="fsel" id="tickets-etapa" onchange="renderTickets()"><option value="">Todas las etapas</option><option value="nuevo">⚪ Nuevos (sin tomar)</option><option value="tomado">🔵 Tomados, sin responder</option><option value="respondido">✅ Respondidos</option><option value="cerrado">⬛ Cerrados</option></select>
           <select class="fsel" id="tickets-resp" onchange="renderTickets()"><option value="">Todos los responsables</option><option value="EG">Eduardo Galindo</option><option value="CS">Camila Soto</option><option value="ST">Samira Taboada</option></select>
           <select class="fsel" id="tickets-solic" onchange="renderTickets()"><option value="">Todos los solicitantes</option></select>
-          <select class="fsel" id="tickets-pais" onchange="renderTickets()"><option value="">Todos los países</option><option value="AR">🇦🇷 Argentina</option><option value="UY">🇺🇾 Uruguay</option><option value="PY">🇵🇾 Paraguay</option><option value="sin">Sin país</option></select>
+          <select class="fsel" id="tickets-pais" onchange="renderTickets()"><option value="">Todos los países</option><option value="AR">🇦🇷 Argentina</option><option value="UY">🇺🇾 Uruguay</option><option value="PY">🇵🇾 Paraguay</option><option value="Regional">🌎 Regional (ATIS LATAM)</option><option value="sin">Sin país</option></select>
           <select class="fsel" id="tickets-venc" onchange="renderTickets()"><option value="">Todos los vencimientos</option><option value="vencido">⛔ Vencidos (vencimiento real)</option><option value="atrasado">⏰ Atrasados (fecha estimada)</option><option value="espera">⏸ En espera</option><option value="hoy">🟠 Vencen hoy</option><option value="manana">🟠 Vencen mañana</option><option value="semana">🟡 Próximos 7 días</option><option value="mas">🟢 Más adelante</option><option value="sin">⚪ Sin deadline</option></select>
           <select class="fsel" id="tickets-prio" onchange="renderTickets()"><option value="">Todas las prioridades</option><option value="Crítica">🚨 Crítica — hoy</option><option value="Alta">🔴 Alta</option><option value="Media">🟡 Media</option><option value="Baja">🟢 Baja</option></select>
           <select class="fsel" id="tickets-orden" onchange="renderTickets()"><option value="deadline" selected>Ordenar por deadline</option><option value="prioridad">Ordenar por prioridad</option><option value="recientes">Más recientes primero</option></select>
@@ -2907,7 +2909,7 @@ function finPunteo(){
 
 var MAPA_PATHS={"ARG":"M84.0,401.6L76.4,402.0L72.3,399.2L67.5,399.0L58.9,399.0L58.9,381.1L62.0,384.8L66.0,390.8L76.4,395.6L87.6,397.6L84.0,401.6ZM88.3,136.6L93.0,142.4L96.1,135.9L105.2,136.3L106.5,138.0L121.2,151.0L127.8,152.3L137.5,158.2L145.8,161.3L146.9,164.8L139.1,177.0L147.1,179.2L156.1,180.4L162.4,179.1L169.7,173.0L171.0,165.9L175.0,164.4L179.0,169.0L178.8,175.4L172.1,179.8L166.7,183.1L157.7,190.8L147.0,201.7L145.0,208.1L142.9,216.4L142.9,224.3L141.2,226.1L140.6,231.3L140.0,235.5L150.2,242.3L149.1,247.8L154.1,251.3L153.7,255.2L146.0,265.5L134.1,269.8L118.1,271.4L109.3,270.6L111.0,275.4L109.4,281.4L110.8,285.4L106.0,288.2L97.8,289.3L90.1,286.4L87.1,288.5L88.2,296.5L93.6,298.9L98.0,296.3L100.3,300.5L93.0,303.0L86.5,308.0L85.4,316.0L83.5,320.3L75.9,320.3L69.6,324.4L67.4,330.4L75.2,336.3L82.9,337.9L80.1,345.1L70.7,349.6L65.5,359.0L58.2,362.1L54.9,365.9L57.5,374.2L62.8,378.8L59.4,378.4L52.0,377.1L32.7,376.1L29.4,371.4L29.5,365.4L24.2,365.9L21.4,363.0L20.7,354.5L26.8,351.0L29.4,346.0L28.4,341.9L32.7,335.1L35.6,324.5L34.7,319.8L38.2,318.3L37.4,315.3L33.7,313.7L36.3,310.3L32.7,307.3L30.8,298.0L34.0,296.4L32.7,286.7L34.6,278.5L36.7,271.3L41.5,268.4L39.1,260.6L39.0,253.3L45.1,248.0L44.9,241.4L49.5,233.5L49.5,226.2L47.4,224.7L43.7,210.9L48.6,202.7L47.9,194.9L50.8,187.7L56.0,180.2L61.6,175.2L59.2,172.1L60.9,169.5L60.7,156.1L69.4,152.2L72.1,143.9L71.1,141.9L77.8,134.7L88.3,136.6Z","URY":"M147.0,201.7L152.2,200.9L160.2,207.1L163.2,206.8L171.4,212.0L177.7,216.4L182.3,221.8L178.8,225.6L181.0,230.1L177.5,235.2L168.5,239.6L162.6,238.0L158.3,238.9L150.9,235.4L145.5,235.7L140.6,231.3L141.2,226.1L142.9,224.3L142.9,216.4L145.0,208.1L147.0,201.7Z","PRY":"M106.5,138.0L109.7,128.4L109.9,124.1L113.7,117.1L127.7,114.7L135.1,114.9L142.5,118.9L142.7,121.4L145.0,125.9L144.5,136.7L152.9,138.3L156.2,136.7L161.6,138.9L163.1,141.2L163.9,148.6L164.8,151.7L167.8,152.0L170.8,150.7L173.7,152.2L173.7,156.6L172.6,161.3L171.0,165.9L169.7,173.0L162.4,179.1L156.1,180.4L147.1,179.2L139.1,177.0L146.9,164.8L145.8,161.3L137.5,158.2L127.8,152.3L121.2,151.0L106.5,138.0Z","BRA":"M147.0,201.7L157.7,190.8L166.7,183.1L172.1,179.8L178.8,175.4L179.0,169.0L175.0,164.4L171.0,165.9L172.6,161.3L173.7,156.6L173.7,152.2L170.8,150.7L167.8,152.0L164.8,151.7L163.9,148.6L163.1,141.2L161.6,138.9L156.2,136.7L152.9,138.3L144.5,136.7L145.0,125.9L142.7,121.4L145.2,119.8L144.4,115.2L146.6,111.7L148.0,105.4L146.1,100.4L141.8,98.2L140.9,95.0L142.1,90.4L126.7,90.1L123.7,80.8L126.0,80.6L125.9,77.2L124.3,74.8L124.0,70.2L119.3,67.8L114.3,67.9L111.0,65.6L105.6,64.0L102.4,61.0L93.5,59.7L84.8,52.5L85.4,47.2L84.4,44.1L85.3,38.1L74.8,39.5L70.6,42.5L63.6,45.7L61.8,48.1L57.7,48.3L51.8,47.6L47.2,49.0L43.6,48.1L44.1,35.9L37.6,40.6L30.5,40.4L27.5,36.2L22.2,35.7L23.9,32.3L19.4,27.4L16.1,20.2L18.2,18.7L18.2,15.3L23.0,13.0L22.2,8.7L24.3,5.9L24.9,2.2L34.0,-3.2L40.6,-4.8L41.6,-6.0L48.9,-5.6L52.4,-27.5L52.6,-31.0L51.4,-35.6L47.8,-38.5L47.9,-44.3L52.4,-45.6L54.0,-44.8L54.3,-47.9L49.6,-48.7L49.5,-53.7L65.1,-53.5L67.7,-56.3L69.9,-53.8L71.5,-49.0L73.0,-50.0L77.4,-45.8L83.6,-46.3L85.2,-48.8L91.1,-50.6L94.4,-51.9L95.3,-55.3L101.0,-57.6L100.6,-59.3L93.8,-60.0L92.7,-65.0L93.1,-70.4L89.5,-72.5L91.0,-73.2L96.9,-72.2L103.3,-70.2L105.6,-72.1L111.3,-73.3L120.3,-76.3L123.2,-79.3L122.1,-81.6L126.3,-82.0L128.2,-80.1L127.1,-76.6L129.9,-75.4L131.7,-71.7L129.5,-68.9L128.2,-62.0L130.3,-58.0L130.8,-54.3L135.8,-50.5L139.7,-50.1L140.6,-51.7L143.1,-52.1L146.7,-53.5L149.3,-55.6L153.7,-54.9L155.7,-55.2L160.0,-54.5L160.8,-56.2L159.4,-57.8L160.2,-60.1L163.4,-59.4L167.2,-60.2L171.8,-58.5L175.3,-56.8L177.8,-59.0L179.6,-58.7L180.7,-56.4L184.5,-57.0L187.5,-60.0L190.0,-65.9L194.7,-73.2L197.5,-73.6L199.4,-69.2L203.9,-55.2L208.2,-53.9L208.4,-48.4L202.4,-41.8L204.9,-39.4L219.0,-38.1L219.3,-30.1L225.4,-35.3L235.5,-32.5L248.8,-27.6L252.7,-22.9L251.3,-18.5L260.6,-20.9L276.2,-16.7L288.2,-17.0L300.0,-10.4L310.2,-1.4L316.4,0.9L323.2,1.2L326.1,3.7L328.8,13.9L330.2,18.7L327.0,32.0L322.9,37.2L311.6,48.3L306.5,57.4L300.6,64.3L298.6,64.5L296.4,70.3L296.9,85.3L294.7,97.7L293.9,102.9L291.3,106.1L289.9,116.8L281.8,127.2L280.4,135.5L274.0,139.0L272.1,143.8L263.4,143.7L250.8,146.8L245.2,150.4L236.2,152.7L226.8,159.1L220.0,167.0L218.9,173.0L220.2,177.4L218.7,185.5L216.9,189.4L211.3,193.8L202.4,207.9L195.4,214.2L190.0,218.0L186.3,225.6L181.0,230.1L178.8,225.6L182.3,221.8L177.7,216.4L171.4,212.0L163.2,206.8L160.2,207.1L152.2,200.9L147.0,201.7Z","CHL":"M58.9,381.1L58.9,399.0L67.5,399.0L72.3,399.2L69.7,402.4L62.8,404.9L58.9,404.6L54.1,404.0L48.3,401.6L40.0,400.4L29.9,396.0L21.7,391.7L10.7,382.7L17.3,384.4L28.5,389.7L39.1,392.6L43.3,388.9L45.9,383.4L53.2,380.1L58.9,381.1ZM62.2,132.0L65.4,143.0L71.1,141.9L72.1,143.9L69.4,152.2L60.7,156.1L60.9,169.5L59.2,172.1L61.6,175.2L56.0,180.2L50.8,187.7L47.9,194.9L48.6,202.7L43.7,210.9L47.4,224.7L49.5,226.2L49.5,233.5L44.9,241.4L45.1,248.0L39.0,253.3L39.1,260.6L41.5,268.4L36.7,271.3L34.6,278.5L32.7,286.7L34.0,296.4L30.8,298.0L32.7,307.3L36.3,310.3L33.7,313.7L37.4,315.3L38.2,318.3L34.7,319.8L35.6,324.5L32.7,335.1L28.4,341.9L29.4,346.0L26.8,351.0L20.7,354.5L21.4,363.0L24.2,365.9L29.5,365.4L29.4,371.4L32.7,376.1L52.0,377.1L59.4,378.4L52.3,378.3L48.5,380.3L41.2,383.2L39.9,390.7L36.6,390.9L27.5,388.3L18.4,382.7L8.4,378.1L5.9,373.0L8.2,368.3L4.2,363.0L3.1,349.4L6.5,341.7L15.0,335.5L2.8,333.2L10.5,326.1L13.2,312.8L22.1,315.6L26.3,299.1L20.9,296.9L18.4,306.9L13.3,305.8L15.9,294.4L18.6,279.5L22.3,274.1L20.0,266.3L19.3,257.3L22.7,257.0L27.6,244.1L33.1,231.3L36.5,219.4L34.7,207.4L37.0,200.8L36.1,190.9L40.8,181.1L42.2,165.6L44.8,149.0L47.3,131.1L46.7,118.1L45.0,106.8L49.1,104.7L51.3,100.6L55.2,106.1L56.3,111.9L60.5,115.2L57.9,123.0L62.2,132.0Z","BOL":"M105.2,136.3L96.1,135.9L93.0,142.4L88.3,136.6L77.8,134.7L71.1,141.9L65.4,143.0L62.2,132.0L57.9,123.0L60.5,115.2L56.3,111.9L55.2,106.1L51.3,100.6L56.3,92.0L52.9,85.3L54.7,82.6L53.3,79.6L56.4,75.6L56.6,68.8L57.0,63.2L58.7,60.5L51.8,47.6L57.7,48.3L61.8,48.1L63.6,45.7L70.6,42.5L74.8,39.5L85.3,38.1L84.4,44.1L85.4,47.2L84.8,52.5L93.5,59.7L102.4,61.0L105.6,64.0L111.0,65.6L114.3,67.9L119.3,67.8L124.0,70.2L124.3,74.8L125.9,77.2L126.0,80.6L123.7,80.8L126.7,90.1L142.1,90.4L140.9,95.0L141.8,98.2L146.1,100.4L148.0,105.4L146.6,111.7L144.4,115.2L145.2,119.8L142.7,121.4L142.5,118.9L135.1,114.9L127.7,114.7L113.7,117.1L109.9,124.1L109.7,128.4L106.5,138.0L105.2,136.3Z","PER":"M51.3,100.6L49.1,104.7L45.0,106.8L37.0,102.2L36.3,98.9L20.4,90.9L6.1,82.1L-0.1,77.2L-3.4,70.6L-2.1,68.3L-8.8,57.8L-16.7,43.0L-24.3,27.1L-27.6,23.4L-30.1,17.6L-36.3,12.3L-42.0,9.1L-39.4,5.5L-43.3,-2.1L-40.8,-7.7L-34.4,-12.8L-33.5,-9.4L-35.8,-7.5L-35.5,-4.6L-32.2,-5.2L-29.0,-4.4L-25.6,-0.3L-21.1,-3.6L-19.6,-9.0L-14.7,-16.0L-5.1,-19.1L3.6,-27.5L6.1,-32.7L5.0,-38.8L7.1,-39.5L12.5,-35.8L15.0,-32.0L18.7,-29.9L23.4,-21.5L29.4,-20.5L33.8,-22.6L36.7,-21.3L41.5,-21.9L47.6,-18.2L42.5,-10.1L44.8,-9.9L48.9,-5.6L41.6,-6.0L40.6,-4.8L34.0,-3.2L24.9,2.2L24.3,5.9L22.2,8.7L23.0,13.0L18.2,15.3L18.2,18.7L16.1,20.2L19.4,27.4L23.9,32.3L22.2,35.7L27.5,36.2L30.5,40.4L37.6,40.6L44.1,35.9L43.6,48.1L47.2,49.0L51.8,47.6L58.7,60.5L57.0,63.2L56.6,68.8L56.4,75.6L53.3,79.6L54.7,82.6L52.9,85.3L56.3,92.0L51.3,100.6Z"};
 // ─── MAPA DE PAÍSES (dashboard): semáforo de tickets por país ──────────────
-var PAISES_HUB=[{k:'AR',iso:'ARG',n:'Argentina',f:'🇦🇷',lx:86,ly:250},{k:'UY',iso:'URY',n:'Uruguay',f:'🇺🇾',lx:186,ly:232},{k:'PY',iso:'PRY',n:'Paraguay',f:'🇵🇾',lx:136,ly:150}];
+var PAISES_HUB=[{k:'AR',iso:'ARG',n:'Argentina',f:'🇦🇷',lx:86,ly:250,marca:'ATIS ARG'},{k:'UY',iso:'URY',n:'Uruguay',f:'🇺🇾',lx:186,ly:232,marca:'ATIS UY'},{k:'PY',iso:'PRY',n:'Paraguay',f:'🇵🇾',lx:136,ly:150,marca:'ATIS PY'}];
 // País del ticket: el cargado; si falta, se deduce solo de códigos de sitio inequívocos
 function paisTicket(t){
   if(t.pais)return t.pais;
@@ -2917,7 +2919,8 @@ function paisTicket(t){
   return '';
 }
 function estadoPais(k){
-  var ab=ticketsVisibles().filter(function(t){return t.estado!=='Resuelto'&&(paisTicket(t)===k||(k!==''&&paisTicket(t)==='Regional'));});
+  // Cada país cuenta solo sus tickets; los regionales (ATIS LATAM, EE.UU.) van en su propio recuadro
+  var ab=ticketsVisibles().filter(function(t){return t.estado!=='Resuelto'&&paisTicket(t)===k;});
   var venc=ab.filter(function(t){var dv=t.venc?daysTo(t.venc):null;return dv!==null&&dv<=rojoDesde(t);}).length;
   var crit=ab.filter(function(t){return t.urgencia==='Crítica';}).length;
   var prox=ab.filter(function(t){return ['atrasado','hoy','manana','semana'].indexOf(vencBucket(t))>=0;}).length;
@@ -2927,33 +2930,54 @@ function estadoPais(k){
   if(k==='PY'&&todayStr()<'2027-01-01'&&!ab.length)niv='off';
   return {ab:ab.length,venc:venc,crit:crit,prox:prox,hitoAtr:hitoAtr,niv:niv};
 }
+var MAPA_USA='M59.7,10L60,11.1L60.5,11.5L61.7,11.6L63.3,12L65,12.6L66.3,12.3L68.4,12.9L68.9,12.9L70.4,12.3L71.9,13L73.6,13.8L74.9,14.5L76.2,15.2L76.4,15.7L76.8,15.9L76.7,16.1L77.1,16.2L77.4,16L77.5,16.5L77.8,16.8L78.3,16.8L78.6,17.1L78.3,17.4L80.1,18.4L80.4,20.3L80.8,22.1L80.3,23.3L79.5,24.5L79.1,25.2L79.1,25.4L79.3,25.7L79.8,26.1L80.3,26.1L82.2,25L83.9,24.6L86.1,23.6L86.1,23.4L86,22.7L85.7,22.3L86.4,22L88.1,22L89.6,22L90.1,21.2L90.3,21L92.1,19.5L92.9,19.1L95.4,19.1L98.4,19.1L98.6,18.6L99.1,18.5L99.9,18.2L100.4,17.2L101,15.6L102.2,14L102.8,14.6L103.9,14.2L104.6,14.8L104.6,17.7L105.7,18.9L106,19.5L104.2,20.5L102.5,21.3L100.8,21.9L99.9,23.1L99.6,23.6L99.6,24.7L100.1,25.8L100.8,25.8L100.6,25.1L101.1,25.5L101,26.1L99.9,26.5L99.1,26.4L97.9,26.8L97.1,26.9L96.2,27L94.8,27.6L97.2,27.2L97.7,27.6L95.4,28.2L94.3,28.2L94.4,28L93.9,28.6L94.4,28.7L94,30.2L92.8,31.8L92.7,31.2L92.3,31.1L91.8,30.6L92.1,31.7L92.5,32.1L92.5,32.9L92,33.7L91.1,35.3L90.9,35.3L91.4,33.8L90.6,33.1L90.4,31.3L90.1,32.2L90.4,33.5L89.3,33.2L90.5,33.9L90.5,35.9L91,36L91.2,36.7L91.4,38.8L90.4,40.4L88.6,41L87.6,42.2L86.7,42.3L85.9,43.1L85.6,43.8L83.8,45.2L82.9,46.1L82.1,47.4L81.8,48.9L82.1,50.3L82.7,52.1L83.4,53.6L83.4,54.5L84.2,56.9L84.2,58.3L84.1,59.1L83.7,60.4L83.2,60.6L82.4,60.4L82.1,59.5L81.5,59L80.6,57.2L79.8,55.6L79.6,54.8L79.9,53.4L79.4,52.3L78.2,50.5L77.5,50.2L75.8,51.1L75.5,51L74.7,50.1L73.7,49.5L71.8,49.8L70.3,49.6L69.1,49.7L68.4,50L68.7,50.6L68.6,51.4L69,51.9L68.7,52.1L68.1,51.8L67.4,52.2L66.2,52.2L65,51L63.5,51.3L62.3,50.8L61.3,51L59.9,51.5L58.4,53L56.7,53.9L55.8,54.9L55.4,55.8L55.4,57.3L55.5,58.3L55.8,59L55.2,59L54,58.6L52.7,57.9L52.2,57L51.9,55.5L50.9,54.3L50.3,53.1L49.5,51.7L48.3,50.8L46.9,50.9L45.9,52.5L44.5,51.9L43.6,51.3L43.2,50.1L42.7,49L41.7,48.1L40.8,47.5L40.2,46.7L37.4,46.7L37.4,47.6L36,47.6L32.7,47.6L28.9,46.1L26.4,45.1L26.6,44.7L24.5,44.9L22.6,45.1L22.3,44L21.2,42.8L20.4,42.6L20.3,42L19.3,41.9L18.7,41.3L17.2,41.1L16.8,40.8L16.6,39.6L14.9,37.5L13.6,34.7L13.6,34.2L12.9,33.5L11.6,31.7L11.4,30L10.5,28.9L10.8,27.2L10.8,25.4L10.3,23.8L10.9,21.8L11.1,19.9L11.3,18.1L11,15.3L10.5,13.5L10,12.5L10.2,12.1L12.6,12.8L13.5,14.8L13.9,14.2L13.6,12.5L13.1,10.8L17.8,10.8L22.7,10.8L24.4,10.8L29.4,10.8L34.3,10.8L39.3,10.8L44.3,10.8L50,10.8L55.7,10.8L59.1,10.8L59.1,10L59.7,10Z';
+var REGIONAL_HUB={k:'Regional',n:'Regional (EE.UU.)',f:'🌎',marca:'ATIS LATAM'};
 function mapaPaisesHTML(){
   var COLM={r:'#DC2626',a:'#F59E0B',g:'#16A34A',off:'#9CA3AF'};
   var est={};PAISES_HUB.forEach(function(p){est[p.k]=estadoPais(p.k);});
+  var eR=estadoPais('Regional');
   var sinPais=ticketsVisibles().filter(function(t){return t.estado!=='Resuelto'&&!paisTicket(t);}).length;
-  var svg='<svg viewBox="0 0 336 408" role="img" aria-label="Mapa de Argentina, Uruguay y Paraguay con el estado de los tickets" style="width:100%;max-width:300px;height:auto;display:block;margin:0 auto">'
+  var titulo=function(n,e){return '<title>'+n+': '+e.ab+' tickets abiertos'+(e.venc?', '+e.venc+' vencidos':'')+'</title>';};
+  var svg='<svg class="mapa-svg" viewBox="0 0 336 408" role="img" aria-label="Mapa de Argentina, Uruguay y Paraguay, con un recuadro para los temas regionales, y el estado de los tickets" style="width:100%;max-width:300px;height:auto;display:block;margin:0 auto;border-radius:10px"><defs><clipPath id="mapa-clip"><rect width="336" height="408" rx="10"/></clipPath></defs><g clip-path="url(#mapa-clip)">'
     +'<rect width="336" height="408" fill="var(--bl-bg)" rx="10"/>';
   ['BRA','CHL','BOL','PER'].forEach(function(iso){svg+='<path d="'+MAPA_PATHS[iso]+'" fill="var(--surf2)" stroke="var(--brd2)" stroke-width="0.8"/>';});
+  // Marcas de agua (una por empresa): aparecen al pasar el mouse por el país
+  var marcas='';
+  PAISES_HUB.concat([REGIONAL_HUB]).forEach(function(p){marcas+='<text class="mapa-marca" data-k="'+p.k+'" x="168" y="214" text-anchor="middle" font-size="44" font-weight="800" letter-spacing="3" fill="var(--bl)" stroke="#fff" stroke-width="1.5" paint-order="stroke">'+p.marca+'</text>';});
   PAISES_HUB.forEach(function(p){
     var e=est[p.k];
-    svg+='<g class="mapa-pais" onclick="dashTk({pais:\''+p.k+'\'})" style="cursor:pointer"><title>'+p.n+': '+e.ab+' tickets abiertos'+(e.venc?', '+e.venc+' vencidos':'')+'</title>'
-      +'<path d="'+MAPA_PATHS[p.iso]+'" fill="'+COLM[e.niv]+'" fill-opacity="0.82" stroke="#fff" stroke-width="1.2"/>'
+    svg+='<g class="mapa-pais" data-k="'+p.k+'" onmouseenter="mapaMarca(this,1)" onmouseleave="mapaMarca(this,0)" onclick="dashTk({pais:\''+p.k+'\'})" style="cursor:pointer">'+titulo(p.marca+' · '+p.n,e)
+      +'<path class="mapa-forma" d="'+MAPA_PATHS[p.iso]+'" fill="'+COLM[e.niv]+'" fill-opacity="0.82" stroke="#fff" stroke-width="1.2"/>'
       +'<circle cx="'+p.lx+'" cy="'+p.ly+'" r="13" fill="#fff" stroke="'+COLM[e.niv]+'" stroke-width="2.5"/>'
       +'<text x="'+p.lx+'" y="'+(p.ly+4.5)+'" text-anchor="middle" font-size="13" font-weight="700" fill="#1A1916">'+e.ab+'</text></g>';
   });
-  svg+='</svg>';
-  var filas=PAISES_HUB.map(function(p){
-    var e=est[p.k], ic={r:'🔴',a:'🟡',g:'🟢',off:'⚪'}[e.niv];
+  // Recuadro regional: EE.UU. (ATIS LATAM), abajo a la derecha sobre el océano
+  svg+='<g class="mapa-pais" data-k="Regional" onmouseenter="mapaMarca(this,1)" onmouseleave="mapaMarca(this,0)" onclick="dashTk({pais:\'Regional\'})" style="cursor:pointer" transform="translate(214,300)">'+titulo('ATIS LATAM · Regional (EE.UU.)',eR)
+    +'<rect x="0" y="0" width="116" height="96" rx="8" fill="var(--surf)" stroke="var(--brd2)"/>'
+    +'<text x="58" y="88" text-anchor="middle" font-size="9.5" font-weight="700" fill="var(--tx2)" letter-spacing=".5">ATIS LATAM · Regional</text>'
+    +'<g transform="translate(0,4)"><path class="mapa-forma" d="'+MAPA_USA+'" fill="'+COLM[eR.niv]+'" fill-opacity="0.82" stroke="#fff" stroke-width="0.8"/></g>'
+    +'<circle cx="58" cy="40" r="13" fill="#fff" stroke="'+COLM[eR.niv]+'" stroke-width="2.5"/>'
+    +'<text x="58" y="44.5" text-anchor="middle" font-size="13" font-weight="700" fill="#1A1916">'+eR.ab+'</text></g>';
+  svg+=marcas+'</g></svg>';
+  var fila=function(p,e){
+    var ic={r:'🔴',a:'🟡',g:'🟢',off:'⚪'}[e.niv];
     var det=[e.crit?e.crit+(e.crit===1?' crítico':' críticos'):'',e.venc?e.venc+(e.venc===1?' vencimiento real en zona roja':' vencimientos reales en zona roja'):'',e.prox?e.prox+(e.prox===1?' por vencer o atrasado':' por vencer o atrasados'):'',e.hitoAtr?e.hitoAtr+' con hitos atrasados':''].filter(Boolean).join(' · ')||(e.niv==='off'?'arranca en Tickets el 1/1/2027':e.ab?'todo en plazo':'sin tickets abiertos');
-    return '<div class="dash-item" onclick="dashTk({pais:\''+p.k+'\'})" style="cursor:pointer;display:flex;gap:10px;align-items:center;padding:10px 8px;border-bottom:1px solid var(--brd)">'
-      +'<span style="font-size:22px">'+p.f+'</span><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">'+p.n+' <span style="font-weight:400;color:var(--tx3);font-size:12px">· '+e.ab+' abiertos</span></div>'
+    return '<div class="dash-item" data-k="'+p.k+'" onmouseenter="mapaMarcaK(\''+p.k+'\',1)" onmouseleave="mapaMarcaK(\''+p.k+'\',0)" onclick="dashTk({pais:\''+p.k+'\'})" style="cursor:pointer;display:flex;gap:10px;align-items:center;padding:10px 8px;border-bottom:1px solid var(--brd)">'
+      +'<span style="font-size:22px">'+p.f+'</span><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">'+p.n+' <span style="font-weight:400;color:var(--tx3);font-size:12px">· '+p.marca+' · '+e.ab+' abiertos</span></div>'
       +'<div style="font-size:12px;color:'+(e.niv==='r'?'var(--rd-tx)':e.niv==='a'?'var(--am-tx)':e.niv==='off'?'var(--tx3)':'var(--gr-tx)')+'">'+escHtml(det)+'</div></div><span style="font-size:16px">'+ic+'</span></div>';
-  }).join('');
+  };
+  var filas=PAISES_HUB.map(function(p){return fila(p,est[p.k]);}).join('')+fila(REGIONAL_HUB,eR);
   return '<div class="card" style="margin-top:12px"><div class="cardh"><div class="cardht">🗺️ Cómo viene cada país</div><div style="font-size:11px;color:var(--tx3)">tocá un país para ver sus tickets</div></div>'
     +'<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center"><div style="flex:1 1 240px;min-width:220px">'+svg+'</div>'
     +'<div style="flex:1 1 260px;min-width:240px">'+filas
-    +'<div style="font-size:11px;color:var(--tx3);margin-top:8px;line-height:1.5">🔴 vencimiento real vencido o que vence hoy/mañana, o críticos · 🟡 atrasados, algo estimado para los próximos 7 días o un hito atrasado · 🟢 todo en plazo'
+    +'<div style="font-size:11px;color:var(--tx3);margin-top:8px;line-height:1.5">🔴 vencimiento real vencido o que vence hoy/mañana, o críticos · 🟡 atrasados, algo estimado para los próximos 7 días o un hito atrasado · 🟢 todo en plazo. Los temas regionales cuentan solo en ATIS LATAM.'
     +(sinPais?'<br><span class="dash-link" onclick="dashTk({pais:\'sin\'})" style="cursor:pointer;text-decoration:underline;color:var(--am-tx)">'+sinPais+(sinPais===1?' ticket abierto sin país':' tickets abiertos sin país')+'</span> — asignalo en ✏️ Gestionar para que cuente en el mapa.':'')+'</div></div></div></div>';
+}
+// Al pasar el mouse: el país se agranda y aparece de fondo el nombre de la empresa (también desde la lista de al lado)
+function mapaMarca(g,on){mapaMarcaK(g.getAttribute('data-k'),on);}
+function mapaMarcaK(k,on){
+  document.querySelectorAll('.mapa-pais[data-k="'+k+'"]').forEach(function(g){g.classList.toggle('activo',!!on);if(on&&g.parentNode){var m=g.parentNode.querySelector('.mapa-marca');g.parentNode.insertBefore(g,m);}});
+  document.querySelectorAll('.mapa-marca[data-k="'+k+'"]').forEach(function(t){t.classList.toggle('visible',!!on);});
 }
 
 // ─── NOTICIAS DEL SECTOR (dashboard) ───────────────────────────────────────
@@ -4808,7 +4832,7 @@ function renderTickets(){
   var fe=esSol?'':val('tickets-estado'),fr=val('tickets-resp'),fp=val('tickets-prio'),fs=val('tickets-solic'),fet=val('tickets-etapa'),fv=val('tickets-venc');
   var extra=typeof TK_EXTRA!=='undefined'?TK_EXTRA:'';
   var list=base.filter(function(t){return (!fe||t.estado===fe)&&(!fr||t.resp===fr)&&(!fp||t.urgencia===fp)&&(!fs||t.email===fs)&&(!fet||etapaTicket(t)===fet)&&(!fv||vencBucket(t)===fv)
-    &&(extra!=='estancado'||esEstancado(t))&&(extra!=='vence7'||['hoy','manana','semana'].indexOf(vencBucket(t))>=0)&&(extra!=='pm'||t.pm)&&(extra!=='rojo'||(t.venc&&t.estado!=='Resuelto'&&!t.respTs&&daysTo(t.venc)<=rojoDesde(t)))&&(!fpa||(fpa==='sin'?!paisTicket(t):(paisTicket(t)===fpa||paisTicket(t)==='Regional')));});
+    &&(extra!=='estancado'||esEstancado(t))&&(extra!=='vence7'||['hoy','manana','semana'].indexOf(vencBucket(t))>=0)&&(extra!=='pm'||t.pm)&&(extra!=='rojo'||(t.venc&&t.estado!=='Resuelto'&&!t.respTs&&daysTo(t.venc)<=rojoDesde(t)))&&(!fpa||(fpa==='sin'?!paisTicket(t):paisTicket(t)===fpa));});
   var q=val('tickets-q').trim().toLowerCase();
   if(q)list=list.filter(function(t){return [t.num,t.asuntoRaw,t.cuerpoRaw,t.sitioRaw,catDeTicket(t),nombreSolicitante(t)].join(' ').toLowerCase().indexOf(q)>=0;});
   ordenarTickets(list,esSol?'recientes':(val('tickets-orden')||'deadline'));
@@ -4918,7 +4942,7 @@ function esSinTomarViejo(t){return etapaTicket(t)==='nuevo'&&diasDesde(t.creadoT
 function filtrarTk(o){
   var set=function(id,v){var e=document.getElementById(id);if(e)e.value=v;};
   set('tickets-estado',o.etapa==='cerrado'?'Resuelto':(o.todos?'':'En curso'));
-  set('tickets-etapa',o.etapa||'');set('tickets-venc',o.venc||'');set('tickets-resp',o.resp||'');
+  set('tickets-etapa',o.etapa||'');set('tickets-venc',o.venc||'');set('tickets-resp',o.resp||'');set('tickets-pais',o.pais||'');
   set('tickets-prio','');set('tickets-solic','');
   TK_EXTRA=o.extra||'';
   renderTickets();
@@ -6049,7 +6073,7 @@ async function cargarAgendaPant(){
 }
 
 // ── Armado de slides (se rearman en cada pasada, así reflejan los datos nuevos) ──
-var PANT_PAIS={AR:'🇦🇷 Argentina',UY:'🇺🇾 Uruguay',PY:'🇵🇾 Paraguay',Regional:'🌎 Regional',sin:'📍 Sin país'};
+var PANT_PAIS={AR:'🇦🇷 ATIS ARG',UY:'🇺🇾 ATIS UY',PY:'🇵🇾 ATIS PY',Regional:'🌎 ATIS LATAM (Regional)',sin:'📍 Sin país'};
 // Interactivo: tocar una fila abre el ticket o la sección; un botón flotante vuelve a la pantalla
 function pantBotonVolver(v){
   var b=document.getElementById('pant-volver');
@@ -6074,6 +6098,8 @@ function pantVolver(){
 }
 function pantTicket(id){pantSalirA(function(){PANT.desdeTicket=true;goTo('tickets',document.getElementById('nav-tickets'));gestionarTicket(id);});}
 function pantModulo(p){pantSalirA(function(){goTo(p,document.getElementById('nav-'+p)||document.getElementById('nav-dashboard'));});}
+// La agenda se abre en Outlook (calendario) en otra pestaña
+function pantAgenda(){window.open('https://outlook.office.com/calendar/view/day','_blank','noopener');}
 function pantTickets(o){pantSalirA(function(){goTo('tickets',document.getElementById('nav-tickets'));filtrarTk(o);});}
 function pantFila(izq,txt,der,col,click){
   return '<div'+(click?' onclick="'+click+'" class="pant-click" title="Tocá para abrir"':'')+' style="display:flex;gap:16px;align-items:center;padding:11px 6px;border-bottom:1px solid var(--brd);font-size:19px'+(click?';cursor:pointer;border-radius:8px':'')+'">'
@@ -6105,9 +6131,9 @@ function armarSlidesPant(){
   if(prox.length)h+='<div style="font-size:18px;font-weight:700;margin-bottom:6px">Lo más próximo</div>'+pantLista(prox,4,function(t){var d=daysTo(t.venc);return pantFila('⛔ '+pantDias(d),t.asunto+(t.vencMotivo?' <span style="color:var(--tx3)">— '+escHtml(t.vencMotivo)+'</span>':''),pantRespNom(t.resp),d<=rojoDesde(t)?'var(--rd-tx)':'var(--am-tx)','pantTicket(\x27'+t.id+'\x27)');});
   // Próxima reunión (si hay agenda) y fechas clave de esta semana
   if(PANT.agenda){var sig=PANT.agenda.filter(function(e){return !e.isAllDay&&new Date(e.end.dateTime).getTime()>Date.now();})[0];
-    if(sig){var hs=new Date(sig.start.dateTime);h+='<div style="font-size:18px;font-weight:700;margin:20px 0 6px">Próxima reunión</div>'+pantFila('📅 '+('0'+hs.getHours()).slice(-2)+':'+('0'+hs.getMinutes()).slice(-2),escHtml(sig.subject||'(sin asunto)')+(sig.isOnlineMeeting?' <span style="font-size:14px;color:#5B5FC7">● Teams</span>':''),'','var(--bl)');}}
+    if(sig){var hs=new Date(sig.start.dateTime);h+='<div style="font-size:18px;font-weight:700;margin:20px 0 6px">Próxima reunión</div>'+pantFila('📅 '+('0'+hs.getHours()).slice(-2)+':'+('0'+hs.getMinutes()).slice(-2),escHtml(sig.subject||'(sin asunto)')+(sig.isOnlineMeeting?' <span style="font-size:14px;color:#5B5FC7">● Teams</span>':''),'','var(--bl)','pantAgenda()');}}
   var fSem=(fechas||[]).filter(function(f){var d=daysTo(f.fecha);return d!==null&&d>=0&&d<=7;}).sort(function(a,b){return a.fecha<b.fecha?-1:1;});
-  if(fSem.length)h+='<div style="font-size:18px;font-weight:700;margin:20px 0 6px">Fechas clave de la semana</div>'+pantLista(fSem,3,function(f){return pantFila('📌 '+pantDias(daysTo(f.fecha)),escHtml(f.desc),escHtml(f.cat||''),'var(--am-tx)');});
+  if(fSem.length)h+='<div style="font-size:18px;font-weight:700;margin:20px 0 6px">Fechas clave de la semana</div>'+pantLista(fSem,3,function(f){return pantFila('📌 '+pantDias(daysTo(f.fecha)),escHtml(f.desc),escHtml(f.cat||''),'var(--am-tx)','pantModulo(\'fechas\')');});
   S.push({titulo:'Resumen del día',html:h});
 
   // 2. Agenda de Teams
@@ -6118,7 +6144,7 @@ function armarSlidesPant(){
       var s=new Date(e.start.dateTime),f=new Date(e.end.dateTime),hh=function(d){return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);};
       var ya=f.getTime()<ahora, ahoraM=s.getTime()<=ahora&&f.getTime()>=ahora;
       var col=ahoraM?'var(--gr-tx)':ya?'var(--tx3)':'var(--bl)';
-      return pantFila((e.isAllDay?'Todo el día':hh(s)+' – '+hh(f))+(ahoraM?' · AHORA':''),'<span style="'+(ya?'color:var(--tx3);text-decoration:line-through':'')+'">'+escHtml(e.subject||'(sin asunto)')+'</span>'+(e.isOnlineMeeting?' <span style="font-size:14px;color:#5B5FC7">● Teams</span>':''),escHtml((e.location&&e.location.displayName)||''),col);}):'<div style="font-size:22px;color:var(--tx3);margin-top:30px">Día libre de reuniones 🎉</div>';
+      return pantFila((e.isAllDay?'Todo el día':hh(s)+' – '+hh(f))+(ahoraM?' · AHORA':''),'<span style="'+(ya?'color:var(--tx3);text-decoration:line-through':'')+'">'+escHtml(e.subject||'(sin asunto)')+'</span>'+(e.isOnlineMeeting?' <span style="font-size:14px;color:#5B5FC7">● Teams</span>':''),escHtml((e.location&&e.location.displayName)||''),col,'pantAgenda()');}):'<div style="font-size:22px;color:var(--tx3);margin-top:30px">Día libre de reuniones 🎉</div>';
     S.push({titulo:'Agenda',html:hA});
   }
 
@@ -6148,7 +6174,7 @@ function armarSlidesPant(){
   var pk=['AR','UY','PY','Regional','sin'].filter(function(k){return P[k];});
   if(pk.length){
     S.push({titulo:'Por país',html:pantTit('🌎 Semáforo por país','Pedidos abiertos')+'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px">'+pk.map(function(k){var p=P[k];
-      return '<div style="background:var(--surf);border:1px solid var(--brd);border-radius:14px;padding:20px 22px;border-top:6px solid '+(p.r?'var(--rd)':p.a?'var(--am)':'var(--gr-tx)')+'"><div style="font-size:22px;font-weight:700">'+PANT_PAIS[k]+'</div><div style="font-size:44px;font-weight:800;margin:6px 0">'+p.tot+'</div>'
+      return '<div class="pant-click" onclick="pantTickets({pais:\''+k+'\'})" title="Tocá para ver sus tickets" style="cursor:pointer;background:var(--surf);border:1px solid var(--brd);border-radius:14px;padding:20px 22px;border-top:6px solid '+(p.r?'var(--rd)':p.a?'var(--am)':'var(--gr-tx)')+'"><div style="font-size:22px;font-weight:700">'+PANT_PAIS[k]+'</div><div style="font-size:44px;font-weight:800;margin:6px 0">'+p.tot+'</div>'
         +'<div style="font-size:17px;display:flex;gap:14px;flex-wrap:wrap"><span>🔴 '+p.r+'</span><span>🟡 '+p.a+'</span><span>🟢 '+p.v+'</span><span style="color:var(--tx3)">⚪ '+p.n+'</span></div></div>';}).join('')+'</div>'
       +'<div style="font-size:14px;color:var(--tx3);margin-top:14px">🔴 vencidos o atrasados · 🟡 vencen pronto · 🟢 en plazo · ⚪ respondidos, en espera o sin fecha</div>'});
   }
@@ -6158,7 +6184,7 @@ function armarSlidesPant(){
   var rk=Object.keys(R).sort(function(a,b){return R[b].tot-R[a].tot;});
   if(rk.length>1||(rk.length&&currentUser.perfil==='Admin')){
     S.push({titulo:'Equipo',html:pantTit('👥 ¿Quién tiene qué?','Pedidos abiertos por responsable')+'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px">'+rk.map(function(k){var r=R[k],u=legalUser(k);
-      return '<div style="background:var(--surf);border:1px solid var(--brd);border-radius:14px;padding:20px 22px"><div style="font-size:21px;font-weight:700">'+escHtml(u?u.name:k)+'</div><div style="font-size:44px;font-weight:800;margin:6px 0">'+r.tot+'</div>'
+      return '<div class="pant-click" onclick="pantTickets({resp:\''+k+'\'})" title="Tocá para ver sus tickets" style="cursor:pointer;background:var(--surf);border:1px solid var(--brd);border-radius:14px;padding:20px 22px"><div style="font-size:21px;font-weight:700">'+escHtml(u?u.name:k)+'</div><div style="font-size:44px;font-weight:800;margin:6px 0">'+r.tot+'</div>'
         +'<div style="font-size:16px;line-height:1.7;color:var(--tx2)">'+(r.ve?'<div style="color:var(--rd-tx)">⛔ '+r.ve+' con vencimiento en 7 días</div>':'')+(r.at?'<div style="color:#C2410C">⏰ '+r.at+' atrasados</div>':'')+(r.nu?'<div style="color:var(--bl)">📥 '+r.nu+' sin tomar</div>':'')+(r.es?'<div style="color:var(--am-tx)">⏸ '+r.es+' en espera</div>':'')+(!r.ve&&!r.at&&!r.nu?'<div style="color:var(--gr-tx)">✅ todo en orden</div>':'')+'</div></div>';}).join('')+'</div>'});
   }
 
@@ -6179,7 +6205,7 @@ function armarSlidesPant(){
   // 10. Tickets complejos (avance por hitos)
   var comp=ab.filter(function(t){return t.esProyecto&&(t.hitos||[]).length;});
   if(comp.length)S.push({titulo:'Complejos',html:pantTit('🧩 Proyectos complejos','Avance por etapas')+comp.slice(0,7).map(function(t){var hs=t.hitos,ok=hs.filter(function(x){return x.ok;}).length,act=hs.filter(function(x){return !x.ok;})[0];
-    return '<div style="padding:12px 0;border-bottom:1px solid var(--brd)"><div style="display:flex;justify-content:space-between;font-size:19px;gap:12px"><b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+t.asunto+'</b><span style="color:var(--tx3);font-size:15px;white-space:nowrap">'+ok+'/'+hs.length+' · '+pantRespNom(t.resp)+'</span></div>'
+    return '<div class="pant-click" onclick="pantTicket(\''+t.id+'\')" title="Tocá para abrir" style="cursor:pointer;border-radius:8px;padding:12px 6px;border-bottom:1px solid var(--brd)"><div style="display:flex;justify-content:space-between;font-size:19px;gap:12px"><b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+t.asunto+'</b><span style="color:var(--tx3);font-size:15px;white-space:nowrap">'+ok+'/'+hs.length+' · '+pantRespNom(t.resp)+'</span></div>'
       +'<div style="display:flex;gap:4px;margin:8px 0 4px">'+hs.map(function(x,j){return '<div style="flex:1;height:8px;border-radius:4px;background:'+(x.ok?'var(--gr-tx)':x===act?'var(--bl)':'var(--brd2)')+'"></div>';}).join('')+'</div>'
       +(act?'<div style="font-size:15px;color:var(--bl)">Ahora: '+escHtml(act.t)+'</div>':'<div style="font-size:15px;color:var(--gr-tx)">✅ Todas las etapas cumplidas</div>')+'</div>';}).join('')});
 
@@ -6209,7 +6235,7 @@ function armarSlidesPant(){
   if(leg.length&&currentUser.perfil==='Admin'){
     var pc=function(v,ok,mal){return v===null?'<span style="color:var(--tx3)">—</span>':'<b style="color:'+(v>=ok?'var(--gr-tx)':v>=mal?'var(--am-tx)':'var(--rd-tx)')+'">'+v+'%</b>';};
     S.push({titulo:'Cumplimiento',html:pantTit('🏆 Cumplimiento del equipo','Tickets que entraron en los últimos 30 días')+'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">'+leg.map(function(u){var m=metricasPersona(u.ini,30);
-      return '<div style="background:var(--surf);border:1px solid var(--brd);border-radius:14px;padding:20px 22px"><div style="font-size:21px;font-weight:700;margin-bottom:10px">'+escHtml(u.name)+'</div>'
+      return '<div class="pant-click" onclick="pantTickets({resp:\''+u.ini+'\',todos:true})" title="Tocá para ver sus tickets" style="cursor:pointer;background:var(--surf);border:1px solid var(--brd);border-radius:14px;padding:20px 22px"><div style="font-size:21px;font-weight:700;margin-bottom:10px">'+escHtml(u.name)+'</div>'
         +'<div style="font-size:17px;line-height:1.9">📥 '+m.total+' recibidos · ✅ '+m.cerrados+' cerrados<br>🙋 Tarda en tomarlos: <b>'+fmtHoras(m.hTomar)+'</b><br>📤 Devolución registrada: '+pc(m.pctDev,90,70)+'<br>🎯 Respondidos en plazo: '+pc(m.pctPlazo,85,65)+'</div></div>';}).join('')+'</div>'
       +'<div style="font-size:14px;color:var(--tx3);margin-top:14px">Meta del circuito: tomar en 1 día hábil, registrar siempre la devolución (📤) y responder en plazo.</div>'});
   }
@@ -6242,7 +6268,7 @@ function armarSlidesPant(){
   var ns=(NOTICIAS&&NOTICIAS.noticias)||[];
   for(var q=0;q<ns.length;q+=2){
     S.push({titulo:'Noticias',html:pantTit('📰 Noticias del sector','Selección automática con IA de medios públicos · verificá en la fuente')+ns.slice(q,q+2).map(function(n){
-      return '<div style="background:var(--surf);border:1px solid var(--brd);border-radius:14px;padding:20px 24px;margin-bottom:14px"><div style="font-size:14px;color:var(--tx3);margin-bottom:6px">'+escHtml(n.categoria||'Noticia')+(n.pais?' · '+escHtml(n.pais):'')+' · '+escHtml(n.fuente||'')+(n.fecha?' · '+fmtDate(n.fecha):'')+'</div>'
+      return '<div class="pant-click" onclick="window.open(\''+escUrl(n.url)+'\',\'_blank\',\'noopener\')" title="Tocá para abrir la nota" style="cursor:pointer;background:var(--surf);border:1px solid var(--brd);border-radius:14px;padding:20px 24px;margin-bottom:14px"><div style="font-size:14px;color:var(--tx3);margin-bottom:6px">'+escHtml(n.categoria||'Noticia')+(n.pais?' · '+escHtml(n.pais):'')+' · '+escHtml(n.fuente||'')+(n.fecha?' · '+fmtDate(n.fecha):'')+'</div>'
         +'<div style="font-size:24px;font-weight:700;line-height:1.3">'+escHtml(n.titulo)+'</div>'+(n.que_paso?'<div style="font-size:17px;color:var(--tx2);margin-top:8px;line-height:1.5">'+escHtml(n.que_paso)+'</div>':'')
         +(n.por_que_importa?'<div style="font-size:17px;color:var(--bl);margin-top:8px">→ '+escHtml(n.por_que_importa)+'</div>':'')+'</div>';}).join('')});
   }
