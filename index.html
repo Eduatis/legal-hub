@@ -345,6 +345,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <button onclick="abrirPanelRecordatorios()" style="width:100%;font-size:11px;padding:7px;border-radius:var(--rs);border:1px solid var(--gr-tx);background:var(--gr-bg);color:var(--gr-tx);cursor:pointer;font-weight:500">📬 Recordatorios</button>
         <button id="btn-respaldo" onclick="hacerRespaldo(true)" style="width:100%;font-size:11px;padding:7px;border-radius:var(--rs);border:1px solid var(--brd2);background:var(--surf);color:var(--tx2);cursor:pointer;font-weight:500">💾 Respaldar ahora</button>
       </div>
+      <button id="sb-vercomo" onclick="abrirVerComo()" style="display:none;width:100%;margin-bottom:8px;font-size:11px;padding:7px;border-radius:var(--rs);border:1px solid #7C3AED;background:#F5F3FF;color:#7C3AED;cursor:pointer;font-weight:600">👁 Ver como…</button>
       <div class="sbuser">
         <div class="av" id="sb-av" style="width:28px;height:28px;font-size:10px"></div>
         <div><div class="sbun" id="sb-name"></div><div class="sbur" id="sb-role"></div></div>
@@ -369,7 +370,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div class="pageview active" id="page-dashboard">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px">
           <div id="dash-greeting" style="font-size:22px;font-weight:700;color:var(--bl);padding:0 2px"></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btns" id="btn-pantalla" style="display:none" onclick="abrirPantalla()" title="Para un segundo monitor: va pasando la información sola">📺 Modo pantalla</button><button class="btnp" id="btn-repaso" style="display:none" onclick="abrirRepaso()">🎙 Repaso del día</button></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btns" id="btn-vercomo" style="display:none;border-color:#7C3AED;color:#7C3AED" onclick="abrirVerComo()" title="Ver el Hub como lo ve otra persona (Legal, lectura, solicitantes…)">👁 Ver como…</button><button class="btns" id="btn-pantalla" style="display:none" onclick="abrirPantalla()" title="Para un segundo monitor: va pasando la información sola">📺 Modo pantalla</button><button class="btnp" id="btn-repaso" style="display:none" onclick="abrirRepaso()">🎙 Repaso del día</button></div>
         </div>
         <!-- Repaso del día por voz (se arma con los datos ya cargados; no sale nada del Hub) -->
         <div id="repaso" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;align-items:center;justify-content:center;padding:16px">
@@ -1597,7 +1598,7 @@ async function initApp(account){
   await syncAll();hideLoading();document.getElementById('app').style.display='block';
   try{abrirTicketDeURL();}catch(e){console.warn(e);}
   try{if(sessionStorage.getItem('hubVac')==='1'){sessionStorage.removeItem('hubVac');if(puedeGestionarVac())abrirVacaciones();}}catch(e){}
-  if(currentUser.perfil==='Admin'){document.getElementById('setup-btn-wrap').style.display='flex';}
+  if(currentUser.perfil==='Admin'){document.getElementById('setup-btn-wrap').style.display='flex';}actualizarBotonVerComo();
   // Repaso del día por voz: para quien tiene dashboard
   if(currentUser.perfil!=='Solicitante'&&!currentUser.mlaOnly){document.getElementById('btn-repaso').style.display='inline-block';document.getElementById('btn-pantalla').style.display='inline-block';}
   // Register login
@@ -2340,7 +2341,6 @@ function goTo(page,el){
   var A={tickets:'<button class="btnp" onclick="openFormTicket()">+ Nueva solicitud</button>',fechas:'<button class="btnp" onclick="openFormFecha()">+ Nueva fecha clave</button>',mla:'<button class="btnp" onclick="openFormMLA()">+ Nuevo MLA</button>',inm:'<button class="btnp" onclick="openFormInm()">+ Nuevo inmueble</button>',poderes:'<button class="btns" onclick="exportCSV(\'poderes\')" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormPoder()">+ Nuevo poder</button>',societario:socTab==="autoridades"?'<button class="btnp" onclick="openFormSocAut()">+ Nueva autoridad</button>':'<button class="btnp" onclick="openFormSocAcc()">+ Nuevo accionista</button>',temas:'<button class="btns" onclick="abrirReunion()" style="font-size:12px">📊 Modo reunión</button><button class="btns" onclick="exportCSV(\"temas\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormTema()">+ Nuevo tema</button>',documentos:'<button class="btns" onclick="exportCSV(\"documentos\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDoc()">+ Nuevo documento</button>',suelo:'<button class="btns" onclick="exportCSV(\"suelo\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormSuelo()">+ Nuevo contrato</button>',intoru:'<button class="btns" onclick="exportCSV(\"intoru\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormINTORU()">+ Nuevo sitio</button>',dd:'<button class="btns" onclick="exportCSV(\"dd\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDD()">+ Nuevo sitio</button>'};
   document.getElementById('tb-act').innerHTML=A[page]||'';
   if(page==='tickets'&&esSolicitanteTk()){document.getElementById('tb-title').textContent='Mis pedidos a Legal';document.getElementById('tb-sub').textContent='Cargá un pedido y seguí en qué está';}
-  if(currentUser&&!VER_COMO&&currentUser.perfil==='Admin')document.getElementById('tb-act').insertAdjacentHTML('afterbegin','<button class="btns" onclick="abrirVerComo()" style="font-size:12px" title="Ver el Hub como lo ve otra persona (Legal, lectura, solicitantes…)">👁 Ver como…</button>');
   if(page==='tickets'&&currentUser&&!VER_COMO&&(currentUser.perfil==='Admin'||legalUser(currentUser.ini)))document.getElementById('tb-act').insertAdjacentHTML('afterbegin','<button class="btns" onclick="abrirReunion()" style="font-size:12px">📊 Modo reunión</button><button class="btns" onclick="abrirVacaciones()" style="font-size:12px">🏖️ Vacaciones</button>');
   var EXTRA_T={mails:['Mails importantes','Resumen de tu bandeja — se lee en vivo, no se guarda nada'],semanas:['Punteo semanal','Repaso de tickets uno por uno — reunión de los lunes con el equipo'],calendario:['Calendario','Todos los vencimientos en un solo lugar']};
   if(EXTRA_T[page]){document.getElementById('tb-title').textContent=EXTRA_T[page][0];document.getElementById('tb-sub').textContent=EXTRA_T[page][1];}
@@ -2456,10 +2456,21 @@ function esSolicitanteTk(){return !!currentUser&&(!!VER_COMO||(currentUser.perfi
 // ─── VISTA PREVIA "VER COMO…" (solo Admin): muestra el Hub como lo ve un solicitante, sin poder enviar nada ───
 var VER_COMO=null, VER_COMO_NAV=null;
 function personaTk(){return VER_COMO||currentUser;}
+// Botón "👁 Ver como…" en el inicio y en la barra lateral: siempre disponible para el Admin real (también mientras simula)
+function actualizarBotonVerComo(){
+  var real=SIMULA?SIMULA.real:currentUser, ok=!!(real&&real.perfil==='Admin');
+  var quien=SIMULA?SIMULA.as.name:(VER_COMO?VER_COMO.name:'');
+  ['btn-vercomo','sb-vercomo'].forEach(function(id){var b=document.getElementById(id);if(!b)return;
+    b.style.display=ok?(id==='sb-vercomo'?'block':'inline-block'):'none';
+    b.textContent=quien?'👁 Viendo como '+primerNombre(quien)+' · cambiar':'👁 Ver como…';});
+}
+function volverAMi(){if(SIMULA)salirSimulacion();if(VER_COMO)salirVerComo();}
 function abrirVerComo(){
   var real=SIMULA?SIMULA.real:currentUser;
   if(!real||real.perfil!=='Admin')return;
-  if(SIMULA)salirSimulacion();
+  if(SIMULA)salirSimulacion(true);
+  if(VER_COMO)salirVerComo(true);
+  goTo('dashboard',document.getElementById('nav-dashboard'));
   var otros=USERS_LIST.filter(function(u){return u.email&&u.email!==real.email;});
   var esSol=function(u){return !USERS_MAP[u.email]||USERS_MAP[u.email].perfil==='Solicitante';};
   var PERF={Admin:'Admin',Editor:'Edición',Lectura:'Solo lectura',Limitado:'Limitado',SoloMLA:'Solo MLA'};
@@ -2495,17 +2506,25 @@ function entrarVerComo(email){
   document.getElementById('sb-name').textContent=u.name;document.getElementById('sb-role').textContent='Solicitante'+(u.sector?' · '+u.sector:'');
   var b=document.getElementById('ver-como-bar');
   if(!b){b=document.createElement('div');b.id='ver-como-bar';b.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:600;background:#7C3AED;color:#fff;padding:8px 14px;border-radius:10px;max-width:calc(100vw - 32px);font-size:12px;box-shadow:0 2px 10px rgba(0,0,0,.2);display:flex;gap:10px;align-items:center';document.body.appendChild(b);}
-  b.innerHTML='👁 Estás viendo el Hub como <b>'+escHtml(u.name)+'</b> (vista previa, no se envía nada) <button onclick="salirVerComo()" style="background:#fff;color:#7C3AED;border:none;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:600;cursor:pointer">Salir</button>';
+  b.innerHTML=barraVerComoHTML(u.name);
   ['tickets-estado'].forEach(function(i){document.getElementById(i).value='En curso';});
+  actualizarBotonVerComo();
   goTo('tickets',document.getElementById('nav-tickets'));renderTickets();
 }
-function salirVerComo(){
+function barraVerComoHTML(nombre){
+  return '<span>👁 Estás viendo el Hub como <b>'+escHtml(nombre)+'</b> (vista previa: no se guarda ni se envía nada)</span>'
+    +'<button onclick="abrirVerComo()" style="background:transparent;color:#fff;border:1px solid #fff;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer">🔄 Cambiar de persona</button>'
+    +'<button onclick="volverAMi()" style="background:#fff;color:#7C3AED;border:none;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:600;cursor:pointer">↩️ Volver a mi vista</button>';
+}
+function salirVerComo(silencioso){
   VER_COMO=null;
   if(VER_COMO_NAV)Object.keys(VER_COMO_NAV).forEach(function(id){var el=document.getElementById(id);if(el)el.style.display=VER_COMO_NAV[id];});
   VER_COMO_NAV=null;
   document.getElementById('sb-name').textContent=currentUser.name;document.getElementById('sb-role').textContent=currentUser.role;
   var b=document.getElementById('ver-como-bar');if(b)b.remove();
-  closeFormTicket();goTo('tickets',document.getElementById('nav-tickets'));renderTickets();
+  actualizarBotonVerComo();
+  if(silencioso)return;
+  closeFormTicket();renderAll();goTo('dashboard',document.getElementById('nav-dashboard'));
 }
 // Simulación completa (solo Admin): el Hub se arma como si hubiera entrado esa persona, con los datos ya cargados.
 // Todo lo que guarda queda bloqueado mientras dure (no se escribe nada en SharePoint ni se manda ningún aviso).
@@ -2541,11 +2560,11 @@ function simularPerfil(u){
   if(u.perfil==='Lectura'){var st=document.createElement('style');st.id='sim-lectura';st.textContent='.btnedit,.btnrd,.acbtn,#tb-act>*{display:none!important}';document.head.appendChild(st);}
   var b=document.getElementById('ver-como-bar');
   if(!b){b=document.createElement('div');b.id='ver-como-bar';b.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:600;background:#7C3AED;color:#fff;padding:8px 14px;border-radius:10px;max-width:calc(100vw - 32px);font-size:12px;box-shadow:0 2px 10px rgba(0,0,0,.2);display:flex;gap:10px;align-items:center;flex-wrap:wrap';document.body.appendChild(b);}
-  b.innerHTML='👁 Estás viendo el Hub como <b>'+escHtml(u.name)+'</b> (vista previa: no se guarda ni se envía nada) <button onclick="abrirVerComo()" style="background:transparent;color:#fff;border:1px solid #fff;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer">Cambiar</button><button onclick="salirSimulacion()" style="background:#fff;color:#7C3AED;border:none;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:600;cursor:pointer">Salir</button>';
+  b.innerHTML=barraVerComoHTML(u.name);
   renderAll();
   var ini=u.mlaOnly?(u.grupos.indexOf('Tickets')>=0?'tickets':'mla'):'dashboard';
   goTo(ini,document.getElementById('nav-'+ini));
-  showToast('👁 Viendo el Hub como '+u.name);
+  actualizarBotonVerComo();showToast('👁 Viendo el Hub como '+u.name);
 }
 function salirSimulacion(silencioso){
   if(!SIMULA)return;
@@ -2556,7 +2575,7 @@ function salirSimulacion(silencioso){
   var st=document.getElementById('sim-lectura');if(st)st.remove();
   var b=document.getElementById('ver-como-bar');if(b)b.remove();
   pintarUsuarioSidebar(currentUser);
-  if(silencioso)return;
+  actualizarBotonVerComo();if(silencioso)return;
   renderAll();goTo('dashboard',document.getElementById('nav-dashboard'));
 }
 function fechaCorta(ts){return ts?fmtDate(String(ts).split('T')[0]):'';}
