@@ -3017,7 +3017,7 @@ function noticiasHTML(){
   if(!NOTICIAS.generado)return '';
   var gen=new Date(NOTICIAS.generado), hoyS=todayStr(), genS=NOTICIAS.generado.split('T')[0];
   var cuando=(genS===hoyS?'hoy':fmtDate(genS))+' '+gen.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
-  var CATC={'Regulación':'#B91C1C','Mercado de torres':'#4338CA','Clientes':'#0369A1','Inversores':'#15803D','Legal':'#B45309'};
+  var CATC={'Regulación':'#B91C1C','Mercado de torres':'#4338CA','Clientes':'#0369A1','Inversores':'#15803D','Legal':'#B45309','Estudios':'#7C3AED'};
   var BAND={AR:'🇦🇷',UY:'🇺🇾',PY:'🇵🇾',Regional:'🌎'};
   var items=ns.length?ns.map(function(n){
     var c=CATC[n.categoria]||'#6B7280';
