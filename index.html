@@ -2938,7 +2938,7 @@ function mapaPaisesHTML(){
   var eR=estadoPais('Regional');
   var sinPais=ticketsVisibles().filter(function(t){return t.estado!=='Resuelto'&&!paisTicket(t);}).length;
   var titulo=function(n,e){return '<title>'+n+': '+e.ab+' tickets abiertos'+(e.venc?', '+e.venc+' vencidos':'')+'</title>';};
-  var svg='<svg class="mapa-svg" viewBox="0 0 336 408" role="img" aria-label="Mapa de Argentina, Uruguay y Paraguay, con un recuadro para los temas regionales, y el estado de los tickets" style="width:100%;max-width:300px;height:auto;display:block;margin:0 auto;border-radius:10px"><defs><clipPath id="mapa-clip"><rect width="336" height="408" rx="10"/></clipPath></defs><g clip-path="url(#mapa-clip)">'
+  var svg='<svg class="mapa-svg" onmouseleave="mapaLimpiar()" viewBox="0 0 336 408" role="img" aria-label="Mapa de Argentina, Uruguay y Paraguay, con un recuadro para los temas regionales, y el estado de los tickets" style="width:100%;max-width:300px;height:auto;display:block;margin:0 auto;border-radius:10px"><defs><clipPath id="mapa-clip"><rect width="336" height="408" rx="10"/></clipPath></defs><g clip-path="url(#mapa-clip)">'
     +'<rect width="336" height="408" fill="var(--bl-bg)" rx="10"/>';
   ['BRA','CHL','BOL','PER'].forEach(function(iso){svg+='<path d="'+MAPA_PATHS[iso]+'" fill="var(--surf2)" stroke="var(--brd2)" stroke-width="0.8"/>';});
   // Marcas de agua (una por empresa): aparecen al pasar el mouse por el país
@@ -2975,7 +2975,10 @@ function mapaPaisesHTML(){
 }
 // Al pasar el mouse: el país se agranda y aparece de fondo el nombre de la empresa (también desde la lista de al lado)
 function mapaMarca(g,on){mapaMarcaK(g.getAttribute('data-k'),on);}
+// Antes de resaltar uno se apagan todos: al reordenar el SVG el navegador a veces no avisa que el mouse salió del anterior
+function mapaLimpiar(){document.querySelectorAll('.mapa-pais.activo').forEach(function(g){g.classList.remove('activo');});document.querySelectorAll('.mapa-marca.visible').forEach(function(m){m.classList.remove('visible');});}
 function mapaMarcaK(k,on){
+  mapaLimpiar();if(!on)return;
   document.querySelectorAll('.mapa-pais[data-k="'+k+'"]').forEach(function(g){g.classList.toggle('activo',!!on);if(on&&g.parentNode){var m=g.parentNode.querySelector('.mapa-marca');g.parentNode.insertBefore(g,m);}});
   document.querySelectorAll('.mapa-marca[data-k="'+k+'"]').forEach(function(t){t.classList.toggle('visible',!!on);});
 }
