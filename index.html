@@ -6357,7 +6357,8 @@ function mailHTML(titulo,lineas,boton,link,pie){
     +'<p style="font-size:11px;color:#A09F98;margin-top:18px">'+esc(pie||'Aviso automático del Legal Hub.')+'</p></div>';
 }
 function citaHTML(txt){return {html:'<div style="border-left:3px solid #1B4FD8;background:#EEF2FF;padding:8px 12px;margin:0 0 12px;white-space:pre-wrap;line-height:1.5">'+escHtml(txt)+'</div>'};}
-function camposAviso(tipo,para,asunto,cuerpo,teams,cc){return {AvisoTipo:tipo,AvisoPara:para||'',AvisoCC:cc||'',AvisoAsunto:String(asunto).slice(0,250),AvisoCuerpo:cuerpo,AvisoTeams:teams||''};}
+// Segundo aviso (Aviso2*): el flujo lo manda junto con el primero y no lo borra; por eso cada aviso nuevo lo deja vacío salvo que se use
+function camposAviso(tipo,para,asunto,cuerpo,teams,cc){return {AvisoTipo:tipo,AvisoPara:para||'',AvisoCC:cc||'',AvisoAsunto:String(asunto).slice(0,250),AvisoCuerpo:cuerpo,AvisoTeams:teams||'',Aviso2Para:'',Aviso2CC:'',Aviso2Asunto:'',Aviso2Cuerpo:''};}
 // Cierre automático: 5 días hábiles después de la devolución, salvo crítico, alta, vencimiento real o complejo
 function elegibleCierreAuto(t,urg){urg=urg||t.urgenciaRaw;return urg!=='Crítica'&&urg!=='Alta'&&!t.venc&&!t.esProyecto;}
 function fechaCierreAuto(t,urg){return elegibleCierreAuto(t,urg)?sumarDiasHabiles(new Date(),5)+'T00:00:00Z':null;}
