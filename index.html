@@ -2340,7 +2340,7 @@ function goTo(page,el){
   var A={tickets:'<button class="btnp" onclick="openFormTicket()">+ Nueva solicitud</button>',fechas:'<button class="btnp" onclick="openFormFecha()">+ Nueva fecha clave</button>',mla:'<button class="btnp" onclick="openFormMLA()">+ Nuevo MLA</button>',inm:'<button class="btnp" onclick="openFormInm()">+ Nuevo inmueble</button>',poderes:'<button class="btns" onclick="exportCSV(\'poderes\')" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormPoder()">+ Nuevo poder</button>',societario:socTab==="autoridades"?'<button class="btnp" onclick="openFormSocAut()">+ Nueva autoridad</button>':'<button class="btnp" onclick="openFormSocAcc()">+ Nuevo accionista</button>',temas:'<button class="btns" onclick="abrirReunion()" style="font-size:12px">📊 Modo reunión</button><button class="btns" onclick="exportCSV(\"temas\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormTema()">+ Nuevo tema</button>',documentos:'<button class="btns" onclick="exportCSV(\"documentos\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDoc()">+ Nuevo documento</button>',suelo:'<button class="btns" onclick="exportCSV(\"suelo\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormSuelo()">+ Nuevo contrato</button>',intoru:'<button class="btns" onclick="exportCSV(\"intoru\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormINTORU()">+ Nuevo sitio</button>',dd:'<button class="btns" onclick="exportCSV(\"dd\")" style="font-size:12px">↓ Exportar</button><button class="btnp" onclick="openFormDD()">+ Nuevo sitio</button>'};
   document.getElementById('tb-act').innerHTML=A[page]||'';
   if(page==='tickets'&&esSolicitanteTk()){document.getElementById('tb-title').textContent='Mis pedidos a Legal';document.getElementById('tb-sub').textContent='Cargá un pedido y seguí en qué está';}
-  if(page==='tickets'&&currentUser&&!VER_COMO&&currentUser.perfil==='Admin')document.getElementById('tb-act').insertAdjacentHTML('afterbegin','<button class="btns" onclick="abrirVerComo()" style="font-size:12px" title="Ver el Hub como lo ve un solicitante">👁 Ver como…</button>');
+  if(currentUser&&!VER_COMO&&currentUser.perfil==='Admin')document.getElementById('tb-act').insertAdjacentHTML('afterbegin','<button class="btns" onclick="abrirVerComo()" style="font-size:12px" title="Ver el Hub como lo ve otra persona (Legal, lectura, solicitantes…)">👁 Ver como…</button>');
   if(page==='tickets'&&currentUser&&!VER_COMO&&(currentUser.perfil==='Admin'||legalUser(currentUser.ini)))document.getElementById('tb-act').insertAdjacentHTML('afterbegin','<button class="btns" onclick="abrirReunion()" style="font-size:12px">📊 Modo reunión</button><button class="btns" onclick="abrirVacaciones()" style="font-size:12px">🏖️ Vacaciones</button>');
   var EXTRA_T={mails:['Mails importantes','Resumen de tu bandeja — se lee en vivo, no se guarda nada'],semanas:['Punteo semanal','Repaso de tickets uno por uno — reunión de los lunes con el equipo'],calendario:['Calendario','Todos los vencimientos en un solo lugar']};
   if(EXTRA_T[page]){document.getElementById('tb-title').textContent=EXTRA_T[page][0];document.getElementById('tb-sub').textContent=EXTRA_T[page][1];}
@@ -2457,12 +2457,27 @@ function esSolicitanteTk(){return !!currentUser&&(!!VER_COMO||(currentUser.perfi
 var VER_COMO=null, VER_COMO_NAV=null;
 function personaTk(){return VER_COMO||currentUser;}
 function abrirVerComo(){
-  if(!currentUser||currentUser.perfil!=='Admin')return;
-  var lista=USERS_LIST.filter(function(u){return u.email&&!legalUser(u.ini)&&u.perfil!=='Admin'&&(u.grupos.indexOf('Tickets')>=0||u.perfil==='Solicitante');});
-  lista.sort(function(a,b){return a.name.localeCompare(b.name);});
-  var h='<div style="font-size:13px;color:var(--tx2);margin-bottom:12px;line-height:1.5">Elegí a quién querés “ponerte en sus zapatos”. Vas a ver el Hub exactamente como lo ve esa persona, con <b>sus</b> pedidos. Es solo vista previa: <b>no se envía nada en su nombre</b>.</div>';
-  h+=lista.map(function(u){var n=tickets.filter(function(t){return t.email===u.email;}).length;
-    return '<button class="btns" style="width:100%;text-align:left;margin-bottom:6px;padding:10px 12px;display:flex;justify-content:space-between" data-em="'+escHtml(u.email)+'" onclick="entrarVerComo(this.dataset.em)"><span><b>'+escHtml(u.name)+'</b>'+(u.sector?' · '+escHtml(u.sector):'')+'</span><span style="color:var(--tx3)">'+n+(n===1?' pedido':' pedidos')+'</span></button>';}).join('')||'<div class="empty">No hay solicitantes cargados en Usuarios_Hub.</div>';
+  var real=SIMULA?SIMULA.real:currentUser;
+  if(!real||real.perfil!=='Admin')return;
+  if(SIMULA)salirSimulacion();
+  var otros=USERS_LIST.filter(function(u){return u.email&&u.email!==real.email;});
+  var esSol=function(u){return !USERS_MAP[u.email]||USERS_MAP[u.email].perfil==='Solicitante';};
+  var PERF={Admin:'Admin',Editor:'Edición',Lectura:'Solo lectura',Limitado:'Limitado',SoloMLA:'Solo MLA'};
+  var grupos=[
+    ['⚖️ Equipo Legal',otros.filter(function(u){return !!legalUser(u.ini)&&!esSol(u);})],
+    ['📊 Otros con acceso al dashboard',otros.filter(function(u){return !legalUser(u.ini)&&!esSol(u);})],
+    ['📨 Solicitantes (solo Tickets)',otros.filter(function(u){return esSol(u)&&(u.grupos.indexOf('Tickets')>=0||u.perfil==='Solicitante'||!u.perfil);})]];
+  var h='<div style="font-size:13px;color:var(--tx2);margin-bottom:12px;line-height:1.5">Elegí a quién querés “ponerte en sus zapatos”: vas a ver el Hub como lo ve esa persona (su menú, sus países, sus tickets y avisos). Es solo vista previa: <b>no se guarda ni se envía nada</b>.</div>';
+  grupos.forEach(function(g){
+    var l=g[1].slice().sort(function(a,b){return a.name.localeCompare(b.name);});if(!l.length)return;
+    h+='<div style="font-size:12px;font-weight:700;color:var(--tx2);margin:12px 0 6px">'+g[0]+'</div>';
+    h+=l.map(function(u){
+      var m=USERS_MAP[u.email], der;
+      if(esSol(u)){var n=tickets.filter(function(t){return t.email===u.email;}).length;der=n+(n===1?' pedido':' pedidos');}
+      else{var ab=tickets.filter(function(t){return t.resp===u.ini&&t.estado!=='Resuelto';}).length;der=(PERF[m.perfil]||m.perfil)+(legalUser(u.ini)?' · '+ab+' tickets abiertos':'')+' · '+(m.scope||[]).join(', ');}
+      return '<button class="btns" style="width:100%;text-align:left;margin-bottom:6px;padding:10px 12px;display:flex;justify-content:space-between;gap:8px" data-em="'+escHtml(u.email)+'" onclick="entrarVerComo(this.dataset.em)"><span><b>'+escHtml(u.name)+'</b>'+(u.sector?' · '+escHtml(u.sector):'')+(u.role&&!esSol(u)?' · '+escHtml(u.role):'')+'</span><span style="color:var(--tx3);white-space:nowrap">'+escHtml(der)+'</span></button>';}).join('');
+  });
+  if(!otros.length)h+='<div class="empty">No hay otros usuarios cargados en Usuarios_Hub.</div>';
   h+='<button class="btns" style="width:100%;margin-top:8px" onclick="closeFormTicket()">Cancelar</button>';
   ['tk-vista-crear','tk-vista-gestionar','tk-vista-mail'].forEach(function(i){document.getElementById(i).style.display='none';});
   var v=document.getElementById('tk-vista-ver');v.innerHTML=h;v.style.display='block';
@@ -2471,6 +2486,8 @@ function abrirVerComo(){
 }
 function entrarVerComo(email){
   var u=USERS_LIST.filter(function(x){return x.email===email;})[0];if(!u)return;
+  // Con perfil de dashboard (Legal, Lectura, Limitado, SoloMLA…): simulación completa del Hub
+  if(USERS_MAP[email]&&USERS_MAP[email].perfil!=='Solicitante'){closeFormTicket();simularPerfil(USERS_MAP[email]);return;}
   VER_COMO={email:u.email,name:u.name,sector:u.sector||'',scope:u.scope||['AR','UY','PY']};
   closeFormTicket();
   // Menú: solo Tickets, como lo ve el solicitante
@@ -2489,6 +2506,58 @@ function salirVerComo(){
   document.getElementById('sb-name').textContent=currentUser.name;document.getElementById('sb-role').textContent=currentUser.role;
   var b=document.getElementById('ver-como-bar');if(b)b.remove();
   closeFormTicket();goTo('tickets',document.getElementById('nav-tickets'));renderTickets();
+}
+// Simulación completa (solo Admin): el Hub se arma como si hubiera entrado esa persona, con los datos ya cargados.
+// Todo lo que guarda queda bloqueado mientras dure (no se escribe nada en SharePoint ni se manda ningún aviso).
+var SIMULA=null;
+function bloqueoSim(){return Promise.reject(new Error('Vista previa como '+(SIMULA?SIMULA.as.name:'otra persona')+': no se guarda nada'));}
+function aplicarMenuUsuario(u,snap){
+  Object.keys(snap).forEach(function(id){var el=document.getElementById(id);if(el)el.style.display=snap[id];});
+  var set=function(id,v){var el=document.getElementById(id);if(el)el.style.display=v;};
+  var hasUY=u.scope.indexOf('UY')>=0;set('nav-intoru',hasUY?'flex':'none');set('nav-dd',hasUY?'flex':'none');
+  if(u.perfil==='Limitado')['nav-temas','nav-documentos','nav-suelo','nav-dd','nav-search','nav-analytics'].forEach(function(id){set(id,'none');});
+  if(u.mlaOnly){['nav-dashboard','nav-temas','nav-documentos','nav-suelo','nav-intoru','nav-dd','nav-poderes','nav-fechas','nav-inm','nav-societario','nav-search','nav-analytics'].forEach(function(id){set(id,'none');});
+    if(u.grupos.indexOf('Tickets')<0)set('nav-tickets','none');}
+  set('nav-semanas',(u.perfil==='Admin'||legalUser(u.ini))?'flex':'none');
+  set('nav-mails',(typeof MAILS_ACTIVO!=='undefined'&&MAILS_ACTIVO&&u.perfil==='Admin')?'flex':'none');
+  set('nav-calendario',(u.perfil!=='Solicitante'&&!u.mlaOnly)?'flex':'none');
+  set('sync-btn',u.mlaOnly?'none':'');
+  set('setup-btn-wrap',u.perfil==='Admin'?'flex':'none');
+  var dash=u.perfil!=='Solicitante'&&!u.mlaOnly;set('btn-repaso',dash?'inline-block':'none');set('btn-pantalla',dash?'inline-block':'none');
+}
+function pintarUsuarioSidebar(u){
+  try{applyUserTheme(u);}catch(e){}
+  var av=document.getElementById('sb-av');
+  av.textContent=u.ini;av.style.cssText='width:28px;height:28px;font-size:10px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:'+u.bg+';color:'+u.tc;
+  document.getElementById('sb-name').textContent=u.name;document.getElementById('sb-role').textContent=u.role;
+}
+function simularPerfil(u){
+  if(SIMULA||!currentUser||currentUser.perfil!=='Admin')return;
+  var snap={};document.querySelectorAll('[id^="nav-"],#sync-btn,#setup-btn-wrap,#btn-repaso,#btn-pantalla').forEach(function(el){snap[el.id]=el.style.display;});
+  SIMULA={real:currentUser,as:u,snap:snap,fn:{upd:updateListItem,cre:createListItem,del:deleteListItem}};
+  updateListItem=bloqueoSim;createListItem=bloqueoSim;deleteListItem=bloqueoSim;
+  currentUser=Object.assign({},u,{email:u.email});
+  aplicarMenuUsuario(currentUser,snap);pintarUsuarioSidebar(currentUser);
+  if(u.perfil==='Lectura'){var st=document.createElement('style');st.id='sim-lectura';st.textContent='.btnedit,.btnrd,.acbtn,#tb-act>*{display:none!important}';document.head.appendChild(st);}
+  var b=document.getElementById('ver-como-bar');
+  if(!b){b=document.createElement('div');b.id='ver-como-bar';b.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:600;background:#7C3AED;color:#fff;padding:8px 14px;border-radius:10px;max-width:calc(100vw - 32px);font-size:12px;box-shadow:0 2px 10px rgba(0,0,0,.2);display:flex;gap:10px;align-items:center;flex-wrap:wrap';document.body.appendChild(b);}
+  b.innerHTML='👁 Estás viendo el Hub como <b>'+escHtml(u.name)+'</b> (vista previa: no se guarda ni se envía nada) <button onclick="abrirVerComo()" style="background:transparent;color:#fff;border:1px solid #fff;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer">Cambiar</button><button onclick="salirSimulacion()" style="background:#fff;color:#7C3AED;border:none;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:600;cursor:pointer">Salir</button>';
+  renderAll();
+  var ini=u.mlaOnly?(u.grupos.indexOf('Tickets')>=0?'tickets':'mla'):'dashboard';
+  goTo(ini,document.getElementById('nav-'+ini));
+  showToast('👁 Viendo el Hub como '+u.name);
+}
+function salirSimulacion(silencioso){
+  if(!SIMULA)return;
+  updateListItem=SIMULA.fn.upd;createListItem=SIMULA.fn.cre;deleteListItem=SIMULA.fn.del;
+  currentUser=SIMULA.real;
+  Object.keys(SIMULA.snap).forEach(function(id){var el=document.getElementById(id);if(el)el.style.display=SIMULA.snap[id];});
+  SIMULA=null;
+  var st=document.getElementById('sim-lectura');if(st)st.remove();
+  var b=document.getElementById('ver-como-bar');if(b)b.remove();
+  pintarUsuarioSidebar(currentUser);
+  if(silencioso)return;
+  renderAll();goTo('dashboard',document.getElementById('nav-dashboard'));
 }
 function fechaCorta(ts){return ts?fmtDate(String(ts).split('T')[0]):'';}
 // Estado en palabras simples (sin jerga interna)
